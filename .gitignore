@@ -1,0 +1,4 @@
+obj
+bin
+Claymore.*
+!Claymore.cbp
