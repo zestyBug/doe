@@ -395,12 +395,13 @@ namespace DOTS
             const entity_t entity_index = get_index(entity);
             assert(entity_index < this->entity_value.size());
             entity_t old_value = this->entity_value[entity_index];
+            const entity_t old_value_index = get_index(old_value);
+            // WARN: empty entities contains invalid archtype id
+            const archtypeId_t old_archtype_index = get_archtype_index(old_value);
 
-            // empty entities may contain invalid component id
-            if(get_index(old_value) == null_entity_id){
+            if(old_value_index == null_entity_id){
                 old_component_bitmap = 0;
             }else{
-                const archtypeId_t old_archtype_index = get_archtype_index(old_value);
                 old_component_bitmap = this->archtypes_id[old_archtype_index];
             }
             
@@ -413,17 +414,15 @@ namespace DOTS
                 this->entity_value[entity_index] = null_entity_id;
             }else{
                 const archtypeId_t new_archtype_index = getArchtypeIndex(new_component_bitmap);
-                const entity_t new_value = this->entity_value[entity_index] = this->archtypes[new_archtype_index].allocate(entity) | (new_archtype_index << 24);
+                const entity_t new_value_index = this->archtypes[new_archtype_index].allocate(entity);
+                this->entity_value[entity_index] = new_value_index | (new_archtype_index << 24);
                 // literally creates a new entity
                 if(old_component_bitmap == 0){
                 }else{ // moving old components
-                    const entity_t new_value_index = get_index(new_value);
-                    const entity_t old_value_index = get_index(old_value);
-                    const archtypeId_t old_archtype_index = get_archtype_index(old_value);
                     for (compid_t i = 0; i < 32; i++){
                         if(old_component_bitmap & 1) {
                             const comp_info component_info = type_id(i);
-                            // TODO: does component_bitmap means we can access component array blindly? i mean without null pointer check.
+                            // TODO: does *_component_bitmap means we can access component array blindly? i mean without null pointer check.
                             void *src = ((char*)(this->archtypes[old_archtype_index].components[i])) + (old_value_index * component_info.size);
                             if(new_component_bitmap & 1){
                                 void *dst = ((char*)(this->archtypes[new_archtype_index].components[i])) + (new_value_index * component_info.size);
