@@ -603,11 +603,11 @@ namespace DOTS
 StaticArray<DOTS::comp_info,32> DOTS::rtti;
 
 
-void f1(int& v1){
+void f1(DOTS::entity_t, int& v1){
     v1 = 69;
 }
 
-void f2(int v1){
+void f2(DOTS::entity_t, int v1){
     printf("%d\n",v1);
 }
 
@@ -623,7 +623,7 @@ public:
 
 int main(){
     DOTS::Register *reg = new DOTS::Register();
-    /*
+    
     auto v1 = reg->create<int,float,bool>();
     reg->create<int,float,bool>();
     reg->create<int,float>();
@@ -642,7 +642,7 @@ int main(){
         printf("}\n");
     });
     reg->iterate<int>(f2);
-    */
+    
 
    reg->addSystem<TransformSystem>();
 
