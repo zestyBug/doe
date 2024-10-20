@@ -103,6 +103,10 @@ namespace DOTS
     // index of archtype in archtype list
     using archtypeId_t = uint32_t;
     
+    struct entity_range {
+        entity_t begin;
+        entity_t end;
+    };
 
     inline size_t get_index(entity_t e){
         return e & 0xffffff;
@@ -288,9 +292,9 @@ namespace DOTS
     class System {
         friend class Register;
     protected:
-        virtual void Start(){};
-        virtual void Update(){};
-        virtual void Stop(){};
+        virtual void start(){};
+        virtual void update(){};
+        virtual void stop(){};
     public:
         System(){}
         virtual ~System(){}
@@ -305,8 +309,8 @@ namespace DOTS
 
 
     class Register final {
-        static const entity_t null_entity_id = 0xffffff;
-        static const archtypeId_t null_archtype_index = 0xffffffff;
+        static constexpr entity_t null_entity_id = 0xffffff;
+        static constexpr archtypeId_t null_archtype_index = 0xffffffff;
         // array of entities value,
         // contains index of it archtype and it index in that archtype 
         std::vector<entity_t> entity_value;
@@ -447,6 +451,11 @@ namespace DOTS
             }
         }
 
+        template<typename Type>
+        Type template_wrapper(std::array<void*,33> &comps,size_t entity_index){
+            return ((std::add_pointer_t<std::remove_const_t<std::remove_reference_t<Type>>>)comps[type_id<Type>().index]) [entity_index];
+        }
+
     public:
         Register(){};
         ~Register(){};
@@ -561,11 +570,6 @@ namespace DOTS
                 }
         }
 
-        template<typename Type>
-        Type template_wrapper(std::array<void*,33> &comps,size_t entity_index){
-            return ((std::add_pointer_t<std::remove_const_t<std::remove_reference_t<Type>>>)comps[type_id<Type>().index]) [entity_index];
-        }
-
         // TODO: recives a chunk size, so gives call the callback with multiple times 
         // with array of pointers to components and maximum size of arrays as argument
         template<typename ... Types>
@@ -579,30 +583,51 @@ namespace DOTS
                         func( ((Entity*)arch.components[32])[entity_index], template_wrapper<Types>(arch.components,entity_index) ...);
                 }
         }
+        /// @brief A helper function for job systems, searchs archtype after archtype
+        /// @tparam ...Types components that must be included
+        /// @param from begining entity value to start searching, pass 0 if want to begin from zero
+        /// @param chunck_size maximum number of entities to pick in one single entity range
+        /// @return range of available entities in value in same archtype exluding the end one, if begin and end was same
+        // means it is an empty range and we found nothing.
+        template<typename ... Types>
+        entity_range findChunk(entity_t from, const size_t chunck_size) const {
+            const compid_t comps_bitmap = (type_bit<Types>() | ...);
+            entity_t entity_index = get_index(from);
+            const entity_t archtype_index = get_archtype_index(from);
+            for (archtypeId_t i = archtype_index; i < this->archtypes_index; i++){
+                if((this->archtypes_id[i] & comps_bitmap) == comps_bitmap){
+                    if(entity_index < this->archtypes[i].size){
+                        return {(i<<24) | entity_index,(i<<24) | std::min(this->archtypes[i].size, entity_index+chunck_size)};
+                    }
+                }
+                entity_index = 0;
+            }
+            return {from,from};
+        }
         template<typename Type>
         void addSystem(){
             this->system.emplace_back(new Type());
         }
-        void executeSystems() {
+        void executeSystems(){
             for(auto& i:this->system)
-                i->Update();
+                i->update();
         }
     };
 
 
 
     struct Job{
-        entity_t (*next)(entity_t);
-        void (*proc)(entity_t,entity_t);
+        entity_range (*next)(entity_t);
+        void (*proc)(entity_range);
     };
 
-    class semaphore {
+    class Semaphore {
         std::mutex mutex_;
         std::condition_variable condition_;
         volatile unsigned long count_ = 0; // Initialized as locked.
 
     public:
-        semaphore(unsigned long initial_value = 0) : count_(initial_value) {}
+        Semaphore(unsigned long initial_value = 0) : count_(initial_value) {}
         // signal
         void release() {
             std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
@@ -617,7 +642,7 @@ namespace DOTS
             --this->count_;
         }
         // try wait()
-        bool try_acquire() {
+        bool tryAcquire() {
             std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
             if (this->count_ != 0) {
                 --this->count_;
@@ -625,7 +650,7 @@ namespace DOTS
             }
             return false;
         }
-        void set_value(const unsigned long value){
+        void setValue(const unsigned long value){
              std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
             this->count_ = value;
         }
@@ -638,7 +663,7 @@ namespace DOTS
         std::vector<std::vector<Job>> group;
 
 
-        semaphore finished;
+        Semaphore finished;
         std::mutex gmutex;
         std::condition_variable barrier;
 
@@ -674,10 +699,10 @@ namespace DOTS
 
                     Job& j = this->group[group_index_buffer][job_index_buffer];
                     const entity_t entity_index_buffer1 = this->entity_index;
-                    const entity_t entity_index_buffer2 = j.next(entity_index_buffer1);
+                    const entity_range entity_index_buffer2 = j.next(entity_index_buffer1);
 
                     // reached end of a job
-                    if(entity_index_buffer2 == entity_index_buffer1) {
+                    if(entity_index_buffer2.begin == entity_index_buffer2.end) {
                         job_index_buffer++;
                         // validity check remainding job in group
                         if(job_index_buffer >= this->group[group_index_buffer].size()){
@@ -689,9 +714,9 @@ namespace DOTS
                         }
                         this->entity_index = 0;
                     }else{
-                        this->entity_index = entity_index_buffer2;
+                        this->entity_index = entity_index_buffer2.end;
                         lock.unlock();
-                        j.proc(entity_index_buffer1,entity_index_buffer2);
+                        j.proc(entity_index_buffer2);
                         // do proccess here
                     }
                 }
@@ -752,6 +777,8 @@ namespace DOTS
 }
 
 StaticArray<DOTS::comp_info,32> DOTS::rtti;
+DOTS::Register *reg;
+DOTS::ThreadPool *tp;
 
 
 void f1(DOTS::Entity, int& v1){
@@ -763,8 +790,15 @@ void f2(DOTS::Entity, int v1){
 }
 
 class TransformSystem : public DOTS::System {
-    void Update(){
+    void update(){
         printf("nuriiiii!\n");
+        tp->addJob(DOTS::Job{ 
+            [](DOTS::entity_t f){
+                return reg->findChunk<int>(f,2);
+            }, [](DOTS::entity_range es){
+                printf("proc(%u,%u) %llu\n",es.begin,es.end,std::this_thread::get_id());
+            }
+        },0);
     }
 public:
     TransformSystem(){
@@ -772,17 +806,20 @@ public:
     }
 };
 
+
 int main(){
-    DOTS::Register *reg = new DOTS::Register();
-    /*
+    reg = new DOTS::Register();
+    tp = new DOTS::ThreadPool(4);
+    reg->create<int,float>();
     auto v1 = reg->create<int,float,bool>();
     reg->create<int,float,bool>();
-    reg->create<int,float>();
     reg->getComponent<int>(v1) = 10;
     reg->create<int,float>();
     // reg->addComponent<bool>(v1);
     // reg->removeComponent<bool>(v1);
     reg->create<float,int>();
+
+    /*
     reg->iterate<int&>(f1);
     reg->iterate<int>([](std::array<void*,2> arg,size_t chunk_size){
         printf("{");
@@ -794,22 +831,15 @@ int main(){
     });
     reg->iterate<int>(f2);
     
+   */
 
-   reg->addSystem<TransformSystem>();
+    tp->wait();
+    reg->addSystem<TransformSystem>();
+    reg->executeSystems();
+    tp->restart();
+    tp->wait();
 
-   reg->executeSystems();*/
-
-
+    delete tp;
     delete reg;
-
-    DOTS::ThreadPool tp(4);
-    tp.wait();
-    tp.addJob(DOTS::Job{ 
-        [](DOTS::entity_t e){printf("next!\n"); if(e<10)e++; return e;}, 
-        [](DOTS::entity_t e1,DOTS::entity_t e2){printf("proc(%u,%u) %llu\n",e1,e2,std::this_thread::get_id());}
-    },0);
-    tp.restart();
-    tp.wait();
-
     printf("done\n");
 }
