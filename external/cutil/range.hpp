@@ -5,7 +5,7 @@
 #include <cstdint>
 
 template<const unsigned int FROM=0,const unsigned int TO=4,const unsigned int STEP=1>
-struct range final
+struct Range final
 {
     using value = unsigned int;
     struct Iterator final {
@@ -32,7 +32,7 @@ struct range final
             return result;
         }
     };
-    range() = default;
+    Range() = default;
     constexpr Iterator begin(){
         return Iterator{FROM};
     }

@@ -4,34 +4,38 @@
 #include <mutex>
 #include <condition_variable>
 
-class semaphore {
+class Semaphore {
     std::mutex mutex_;
     std::condition_variable condition_;
-    unsigned long count_ = 0; // Initialized as locked.
+    volatile unsigned long count_ = 0; // Initialized as locked.
 
 public:
-    semaphore(unsigned long initial_value = 0) : count_(initial_value) {}
+    Semaphore(unsigned long initial_value = 0) : count_(initial_value) {}
     // signal
     void release() {
-        std::lock_guard<decltype(mutex_)> lock(mutex_);
-        ++count_;
-        condition_.notify_one();
+        std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
+        ++this->count_;
+        this->condition_.notify_one();
     }
     // wait
     void acquire() {
-        std::unique_lock<decltype(mutex_)> lock(mutex_);
-        while (!count_) // Handle spurious wake-ups.
-            condition_.wait(lock);
-        --count_;
+        std::unique_lock<decltype(this->mutex_)> lock(this->mutex_);
+        while (count_ == 0) // Handle spurious wake-ups.
+            this->condition_.wait(lock);
+        --this->count_;
     }
     // try wait()
-    bool try_acquire() {
-        std::lock_guard<decltype(mutex_)> lock(mutex_);
-        if (count_) {
-            --count_;
+    bool tryAcquire() {
+        std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
+        if (this->count_ != 0) {
+            --this->count_;
             return true;
         }
         return false;
+    }
+    void setValue(const unsigned long value){
+            std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
+        this->count_ = value;
     }
 };
 
