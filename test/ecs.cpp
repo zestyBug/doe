@@ -4,10 +4,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include <thread>
 #include <queue>
-#include <atomic>
 #include <memory>
+
+#include <thread>
+#include <condition_variable>
+#include <mutex>
 
 template<typename T, size_t S>
 class StaticArray
@@ -284,7 +286,9 @@ namespace DOTS
     class System {
         friend class Register;
     protected:
-        virtual void Update() = 0;
+        virtual void Start(){};
+        virtual void Update(){};
+        virtual void Stop(){};
     public:
         System(){}
         virtual ~System(){}
@@ -531,21 +535,23 @@ namespace DOTS
                 return false;
             return this->archtypes_id[get_archtype_index(value)] & type_bit<T>();
         }
-        // TODO: recives a chunk size, so gives call the callback with multiple times 
-        // with array of pointers to components and maximum size of arrays as argument
+        // TODO: recives a chunk size, so gives call the callback multiple times 
+        // with array of pointers to components plus entity id list and maximum size of arrays as arguments
         template<typename ... Types>
-        void iterate(void(*func)(std::array<void*, sizeof...(Types)>,size_t), const size_t chunk_size = 16) {
+        void iterate(void(*func)(std::array<void*, sizeof...(Types) + 1>,size_t), const size_t chunk_size = 16) {
             const compid_t comps_bitmap = (type_bit<Types>() | ...);
             const compid_t comps_index[sizeof...(Types)] = {(type_id<Types>().index)...};
             const size_t   comps_size[sizeof...(Types)] = {(type_id<Types>().size)...};
-            std::array<void*, sizeof...(Types)> args;
+            std::array<void*, sizeof...(Types) + 1> args;
             for (archtypeId_t i = 0; i < this->archtypes_index; i++)
                 if((this->archtypes_id[i] & comps_bitmap) == comps_bitmap){
                     Archtype &arch = this->archtypes[i];
                     if(arch.size != 0)
                         for(size_t chunck_index=0; chunck_index < arch.size; chunck_index+=chunk_size) {
-                            for (size_t comp_index = 0; comp_index < sizeof...(Types); comp_index++)
+                            size_t comp_index = 0;
+                            for (; comp_index < sizeof...(Types); comp_index++)
                                 args[comp_index] = ((char*)(arch.components[comps_index[comp_index]])) + comps_size[comp_index] * chunck_index;
+                            args[comp_index] = ((entity_t*)(arch.components[32])) + chunck_index;
                             const size_t remaind = arch.size - chunck_index;
                             func(args,remaind<chunk_size?remaind:chunk_size);
                         }
@@ -582,21 +588,162 @@ namespace DOTS
 
 
 
-
-
-    class Job {
-        virtual void proccess() = 0;
+    struct Job{
+        entity_t (*next)(entity_t);
+        void (*proc)(entity_t,entity_t);
     };
+
+    class semaphore {
+        std::mutex mutex_;
+        std::condition_variable condition_;
+        volatile unsigned long count_ = 0; // Initialized as locked.
+
+    public:
+        semaphore(unsigned long initial_value = 0) : count_(initial_value) {}
+        // signal
+        void release() {
+            std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
+            ++this->count_;
+            this->condition_.notify_one();
+        }
+        // wait
+        void acquire() {
+            std::unique_lock<decltype(this->mutex_)> lock(this->mutex_);
+            while (count_ == 0) // Handle spurious wake-ups.
+                this->condition_.wait(lock);
+            --this->count_;
+        }
+        // try wait()
+        bool try_acquire() {
+            std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
+            if (this->count_ != 0) {
+                --this->count_;
+                return true;
+            }
+            return false;
+        }
+        void set_value(const unsigned long value){
+             std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
+            this->count_ = value;
+        }
+    };
+
     class ThreadPool final {
         // need to keep track of threads so we can join them
         std::vector<std::thread> worker;
-        // the task queue
-        std::vector<std::vector<Job>> task;
-        std::atomic<int> task_index = 0;
-        std::atomic<int> queue_index = 0;
-    };
-    class ResourceManager final {
-        //
+        // each group has it own task queue
+        std::vector<std::vector<Job>> group;
+
+
+        semaphore finished;
+        std::mutex gmutex;
+        std::condition_variable cond;
+
+        volatile bool destroy = false;
+        volatile unsigned int sleeping_threads = 0;
+        volatile unsigned int group_index = 0;
+        volatile unsigned int job_index = 0;
+        volatile entity_t entity_index = 0;
+
+        void func(){while(true){
+                std::unique_lock lock(this->gmutex);
+
+                unsigned int sleeping_threads_buffer = this->sleeping_threads;
+                unsigned int group_index_buffer = this->group_index;
+                unsigned int job_index_buffer = this->job_index;
+
+
+                if(this->destroy)
+                    return;
+                    
+                //reached end of groups
+                if(group_index_buffer >= this->group.size())
+                    goto sleeping_finished;
+                
+                // this group is empty (barrier)
+                else if(this->group[group_index_buffer].size() == 0)
+                    goto sleeping;
+                
+                else {
+                    Job& j = this->group[group_index_buffer][job_index_buffer];
+                    const entity_t entity_index_buffer1 = this->entity_index;
+                    const entity_t entity_index_buffer2 = j.next(entity_index_buffer1);
+
+                    // reached end of a job
+                    if(entity_index_buffer2 == entity_index_buffer1) {
+                        job_index_buffer++;
+                        // if was last job in group
+                        if(job_index_buffer >= this->group[group_index_buffer].size()){
+                            // goto next group.
+                            group_index_buffer++;
+                            this->group_index=group_index_buffer;
+                            this->job_index = 0;
+                        }else{
+                            this->job_index=job_index_buffer;
+                        }
+                        this->entity_index = 0;
+                    }else{
+                        this->entity_index = entity_index_buffer2;
+                        lock.unlock();
+                        j.proc(entity_index_buffer1,entity_index_buffer2);
+                        // do proccess here
+                    }
+                }
+                continue;
+            sleeping:
+                sleeping_threads_buffer++;
+                this->sleeping_threads=sleeping_threads_buffer;
+                if(sleeping_threads_buffer < this->worker.size()){
+                    this->cond.wait(lock);
+                }else{
+                    this->sleeping_threads = 0;
+                    this->group_index=group_index_buffer+1;
+                    this->job_index = 0;
+                    this->entity_index = 0;
+                    this->cond.notify_all();
+                }
+                continue;
+            sleeping_finished:
+                sleeping_threads_buffer++;
+                this->sleeping_threads=sleeping_threads_buffer;
+                if(sleeping_threads_buffer >= this->worker.size())
+                    this->finished.release();
+                this->cond.wait(lock);
+                continue;
+        }}
+    public:
+        ThreadPool(const uint32_t thread_count)
+            :worker(thread_count),finished(0)
+        {
+            std::unique_lock lock(this->gmutex);
+            for(auto& t: this->worker)
+                t = std::thread{&ThreadPool::func,this};
+            group.reserve(64);
+        }
+        void wait(){
+            this->finished.acquire();
+            this->group.clear();
+        }
+        void restart(){
+            std::unique_lock lock(this->gmutex);
+            this->sleeping_threads = 0;
+            this->group_index = 0;
+            this->job_index = 0;
+            this->entity_index = 0;
+            this->cond.notify_all();
+        }
+        void addJob(const Job& j,size_t group_id){
+            if(this->group.size() <= group_id)
+                this->group.resize(group_id+1);
+            this->group[group_id].push_back(j);
+        }
+        void shutdown(){
+            destroy = true;
+            this->cond.notify_all();
+            for(auto& t: this->worker)
+                t.join();
+            this->worker.clear();
+        }
     };
 }
 
@@ -623,7 +770,7 @@ public:
 
 int main(){
     DOTS::Register *reg = new DOTS::Register();
-    
+    /*
     auto v1 = reg->create<int,float,bool>();
     reg->create<int,float,bool>();
     reg->create<int,float>();
@@ -633,7 +780,7 @@ int main(){
     // reg->removeComponent<bool>(v1);
     reg->create<float,int>();
     reg->iterate<int&>(f1);
-    reg->iterate<int>([](std::array<void*,1> arg,size_t chunk_size){
+    reg->iterate<int>([](std::array<void*,2> arg,size_t chunk_size){
         printf("{");
         for (size_t i = 0; i < chunk_size; i++)
         {
@@ -646,9 +793,20 @@ int main(){
 
    reg->addSystem<TransformSystem>();
 
-   reg->executeSystems();
+   reg->executeSystems();*/
 
 
     delete reg;
+
+    DOTS::ThreadPool tp(4);
+    tp.wait();
+    tp.addJob(DOTS::Job{ 
+        [](DOTS::entity_t e){printf("next!\n"); if(e<10)e++; return e;}, 
+        [](DOTS::entity_t e1,DOTS::entity_t e2){printf("proc(%u,%u) %llu\n",e1,e2,std::this_thread::get_id());}
+    },0);
+    tp.restart();
+    tp.wait();
+    tp.shutdown();
+
     printf("done\n");
 }
