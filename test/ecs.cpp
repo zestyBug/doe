@@ -99,13 +99,15 @@ namespace DOTS
     // entity_t >> 24: version or archtype index, depending on situation
     // entity_t & 0xffffff: index in Register::entity_value  or Archtype::components, depending on situation
     using entity_t = uint32_t;
+    using Entity = uint32_t;
     // index of archtype in archtype list
     using archtypeId_t = uint32_t;
     
+
     inline size_t get_index(entity_t e){
         return e & 0xffffff;
     }
-    inline entity_t get_version(entity_t e){
+    inline Entity get_version(Entity e){
         return e & 0xff000000;
     }
     inline size_t get_archtype_index(entity_t e){
@@ -179,9 +181,9 @@ namespace DOTS
                     initialize_component(i);
                 bitmask <<= 1;
             }
-            printf("Debug: malloc(%llu)\n",this->capacity*sizeof(entity_t));
-            this->components[32] = malloc(this->capacity*sizeof(entity_t));
-            this->components_info[32] = comp_info{32,sizeof(entity_t),nullptr};
+            printf("Debug: malloc(%llu)\n",this->capacity*sizeof(Entity));
+            this->components[32] = malloc(this->capacity*sizeof(Entity));
+            this->components_info[32] = comp_info{32,sizeof(Entity),nullptr};
         }
 
         void initialize_component(const compid_t type) {
@@ -194,7 +196,7 @@ namespace DOTS
 
         // recives id of entity (index of entity in registers enity array + version)
         // returns a new valid index in this archtype
-        entity_t allocate(const entity_t index) {
+        entity_t allocate(const Entity index) {
             assert(this->size < 0xffffff);
             if(this->size < this->capacity){
                 ((entity_t*)this->components[32])[this->size] = index;
@@ -214,7 +216,7 @@ namespace DOTS
 
         // recives index in components array
         // returns id of entity that filled the empty space in array or invalid index
-        entity_t destroy(const entity_t index) {
+        Entity destroy(const Entity index) {
             assert(this->size > index);
             this->size--;
             for (size_t i = 0; i < 33; i++)
@@ -235,7 +237,7 @@ namespace DOTS
             }
         }
         // same as destroy() without calling destructor functions
-        entity_t destroy2(const entity_t index) {
+        Entity destroy2(const Entity index) {
             assert(this->size > index);
             this->size--;
             const size_t size_buffer = this->size;
@@ -279,7 +281,7 @@ namespace DOTS
 
     struct DataChunk final {
         size_t count;
-        entity_t *entity;
+        Entity *entity;
         void ** component;
     };
 
@@ -345,19 +347,20 @@ namespace DOTS
             printf("Debug: new archtype bitmask %u\n",comp_bitmap);
             return archtype_index;
         }
-        // finds a empty index on entity array and return it index + version
-        entity_t createEntity(){
-            entity_t result;
+        // finds a empty index on entity array and return it index + version, 
+        // WARN: it may containts invalid value
+        Entity createEntity(){
+            Entity result;
             if(free_entity_index == null_entity_id){
                 size_t index = entity_value.size();
                 assert(index < 0xffffff);
-                entity_value.push_back((entity_t)index);
+                entity_value.push_back(null_entity_id);
                 result = index;
             }else{
-                size_t next_index = get_index(entity_value[free_entity_index]);
-                unsigned int e_version = get_version(entity_value[free_entity_index]);
+                const entity_t prev_val = entity_value[free_entity_index];
+                unsigned int e_version = get_version(prev_val);
                 result = free_entity_index | (e_version + 0x1000000);
-                free_entity_index = next_index;
+                free_entity_index = get_index(prev_val);
             }
             printf("Debug: new entity %u\n",result);
             return result;
@@ -394,7 +397,7 @@ namespace DOTS
             destroyEmptyComponent(archtype_index);
         }
         // charges archtype, recives entity id and components bitmap
-        void _changeComponent(entity_t entity, compid_t new_component_bitmap){
+        void _changeComponent(Entity entity, compid_t new_component_bitmap){
             compid_t old_component_bitmap;
             const entity_t entity_index = get_index(entity);
             assert(entity_index < this->entity_value.size());
@@ -449,25 +452,25 @@ namespace DOTS
         ~Register(){};
         
         // create empty entity
-        entity_t create(){
-            entity_t result = createEntity();
+        Entity create(){
+            Entity result = createEntity();
             entity_value[get_index(result)] = null_entity_id;
             return result;
         }
-        // create entity with given argument
+        // create entity with given Components
         template<typename ... Args>
-        entity_t create() {
+        Entity create() {
             compid_t comp_bitmap = (type_bit<Args>() | ...);
 
             const archtypeId_t archtype_index = getArchtypeIndex(comp_bitmap);
 
-            const entity_t result = createEntity();
+            const Entity result = createEntity();
             const entity_t value = this->archtypes[archtype_index].allocate(result) | (archtype_index << 24);
             this->entity_value[get_index(result)] = value;
             return result;
         }
         // destroy a entity entirly
-        void destroy(entity_t e) {
+        void destroy(Entity e) {
             const entity_t index = get_index(e);
             assert(index < this->entity_value.size());
             const entity_t old_value = this->entity_value[index];
@@ -483,7 +486,7 @@ namespace DOTS
         }
 
         template<typename T>
-        void addComponent(entity_t e){
+        void addComponent(Entity e){
             const entity_t index = get_index(e);
             assert(index < this->entity_value.size());
             entity_t old_value = this->entity_value[index];
@@ -498,7 +501,7 @@ namespace DOTS
             _changeComponent(e,components_bitmap);
         }
         template<typename T>
-        void removeComponent(entity_t e){
+        void removeComponent(Entity e){
             const entity_t index = get_index(e);
             assert(index < this->entity_value.size());
             const entity_t old_value = this->entity_value[index];
@@ -512,7 +515,7 @@ namespace DOTS
             _changeComponent(e,new_component_bitmap);
         }
         template<typename T>
-        auto& getComponent(entity_t e) const {
+        auto& getComponent(Entity e) const {
             const entity_t index = get_index(e);
             assert(index < this->entity_value.size());
             const entity_t value = this->entity_value[index];
@@ -525,7 +528,7 @@ namespace DOTS
             return ((T*)(this->archtypes[archtype_index].components[type_id<T>().index]))[get_index(value)];
         }
         template<typename T>
-        bool hasComponent(entity_t e){
+        bool hasComponent(Entity e){
             const entity_t index = get_index(e);
             assert(index < this->entity_value.size());
             const entity_t value = this->entity_value[index];
@@ -566,14 +569,14 @@ namespace DOTS
         // TODO: recives a chunk size, so gives call the callback with multiple times 
         // with array of pointers to components and maximum size of arrays as argument
         template<typename ... Types>
-        void iterate(void(*func)(entity_t,Types...)) {
+        void iterate(void(*func)(Entity,Types...)) {
             const compid_t comps_bitmap = (type_bit<Types>() | ...);
             for (archtypeId_t i = 0; i < this->archtypes_index; i++)
                 if((this->archtypes_id[i] & comps_bitmap) == comps_bitmap){
                     // arch might be empty and unallocatted
                     Archtype &arch = this->archtypes[i];
                     for(size_t entity_index=0; entity_index < arch.size; entity_index++)
-                        func( ((entity_t*)arch.components[32])[entity_index], template_wrapper<Types>(arch.components,entity_index) ...);
+                        func( ((Entity*)arch.components[32])[entity_index], template_wrapper<Types>(arch.components,entity_index) ...);
                 }
         }
         template<typename Type>
@@ -637,10 +640,10 @@ namespace DOTS
 
         semaphore finished;
         std::mutex gmutex;
-        std::condition_variable cond;
+        std::condition_variable barrier;
 
         volatile bool destroy = false;
-        volatile unsigned int sleeping_threads = 0;
+        volatile unsigned int waiting_threads = 0;
         volatile unsigned int group_index = 0;
         volatile unsigned int job_index = 0;
         volatile entity_t entity_index = 0;
@@ -648,8 +651,8 @@ namespace DOTS
         void func(){while(true){
                 std::unique_lock lock(this->gmutex);
 
-                unsigned int sleeping_threads_buffer = this->sleeping_threads;
-                unsigned int group_index_buffer = this->group_index;
+                unsigned int waiting_threads_buffer = this->waiting_threads;
+                const unsigned int group_index_buffer = this->group_index;
                 unsigned int job_index_buffer = this->job_index;
 
 
@@ -664,7 +667,11 @@ namespace DOTS
                 else if(this->group[group_index_buffer].size() == 0)
                     goto sleeping;
                 
+                // checkin  validity of job_index_buffer is not required:
+                // 1-It begins with 0, and we have checked that group size is not zero
+                // 2-In proccess of increament at the end of every job, validity is checked.
                 else {
+
                     Job& j = this->group[group_index_buffer][job_index_buffer];
                     const entity_t entity_index_buffer1 = this->entity_index;
                     const entity_t entity_index_buffer2 = j.next(entity_index_buffer1);
@@ -672,11 +679,10 @@ namespace DOTS
                     // reached end of a job
                     if(entity_index_buffer2 == entity_index_buffer1) {
                         job_index_buffer++;
-                        // if was last job in group
+                        // validity check remainding job in group
                         if(job_index_buffer >= this->group[group_index_buffer].size()){
                             // goto next group.
-                            group_index_buffer++;
-                            this->group_index=group_index_buffer;
+                            this->group_index=group_index_buffer+1;
                             this->job_index = 0;
                         }else{
                             this->job_index=job_index_buffer;
@@ -691,31 +697,29 @@ namespace DOTS
                 }
                 continue;
             sleeping:
-                sleeping_threads_buffer++;
-                this->sleeping_threads=sleeping_threads_buffer;
-                if(sleeping_threads_buffer < this->worker.size()){
-                    this->cond.wait(lock);
+                if(++waiting_threads_buffer < this->worker.size()){
+                    goto normal_thread_sleep;
                 }else{
-                    this->sleeping_threads = 0;
+                    this->waiting_threads = 0;
                     this->group_index=group_index_buffer+1;
                     this->job_index = 0;
                     this->entity_index = 0;
-                    this->cond.notify_all();
+                    this->barrier.notify_all();
                 }
                 continue;
             sleeping_finished:
-                sleeping_threads_buffer++;
-                this->sleeping_threads=sleeping_threads_buffer;
-                if(sleeping_threads_buffer >= this->worker.size())
+                if(++waiting_threads_buffer >= this->worker.size())
                     this->finished.release();
-                this->cond.wait(lock);
+            normal_thread_sleep:
+                this->waiting_threads=waiting_threads_buffer;
+                this->barrier.wait(lock);
                 continue;
         }}
     public:
         ThreadPool(const uint32_t thread_count)
             :worker(thread_count),finished(0)
         {
-            std::unique_lock lock(this->gmutex);
+            std::lock_guard lock(this->gmutex);
             for(auto& t: this->worker)
                 t = std::thread{&ThreadPool::func,this};
             group.reserve(64);
@@ -725,21 +729,21 @@ namespace DOTS
             this->group.clear();
         }
         void restart(){
-            std::unique_lock lock(this->gmutex);
-            this->sleeping_threads = 0;
+            std::lock_guard lock(this->gmutex);
+            this->waiting_threads = 0;
             this->group_index = 0;
             this->job_index = 0;
             this->entity_index = 0;
-            this->cond.notify_all();
+            this->barrier.notify_all();
         }
         void addJob(const Job& j,size_t group_id){
             if(this->group.size() <= group_id)
                 this->group.resize(group_id+1);
             this->group[group_id].push_back(j);
         }
-        void shutdown(){
+        ~ThreadPool(){
             destroy = true;
-            this->cond.notify_all();
+            this->barrier.notify_all();
             for(auto& t: this->worker)
                 t.join();
             this->worker.clear();
@@ -750,11 +754,11 @@ namespace DOTS
 StaticArray<DOTS::comp_info,32> DOTS::rtti;
 
 
-void f1(DOTS::entity_t, int& v1){
+void f1(DOTS::Entity, int& v1){
     v1 = 69;
 }
 
-void f2(DOTS::entity_t, int v1){
+void f2(DOTS::Entity, int v1){
     printf("%d\n",v1);
 }
 
@@ -806,7 +810,6 @@ int main(){
     },0);
     tp.restart();
     tp.wait();
-    tp.shutdown();
 
     printf("done\n");
 }
