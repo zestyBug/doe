@@ -3,9 +3,11 @@
 
 #include "cutil/StaticArray.hpp"
 
+#define ENGINE_VERSION 0.0
+
 namespace DOTS
 {
-    // type id or type bitmask
+    // type id or type bitmask, can be changed to unordered_set ar bit_set
     using compid_t = uint32_t;
 
     struct comp_info {
@@ -21,29 +23,38 @@ namespace DOTS
     // WARN: dont access this directlys
     extern StaticArray<comp_info,32> rtti;
 
-    // entity_t >> 24: version or archtype index, depending on situation
-    // entity_t & 0xffffff: index in Register::entity_value  or Archtype::components, depending on situation
-    using entity_t = uint32_t;
+    // only use purpose is as index of archtype in archtype list
+    using archtypeId_t = uint16_t;
+    // only use purpose is as index of entity in entity_value array + version
+    // Entity >> 24: version
+    // Entity & 0xffffff: 
     using Entity = uint32_t;
-    // index of archtype in archtype list
-    using archtypeId_t = uint32_t;
+    // only use purpose is as index of entity in archtype array
+    using entityId_t = uint32_t;
+    using version_t = uint8_t;
+    struct entity_t {
+        // index in Archtype::components
+        entityId_t index = 0xffffffff;
+        archtypeId_t archtype = 0xffff;
+        version_t version = 0;
+        entity_t(const entity_t&) = default;
+        entity_t& operator = (const entity_t&) = default;
+    };
     
     struct entity_range {
-        entity_t begin;
-        entity_t end;
+        entityId_t begin;
+        entityId_t end;
+        archtypeId_t archtype;
     };
 
-    inline size_t get_index(entity_t e){
+    constexpr unsigned int null_entity_index = 0xffffff;
+    constexpr archtypeId_t null_archtype_index = 0xffff;
+
+    inline Entity get_index(Entity e){
         return e & 0xffffff;
     }
-    inline Entity get_version(Entity e){
-        return e & 0xff000000;
-    }
-    inline size_t get_archtype_index(entity_t e){
-        return (e >> 24) & 0xff;
-    }
-    inline size_t get_archtype(entity_t e){
-        return e & 0xff000000;
+    inline version_t get_version(Entity e){
+        return (version_t)((e >> 24) & 0xff);
     }
 
     [[nodiscard]] comp_info _new_id(size_t size, void (*destructor)(void*)) noexcept

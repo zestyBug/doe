@@ -45,17 +45,18 @@ namespace DOTS
 
         // recives id of entity (index of entity in registers enity array + version)
         // returns a new valid index in this archtype
-        entity_t allocate(const Entity index) {
+        entityId_t allocate(const Entity index) {
             assert(this->size < 0xffffff);
             if(this->size < this->capacity){
-                ((entity_t*)this->components[32])[this->size] = index;
-                return this->size++;
+                ((Entity*)this->components[32])[this->size] = index;
+                return (entityId_t)(this->size++);
             }else{
+                this->capacity *= 2;
+                assert(this->capacity < null_entity_index);
                 for (size_t i = 0; i < 33; i++)
                     if(components[i]) {
-                        const size_t old_size = this->components_info[i].size * this->capacity;
                         //printf("Debug: realloc(%llu >> %llu)\n",old_size,old_size*2);
-                        assert(this->components[i] = realloc(this->components[i],old_size*2));
+                        assert(this->components[i] = realloc(this->components[i],this->components_info[i].size * this->capacity));
                     }
                 this->capacity *= 2;
                 // TODO: covers wierd scenarios
@@ -65,7 +66,7 @@ namespace DOTS
 
         // recives index in components array
         // returns id of entity that filled the empty space in array or invalid index
-        Entity destroy(const Entity index) {
+        Entity destroy(const entityId_t index) {
             assert(this->size > index);
             this->size--;
             for (size_t i = 0; i < 33; i++)
@@ -80,13 +81,13 @@ namespace DOTS
                     }
                 }
             if(index != this->size){
-                return ((entity_t*)this->components[32])[index];
+                return ((Entity*)this->components[32])[index];
             }else{
                 return 0xffffff;
             }
         }
         // same as destroy() without calling destructor functions
-        Entity destroy2(const Entity index) {
+        Entity destroy2(const entityId_t index) {
             assert(this->size > index);
             this->size--;
             const size_t size_buffer = this->size;
@@ -97,7 +98,7 @@ namespace DOTS
                             memcpy(ptr+(index*comonent_size) , ptr+(size_buffer*comonent_size) , comonent_size);
                     }
             if(index != size_buffer){
-                return ((entity_t*)this->components[32])[index];
+                return ((Entity*)this->components[32])[index];
             }else{
                 return 0xffffff;
             }
