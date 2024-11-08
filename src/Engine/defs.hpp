@@ -1,13 +1,15 @@
 #if !defined(DEFS_HPP)
 #define DEFS_HPP
 
+#include <vector>
 #include "cutil/StaticArray.hpp"
 
 #define ENGINE_VERSION 0.0
 
 namespace DOTS
 {
-    // type id or type bitmask, can be changed to unordered_set ar bit_set
+    // type id or archtype types bitmask, can be changed to unordered_set ar bit_set
+    // WARN: cant use 0 as invalid value
     using compid_t = uint32_t;
 
     struct comp_info {
@@ -46,8 +48,10 @@ namespace DOTS
         entityId_t end;
         archtypeId_t archtype;
     };
-
+    // entity index in archtype array
     constexpr unsigned int null_entity_index = 0xffffff;
+    // entity id (index in entity_Value array)
+    constexpr Entity null_entity = 0xffffff;
     constexpr archtypeId_t null_archtype_index = 0xffff;
 
     inline Entity get_index(Entity e){
@@ -88,6 +92,10 @@ namespace DOTS
     [[nodiscard]] inline compid_t type_bit() 
     {
         return 1 << type_id<T>().index;
+    }
+    template<typename...Args>
+    inline compid_t componentsId(){
+        return (type_bit<Args>() | ...);
     }
 
 }

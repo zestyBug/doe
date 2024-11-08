@@ -57,18 +57,18 @@ namespace DOTS
         // WARN: it may containts invalid value
         Entity createEntity(){
             Entity result;
-            if(free_entity_index < null_entity_index){
-                entity_t& prev_val = this->entity_value[free_entity_index];
-                prev_val.version++;
+            if(free_entity_index < null_entity){
+                entity_t& value = this->entity_value[free_entity_index];
+                value.version++;
 
-                result = free_entity_index | (prev_val.version << 24);
-                free_entity_index = prev_val.index;
+                result = free_entity_index | (value.version << 24);
+                free_entity_index = value.index;
 
-                prev_val.index = null_entity_index;
-                prev_val.archtype = null_archtype_index;
+                value.index = null_entity_index;
+                value.archtype = null_entity;
             }else{
                 const size_t index = entity_value.size();
-                assert(index < null_entity_index);
+                assert(index < null_entity);
                 entity_value.push_back(entity_t{});
                 result = index;
             }
@@ -88,7 +88,7 @@ namespace DOTS
         void destroyComponents2(entity_t value){
             const Entity modified = get_index( this->archtypes[value.archtype].destroy2(value.index) );
             // if it index was filled with other entity
-            if(modified != null_entity_index)
+            if(modified != null_entity)
                 this->entity_value[get_index(modified)].index = value.index;
             else
                 // otherwise either archtype was empty or entity was indexed last one in array
@@ -98,7 +98,7 @@ namespace DOTS
         void destroyComponents(entity_t value){
             const Entity modified = this->archtypes[value.archtype].destroy(value.index);
             // if it index was filled with other entity
-            if(modified != null_entity_index)
+            if(modified != null_entity)
                 this->entity_value[get_index(modified)].index = value.index;
             else
                 // otherwise either archtype was empty or entity was indexed last one in array
@@ -107,9 +107,9 @@ namespace DOTS
         // charges archtype, recives entity id and components bitmap
         // also updates entity_value
         void _changeComponent(Entity entity, compid_t new_component_bitmap){
+            if(!this->valid(entity)) return;
             compid_t old_component_bitmap;
             const Entity entity_index = get_index(entity);
-            assert(entity_index < this->entity_value.size());
             entity_t old_value = this->entity_value[entity_index];
 
             //empty entities contains invalid archtype id
@@ -169,40 +169,41 @@ namespace DOTS
     public:
         Register(){};
         ~Register(){};
-        
-        // create empty entity
-        Entity create(){
-            Entity result = createEntity();
-            this->entity_value[get_index(result)].index = null_entity_index;
-            return result;
+
+        bool valid(Entity e) const {
+            const Entity index = get_index(e);
+            if(
+                index >= this->entity_value.size() ||
+                this->entity_value[index].version != get_version(e)
+            ) return false;
+            return true;
         }
-        // create entity with given Components
-        template<typename ... Args>
-        Entity create() {
-            compid_t comp_bitmap = (type_bit<Args>() | ...);
-            const archtypeId_t archtype_index = this->getArchtypeIndex(comp_bitmap);
-
+        
+        // create entity
+        Entity create(const compid_t comp_bitmap = 0) {
             const Entity result = createEntity();
-
-            this->entity_value[get_index(result)] = entity_t{ 
-                .index =   this->archtypes[archtype_index].allocate(result), 
-                .archtype = archtype_index, 
-                .version = get_version(result) 
-            };
-            
+            if(comp_bitmap != 0){
+                const archtypeId_t archtype_index = this->getArchtypeIndex(comp_bitmap);
+                this->entity_value[get_index(result)] = entity_t{ 
+                    .index =   this->archtypes[archtype_index].allocate(result), 
+                    .archtype = archtype_index, 
+                    .version = get_version(result) 
+                };
+            }else
+                this->entity_value[get_index(result)].index = null_entity_index;
             return result;
         }
         template<typename ... Args>
         Entity create(const Args& ... Argv) {
-            const Entity result = create<Args...>();
+            const Entity result = create(componentsId<Args...>());
             const entity_t value = this->entity_value[get_index(result)];
             (init_wrapper(value, Argv) , ...);
             return result;
         }
         // destroy a entity entirly
         void destroy(Entity e) {
+            if(!this->valid(e)) return;
             const Entity index = get_index(e);
-            assert(index < this->entity_value.size());
             entity_t& value = this->entity_value[index];
 
             // entity is empty
@@ -214,36 +215,35 @@ namespace DOTS
             free_entity_index = index;
         }
 
-        template<typename T>
-        void addComponent(Entity e){
+        void addComponents(Entity e,compid_t components_bitmap){
+            if(!this->valid(e)) return;
             const Entity index = get_index(e);
-            assert(index < this->entity_value.size());
             entity_t& value = this->entity_value[index];
 
-            compid_t components_bitmap = type_bit<T>();
+            //compid_t components_bitmap = type_bit<T>();
 
-            // empty entities may contain invalid component id
+            // empty entities contains invalid component id
             if(value.index != null_entity_index)
                 components_bitmap |= this->archtypes_id[value.archtype];
 
             _changeComponent(e,components_bitmap);
         }
-        template<typename T>
-        void removeComponent(Entity e){
+
+        void removeComponents(Entity e,compid_t components_bitmap){
+            if(!this->valid(e)) return;
             const Entity index = get_index(e);
-            assert(index < this->entity_value.size());
             entity_t& value = this->entity_value[index];
-            compid_t new_component_bitmap=0;
 
-            if(value.index != null_entity_index)
-                new_component_bitmap = this->archtypes_id[value.archtype] & ~type_bit<T>();
+            if(value.index != null_entity_index){
+                components_bitmap = this->archtypes_id[value.archtype] & ~components_bitmap;
+                _changeComponent(e,components_bitmap);
+            }
 
-            _changeComponent(e,new_component_bitmap);
         }
         template<typename T>
         auto& getComponent(Entity e) const {
+            if(!this->valid(e)) return;
             const Entity index = get_index(e);
-            assert(index < this->entity_value.size());
             const entity_t value = this->entity_value[index];
 
             // empty entity
@@ -252,16 +252,15 @@ namespace DOTS
                   assert(this->archtypes[value.archtype].components[type_id<T>().index]);
             return ((T*)(this->archtypes[value.archtype].components[type_id<T>().index]))[value.index];
         }
-        template<typename T>
-        bool hasComponent(Entity e) {
+        bool hasComponents(const Entity e,const compid_t components_bitmap) const {
+            if(!this->valid(e)) return false;
             const Entity index = get_index(e);
-            assert(index < this->entity_value.size());
             const entity_t value = this->entity_value[index];
 
             // no component
             if(value.index == null_entity_index)
                 return false;
-            return this->archtypes_id[value.archtype] & type_bit<T>();
+            return (this->archtypes_id[value.archtype] & components_bitmap) == components_bitmap;
         }
         // TODO: recives a chunk size, so gives call the callback multiple times 
         // with array of pointers to components plus entity id list and maximum size of arrays as arguments

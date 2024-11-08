@@ -46,10 +46,24 @@ class TransformJob : public DOTS::Job {
         }
     }
 };
+static glm::mat4 pissofshit = glm::mat4{0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5};
+
+class StressJob : public DOTS::Job {
+    DOTS::entity_range next(DOTS::entity_t f){
+        return DOTS::entity_range{.begin=f.index, .end= f.index<16?f.index+1:f.index,.archtype=DOTS::null_archtype_index};
+    }
+    void proc(DOTS::entity_range es){
+        glm::mat4 useless = pissofshit;
+        for (size_t i = 0; i < 0xffffff; i++)
+            useless *= pissofshit;
+        pissofshit=useless;
+    }
+};
 
 class TransformSystem : public DOTS::System {
     void update(){
-        tp->addJob(new TransformJob(),0);
+        tp->addJob(new StressJob(),0);
+        //tp->addJob(new TransformJob(),0);
     }
 public:
     TransformSystem(){
@@ -58,15 +72,15 @@ public:
 
 int main(){
     reg = new DOTS::Register();
-    tp = new DOTS::ThreadPool(1);
+    tp = new DOTS::ThreadPool(8);
     auto v0 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
     auto v1 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
+    reg->addComponent<bool>(v1);
     auto v2 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
     auto v3 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
     auto v4 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
+    reg->removeComponent<bool>(v1);
     auto v5 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
-    // reg->addComponent<bool>(v1);
-    // reg->removeComponent<bool>(v1);
    
     /*reg->iterate<int&>(f1);
     reg->iterate<int>([](std::array<void*,2> arg,size_t chunk_size){
@@ -86,6 +100,8 @@ int main(){
     reg->executeSystems();
     tp->restart();
     tp->wait();
+
+    printf("%g\n",pissofshit[0]);
 
     delete tp;
     delete reg;

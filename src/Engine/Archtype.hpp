@@ -46,13 +46,12 @@ namespace DOTS
         // recives id of entity (index of entity in registers enity array + version)
         // returns a new valid index in this archtype
         entityId_t allocate(const Entity index) {
-            assert(this->size < 0xffffff);
+            assert(this->size < (null_entity_index-1));
             if(this->size < this->capacity){
                 ((Entity*)this->components[32])[this->size] = index;
                 return (entityId_t)(this->size++);
             }else{
                 this->capacity *= 2;
-                assert(this->capacity < null_entity_index);
                 for (size_t i = 0; i < 33; i++)
                     if(components[i]) {
                         //printf("Debug: realloc(%llu >> %llu)\n",old_size,old_size*2);
@@ -83,7 +82,7 @@ namespace DOTS
             if(index != this->size){
                 return ((Entity*)this->components[32])[index];
             }else{
-                return 0xffffff;
+                return null_entity;
             }
         }
         // same as destroy() without calling destructor functions
@@ -100,7 +99,7 @@ namespace DOTS
             if(index != size_buffer){
                 return ((Entity*)this->components[32])[index];
             }else{
-                return 0xffffff;
+                return null_entity;
             }
         }
         // destroy all entities in this given archtype and itself
