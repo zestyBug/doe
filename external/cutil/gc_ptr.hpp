@@ -2,6 +2,8 @@
 #define _GC_PTR_HPP_ 1
 
 #include <exception>
+#include <stdlib.h>
+#include <atomic>
 
 // contain const copy of data, refrence counting CG
 template<typename T>
@@ -134,7 +136,7 @@ counter_ptr<_Ty> make_counter(_Types&&... _Args) {
 
 template<typename Type>
 struct gc_val {
-	long ref_count;
+	std::atomic<long> ref_count;
 	Type value;
 };
 
@@ -143,7 +145,7 @@ class weak_gc_ptr;
 
 // pointer to actual data, refrence counting CG
 template<typename T>
-class gc_ptr {
+class gc_ptr final {
 public:
 	typedef T Type;
 
@@ -182,7 +184,14 @@ public:
 		return *this;
 	}
 
-	virtual ~gc_ptr() {
+	long refCount(){
+		if (this->data)
+			return this->data->ref_count.load(std::memory_order::memory_order_relaxed);
+		else
+			return 0;
+	}
+
+	~gc_ptr() {
 		this->Decrease();
 	}
 
@@ -241,12 +250,11 @@ protected:
 
 	void Increase() const {
 		if (this->data)
-			this->data->ref_count++;
+			this->data->ref_count.fetch_add(1,std::memory_order::memory_order_relaxed);
 	}
 	void Decrease() const {
 		if (this->data) {
-			this->data->ref_count--;
-			if (this->data->ref_count == 0) {
+			if (this->data->ref_count.fetch_sub(1,std::memory_order::memory_order_relaxed) == 0) {
 				this->data->value.~Type();
 				free(this->data);
 				//this->data = nullptr;
@@ -366,23 +374,23 @@ gc_ptr<_Ty> make_gc(_Types&&... _Args) {
 class object_ptr {
 public:
 	object_ptr() {
-		puts("object_ptr::object_ptr()");
+		//puts("object_ptr::object_ptr()");
 		this->__refrence_count = (int32_t*)malloc(sizeof(int32_t));
 		*this->__refrence_count = 1;
 		__alloc();
 	}
 	object_ptr(const object_ptr& obj) {
-		puts("object_ptr::object_ptr(const object_ptr&)");
+		//puts("object_ptr::object_ptr(const object_ptr&)");
 		this->__refrence_count = obj.__refrence_count;
 		(*this->__refrence_count)++;
 	}
 	object_ptr(object_ptr&& obj) {
-		puts("object_ptr::object_ptr(object_ptr&&)");
+		//puts("object_ptr::object_ptr(object_ptr&&)");
 		this->__refrence_count = obj.__refrence_count;
 		obj.__refrence_count = nullptr;
 	}
 	object_ptr& operator = (const object_ptr& obj) {
-		puts("object_ptr::operator = (const object_ptr&)");
+		//puts("object_ptr::operator = (const object_ptr&)");
 		if (this != &obj) {
 			this->__refrence_count = obj.__refrence_count;
 			(*this->__refrence_count)++;
@@ -390,7 +398,7 @@ public:
 		return *this;
 	}
 	object_ptr& operator = (object_ptr&& obj) {
-		puts("object_ptr::operator = (object_ptr&&)");
+		//puts("object_ptr::operator = (object_ptr&&)");
 		if (this != &obj) {
 			this->__refrence_count = obj.__refrence_count;
 			obj.__refrence_count = nullptr;
@@ -398,7 +406,7 @@ public:
 		return *this;
 	}
 	virtual ~object_ptr() {
-		puts("object_ptr::~object_ptr()");
+		//puts("object_ptr::~object_ptr()");
 		if (this->__refrence_count) {
 			(*this->__refrence_count)--;
 			if ((*this->__refrence_count) == 0) {
@@ -411,11 +419,11 @@ public:
 protected:
 	//called before all of contructors
 	virtual void __alloc() {
-		puts("object_ptr::__alloc()");
+		//puts("object_ptr::__alloc()");
 	}
 	//called after all of destructors
 	virtual void __dealloc() {
-		puts("object_ptr::__dealloc()");
+		//puts("object_ptr::__dealloc()");
 	}
 private:
 	int32_t* __refrence_count;

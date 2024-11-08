@@ -18,7 +18,7 @@
 
 
 template<typename T>
-class advancedArray {
+class advancedArray final {
 public:
     typedef int32_t key;    
     const static uint64_t max_size = INT32_MAX;

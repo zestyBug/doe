@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <stdio.h>
 
 template<typename T, size_t S>
 class StaticArray
