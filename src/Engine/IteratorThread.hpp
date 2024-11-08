@@ -38,9 +38,9 @@ class IteratorThread{
     void process(){while(true){
         T1 *val;
         // input_tail must be accessed only in this block
-        if(this->input_tail.block == nullptr)
-            return;
         {
+            if(this->input_tail.block == nullptr)
+                return;
             std::unique_lock<decltype(this->mutex_input)> lock(this->mutex_input);
             if(this->input_tail.block == this->input_head.block
             && this->input_tail.index >= this->input_head.index)
@@ -49,7 +49,7 @@ class IteratorThread{
                 // 2-new block with atleast single value is available
                 // 3-kill signal is sent
                 this->condition_.wait(lock);
-
+                
             if(this->input_tail.block == nullptr)
                 return;
 
@@ -117,15 +117,19 @@ public:
         }
     }
     void submit(const T1 &val){
-        std::lock_guard<decltype(this->mutex_input)> lock(this->mutex_input);
-        if(!this->input_head.block)
-                return;
-        if(this->input_head.index >= this->block_size){
-            this->input_head.block->next = new blockStructure1();
-            this->input_head = index2{0,this->input_head.block->next};
+        {
+            std::lock_guard<decltype(this->mutex_input)> lock(this->mutex_input);
+            if(!this->input_head.block)
+                    return;
+            if(this->input_head.index >= this->block_size){
+                this->input_head.block->next = new blockStructure1();
+                this->input_head.index = 0;
+                this->input_head.block = this->input_head.block->next;
+            }
+            this->input_head.block->value[this->input_head.index] = val;
+            this->input_head.index++;
         }
-        this->input_head.block->value[this->input_head.index] = val;
-        this->input_head.index++;
+        this->condition_.notify_one();
     }
     /// @brief return false if no more callback is available
     /// @param func function pointer required since this class is a helper
@@ -143,9 +147,10 @@ public:
             if(this->output_tail.index >= this->block_size)
             {
                 // technically next block must not be either null nor empty at this point
-                blockStructure1 *next = this->output_tail.block->next;
+                blockStructure2 *next = this->output_tail.block->next;
                 delete this->output_tail.block;
-                this->output_tail = index1{0,next};
+                this->output_tail.index = 0;
+                this->output_tail.block = next;
             }
             buff = std::move(this->output_tail.block->value[this->output_tail.index]);
             this->output_tail.index++;
