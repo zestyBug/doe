@@ -1,7 +1,7 @@
 #if !defined(ENTITYCOMMANDBUFFER_HPP)
 #define ENTITYCOMMANDBUFFER_HPP 1
 
-#include "src/Engine/defs.hpp"
+#include "defs.hpp"
 #include <vector>
 
 namespace DOTS

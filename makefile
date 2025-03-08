@@ -4,7 +4,10 @@ TEST_INCLUDE=-Iexternal -Iinclude
 GCPP=g++
 
 test1:
-	$(GCPP) -I. -I"../external" -I"../include" -g -o bin/ecs.exe test/ecs.cpp $(TEST_INCLUDE) -g0 -O3 -s -Wall -Wconversion -Wextra -Wfatal-errors -Wshadow
+	$(GCPP) -I. -I"../external" -I"../include" -g -o bin/ecs test/ecs.cpp $(TEST_INCLUDE) -g0 -O3 -s -Wall -Wconversion -Wextra -Wfatal-errors -Wshadow
 	
 test2:
-	$(GCPP) -I. -I"../external" -I"../include" -g -o bin/res.exe test/res.cpp $(TEST_INCLUDE) -g3 -Og -Wall -Wconversion -Wextra -Wfatal-errors
+	$(GCPP) -I. -I"../external" -I"../include" -g -o bin/res test/res.cpp $(TEST_INCLUDE) -g3 -Og -Wall -Wconversion -Wextra -Wfatal-errors
+		
+test3:
+	$(GCPP) -I. -I"../external" -I"../include" -g -o bin/queuequeue test/queuequeue.cpp $(TEST_INCLUDE) -g3 -Og -Wall -Wconversion -Wextra -Wfatal-errors

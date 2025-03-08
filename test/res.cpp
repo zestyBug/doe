@@ -1,12 +1,12 @@
-#include "src/Engine/defs.hpp"
-#include "src/Engine/EntityCommandBuffer.hpp"
-#include "src/Engine/ResourceManager.hpp"
+#include "src/Engine/ECS/defs.hpp"
+#include "src/Engine/ECS/EntityCommandBuffer.hpp"
+#include "src/Engine/ResourceManager/ResourceManager.hpp"
 #include "src/Engine/IteratorThread.hpp"
 #include <chrono>
 
 StaticArray<DOTS::comp_info,32> DOTS::rtti;
 
-int main(int argc, char const *argv[])
+int main()
 {
     using namespace std::chrono_literals;
     DOTS::ResourceManager rs;

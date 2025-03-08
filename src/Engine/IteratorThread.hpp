@@ -8,7 +8,8 @@
 namespace DOTS
 {
     
-
+// recives array of data type T1, a function that returns data type T2
+// creates a thread and iterate over over inputs and store results somewhere
 template<typename T1,typename T2>
 class IteratorThread{
     static constexpr size_t block_size = 64;
@@ -82,11 +83,7 @@ public:
     IteratorThread(func_t f){
         this->function = f;
         this->input_tail.block = this->input_head.block = new blockStructure1();
-        this->input_head.index = this->input_tail.index = 0;
         this->output_tail.block = this->output_head.block = new blockStructure2();
-        this->output_head.index = this->output_tail.index = 0;
-        this->input_tail.block->next = nullptr;
-        this->output_tail.block->next = nullptr;
         this->th = std::thread{&IteratorThread::process,this};
     }
     ~IteratorThread(){

@@ -1,6 +1,6 @@
-#include "src/Engine/ThreadPool.hpp"
-#include "src/Engine/Register.hpp"
-#include "src/Engine/System.hpp"
+#include "src/Engine/ECS/ThreadPool.hpp"
+#include "src/Engine/ECS/Register.hpp"
+#include "src/Engine/ECS/System.hpp"
 #include "cutil/Range.hpp"
 #include "cutil/SmallVector.hpp"
 #include "glm/glm.hpp"
@@ -75,14 +75,14 @@ int main(){
     tp = new DOTS::ThreadPool(8);
     auto v0 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
     auto v1 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
-    reg->addComponent<bool>(v1);
+    reg->addComponents(v1,DOTS::componentsId<bool>());
     auto v2 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
     auto v3 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
     auto v4 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
-    reg->removeComponent<bool>(v1);
+    reg->removeComponents(v1,DOTS::componentsId<bool>());
     auto v5 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
    
-    /*reg->iterate<int&>(f1);
+    reg->iterate<int&>(f1);
     reg->iterate<int>([](std::array<void*,2> arg,size_t chunk_size){
         printf("{");
         for (size_t i = 0; i < chunk_size; i++)
@@ -91,7 +91,7 @@ int main(){
         }
         printf("}\n");
     });
-    reg->iterate<int>(f2);*/
+    reg->iterate<int>(f2);
     
    
 

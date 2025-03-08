@@ -1,5 +1,6 @@
 .vscode
 obj
 bin
+dump
 Claymore.*
 !Claymore.cbp
