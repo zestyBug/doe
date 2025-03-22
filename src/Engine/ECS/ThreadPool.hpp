@@ -15,7 +15,7 @@ namespace DOTS
         virtual entity_range next(entity_t) = 0;
         virtual void proc(entity_range) = 0;
     };
-    
+
 
     // thread pool for job system,
     // manages threads and arrays of jobs
@@ -35,7 +35,7 @@ namespace DOTS
         volatile unsigned int group_index = 0;
         volatile unsigned int job_index = 0;
         volatile entityId_t entity_index = 0;
-        volatile archtypeId_t archtype_index = 0;
+        volatile archetypeId_t archetype_index = 0;
 
         void func(){while(true){
                 std::unique_lock lock(this->gmutex);
@@ -47,28 +47,28 @@ namespace DOTS
 
                 if(this->destroy)
                     return;
-                    
+
                 //reached end of groups
                 if(group_index_buffer >= this->group.size())
                     goto sleeping_finished;
-                
+
                 // this group is empty (barrier)
                 else if(this->group[group_index_buffer].size() == 0)
                     goto sleeping;
-                
+
                 // checkin  validity of job_index_buffer is not required:
                 // 1-It begins with 0, and we have checked that group size is not zero
                 // 2-In proccess of increament at the end of every job, validity is checked.
                 else {
 
                     Job *j = this->group[group_index_buffer][job_index_buffer].get();
-                    const entity_range entity_index_buffer2 = j->next(entity_t{.index=this->entity_index, .archtype=this->archtype_index});
+                    const entity_range entity_index_buffer2 = j->next(entity_t{.index=this->entity_index, .archetype=this->archetype_index});
                     //printf("range: %u,%u\n",entity_index_buffer2.begin,entity_index_buffer2.end);
 
                     // reached end of a job
                     if(entity_index_buffer2.begin != entity_index_buffer2.end) {
                         this->entity_index   = entity_index_buffer2.end;
-                        this->archtype_index = entity_index_buffer2.archtype;
+                        this->archetype_index = entity_index_buffer2.archetype;
                         lock.unlock();
                         j->proc(entity_index_buffer2);
                     }else{
@@ -82,7 +82,7 @@ namespace DOTS
                             this->job_index=job_index_buffer;
                         }
                         this->entity_index = 0;
-                        this->archtype_index = 0;
+                        this->archetype_index = 0;
                     }
                 }
                 continue;
@@ -94,7 +94,7 @@ namespace DOTS
                     this->group_index=group_index_buffer+1;
                     this->job_index = 0;
                     // TODO: i think these instruments are pointless, this claim require a analysis.
-                    this->entity_index = 0;this->archtype_index = 0;
+                    this->entity_index = 0;this->archetype_index = 0;
                     this->barrier.notify_all();
                 }
                 continue;

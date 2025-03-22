@@ -1,5 +1,5 @@
-#if !defined(ARCHTYPE_HPP)
-#define ARCHTYPE_HPP
+#if !defined(ARCHETYPE_HPP)
+#define ARCHETYPE_HPP
 
 #include "defs.hpp"
 #include <vector>
@@ -7,119 +7,146 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include "cutil/bitset.hpp"
 
 namespace DOTS
 {
-    
-    struct Archtype final {
-        std::array<void*,33> components;
-        std::array<comp_info,33> components_info;
-        size_t capacity;
-        size_t size;
-        
-        Archtype():capacity(0),size(0){
-            memset(&this->components,0,sizeof(this->components));
+
+    class Archetype final {
+        struct single_component
+        {
+            // if pointer is null, then the given component index
+            // does not exist in the given archetype
+            void* pointer = nullptr;
+            comp_info info;
         };
 
-        void initialize(compid_t types_bitmask,const size_t initSize=4) {
-            this->capacity = initSize;
-            assert(this->capacity > 0);
-
-            for(int bitmask=1,i=0;i < (int)(sizeof(types_bitmask)*8);i++){
-                if(types_bitmask & bitmask)
-                    initialize_component(i);
-                bitmask <<= 1;
+        std::vector<single_component> components;
+        Entity* entity_id=nullptr;
+        size_t size=0;
+        size_t capacity=0;
+        friend class Register;
+        // max entity in an archetype, a register may have different max entity count
+        static constexpr size_t max_entity_count = sizeof(size_t)*8 - 1;
+    public:
+        Archetype(){};
+        Archetype(Archetype&& obj){
+            if(obj.capacity){
+                this->components = std::move(obj.components);
+                this->entity_id = obj.entity_id;
+                this->size = obj.size;
+                this->capacity = obj.capacity;
+                obj.entity_id = nullptr;
+                obj.size = 0;
+                obj.capacity = 0;
             }
-            //printf("Debug: malloc(%llu)\n",this->capacity*sizeof(Entity));
-            this->components[32] = malloc(this->capacity*sizeof(Entity));
-            this->components_info[32] = comp_info{32,sizeof(Entity),nullptr};
-        }
+        };
+        Archetype(const Archetype& obj) = delete;
 
-        void initialize_component(const compid_t type) {
-            const comp_info info = type_id(type);
+        /// @param isize: initial entity list size
+        void initialize(const bitset& types,const size_t isize=4) {
+            this->entity_id = (Entity*)malloc(sizeof(Entity) * isize);
+            this->capacity  = isize;
+            // also zero component entities are alowed
+            const size_t component_count = types.true_size();
+            components.reserve(component_count);
+
+            for(size_t i=0;i < component_count;i++)
+                if(types[i])
+                    this->initialize_component(i);
+        }
+    protected:
+        void initialize_component(const typeid_t id) {
+            const comp_info info = type_id(id);
             const size_t s = info.size * this->capacity;
             //printf("Debug: malloc(%llu)\n",s);
-            this->components[info.index] = malloc(s);
-            this->components_info[info.index] = info;
+            this->components[info.index].pointer = malloc(s);
+            this->components[info.index].info = info;
         }
-
+    public:
         // recives id of entity (index of entity in registers enity array + version)
-        // returns a new valid index in this archtype
-        entityId_t allocate(const Entity index) {
-            assert(this->size < (null_entity_index-1));
+        // returns a new valid index in this archetype
+        entityId_t allocate_entity(const Entity index) {
+            assert(this->size < max_entity_count);
+
             if(this->size < this->capacity){
-                ((Entity*)this->components[32])[this->size] = index;
+                this->entity_id[this->size] = index;
                 return (entityId_t)(this->size++);
             }else{
                 this->capacity *= 2;
-                for (size_t i = 0; i < 33; i++)
-                    if(components[i]) {
+                for (auto& com:components)
+                    if(com.pointer)
                         //printf("Debug: realloc(%llu >> %llu)\n",old_size,old_size*2);
-                        assert(this->components[i] = realloc(this->components[i],this->components_info[i].size * this->capacity));
-                    }
-                this->capacity *= 2;
+                        assert(com.pointer = realloc(com.pointer, com.info.size * this->capacity));
+
+                assert(entity_id = (Entity*)realloc(entity_id, sizeof(Entity) * this->capacity));
                 // TODO: covers wierd scenarios
-                return allocate(index);
+                return allocate_entity(index);
             }
         }
 
         // recives index in components array
         // returns id of entity that filled the empty space in array or invalid index
-        Entity destroy(const entityId_t index) {
+        Entity destroy_entity(const entityId_t index) {
             assert(this->size > index);
+
             this->size--;
-            for (size_t i = 0; i < 33; i++)
-                if(components[i]){
-                    const comp_info info = this->components_info[i];
-                    char * const ptr = (char*)(components[i]) + (index * info.size);
-                    if(info.destructor)
-                       info.destructor(ptr);
-                    if(index != this->size){
-                        char * const last = (char*)(this->components[i]) + (this->size * info.size);
-                        memcpy(ptr,last,info.size);
+
+
+            for (auto& com:components)
+                    if(com.pointer){
+                        char * const ptr = (char*)(com.pointer) + (index * com.info.size);
+                        if(com.info.destructor)
+                            com.info.destructor(ptr);
+                        if(index != this->size){
+                            char * const last = (char*)(com.pointer) + (this->size * com.info.size);
+                            memcpy(ptr,last,com.info.size);
+                        }
                     }
-                }
+
             if(index != this->size){
-                return ((Entity*)this->components[32])[index];
+                return (this->entity_id[index] = this->entity_id[this->size]);
             }else{
-                return null_entity;
+                return Entity::null;
             }
         }
+    protected:
         // same as destroy() without calling destructor functions
         Entity destroy2(const entityId_t index) {
             assert(this->size > index);
             this->size--;
-            const size_t size_buffer = this->size;
-            if(index != size_buffer)
-                for (size_t i = 0; i < 33; i++)
-                    if(char * const ptr = (char*)(this->components[i]);ptr){
-                            const size_t comonent_size = this->components_info[i].size;
-                            memcpy(ptr+(index*comonent_size) , ptr+(size_buffer*comonent_size) , comonent_size);
+            for (auto& com:components)
+                if(com.pointer){
+                    char * const ptr = (char*)(com.pointer) + (index * com.info.size);
+                    if(index != this->size){
+                        char * const last = (char*)(com.pointer) + (this->size * com.info.size);
+                        memcpy(ptr,last,com.info.size);
                     }
-            if(index != size_buffer){
-                return ((Entity*)this->components[32])[index];
+                }
+            if(index != this->size){
+                return (this->entity_id[index] = this->entity_id[this->size]);
             }else{
-                return null_entity;
+                return Entity::null;
             }
         }
-        // destroy all entities in this given archtype and itself
+        // destroy all entities in this given archetype and itself
         void destroy(){
-            for (size_t comp = 0; comp < 33; comp++)
-                if(this->components[comp] != nullptr) {
-                    //printf("Debug: free(%llu)\n",this->components_info[comp].size * this->capacity);
-                    if(this->components_info[comp].destructor)
-                        for (size_t i = 0; i < this->size; i++)
-                        {
-                            void *ptr = (char*)(this->components[comp]) + (this->components_info[comp].size * i);
-                            this->components_info[comp].destructor(ptr);
-                        }
-                    free(this->components[comp]);
+            for (auto& com:components)
+                if(com.pointer){
+                    if(com.info.destructor)
+                        for(size_t i = 0; i < this->size; i++)
+                            com.info.destructor((char*)(com.pointer) + (i * com.info.size));
+                    free(com.pointer);
                 }
-            memset(this->components.data(),0,sizeof(this->components));
+            components.clear();
+            if(this->entity_id)
+                free(this->entity_id);
+            this->entity_id = nullptr;
             this->size=0;
             this->capacity=0;
         }
-        ~Archtype(){
+    public:
+        ~Archetype(){
             this->destroy();
         }
     };

@@ -1,6 +1,6 @@
-#include "src/Engine/ECS/ThreadPool.hpp"
-#include "src/Engine/ECS/Register.hpp"
-#include "src/Engine/ECS/System.hpp"
+#include "Engine/ECS/ThreadPool.hpp"
+#include "Engine/ECS/Register.hpp"
+#include "Engine/ECS/System.hpp"
 #include "cutil/Range.hpp"
 #include "cutil/SmallVector.hpp"
 #include "glm/glm.hpp"
@@ -14,6 +14,7 @@ DOTS::ThreadPool *tp;
 
 void f1(DOTS::Entity, int& v1){
     v1 = 69;
+    printf("%p\n",&v1);
 }
 
 void f2(DOTS::Entity, int v1){
@@ -38,10 +39,10 @@ class TransformJob : public DOTS::Job {
     void proc(DOTS::entity_range es){
         if(es.end > es.begin){
             const size_t count = es.end - es.begin;
-            Hierarchy *ptr = reg->getComponent2<Hierarchy>(DOTS::entity_t{.index=es.begin,.archtype=es.archtype});
+            Hierarchy *ptr = reg->getComponent2<Hierarchy>(DOTS::entity_t{.index=es.begin,.archetype=es.archetype});
             printf("{");
             for (size_t i = 0; i < count; i++)
-                printf("%u: %d, ",es.begin+i,ptr[i].parent);
+                printf("%u: %u, ",es.begin+i,(uint32_t)ptr[i].parent);
             printf("}\n");
         }
     }
@@ -50,7 +51,7 @@ static glm::mat4 pissofshit = glm::mat4{0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
 
 class StressJob : public DOTS::Job {
     DOTS::entity_range next(DOTS::entity_t f){
-        return DOTS::entity_range{.begin=f.index, .end= f.index<16?f.index+1:f.index,.archtype=DOTS::null_archtype_index};
+        return DOTS::entity_range{.begin=f.index, .end= f.index<16?f.index+1:f.index,.archetype=DOTS::null_archetype_index};
     }
     void proc(DOTS::entity_range es){
         glm::mat4 useless = pissofshit;
@@ -71,18 +72,27 @@ public:
 };
 
 int main(){
+    {
+        bitset b1;
+        bitset b2;
+        b1.set(4);
+        b2.set(7);
+        //b.resize(10);
+        printf("res: %d\n",b1.and_equal(b2));
+
+    }
     reg = new DOTS::Register();
     tp = new DOTS::ThreadPool(8);
-    auto v0 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
-    auto v1 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
-    reg->addComponents(v1,DOTS::componentsId<bool>());
-    auto v2 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
-    auto v3 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
+    auto v0 = reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
+    auto v1 = reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
+    reg->addComponents(v1,DOTS::componentsBitmask<bool>());
+    auto v2 = reg->create<int>(0);
+    auto v3 = reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
     auto v4 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
-    reg->removeComponents(v1,DOTS::componentsId<bool>());
+    reg->removeComponents(v1,DOTS::componentsBitmask<bool>());
     auto v5 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
-   
-    reg->iterate<int&>(f1);
+
+    reg->iterate(f1);
     reg->iterate<int>([](std::array<void*,2> arg,size_t chunk_size){
         printf("{");
         for (size_t i = 0; i < chunk_size; i++)
@@ -92,16 +102,6 @@ int main(){
         printf("}\n");
     });
     reg->iterate<int>(f2);
-    
-   
-
-    tp->wait();
-    reg->addSystem(new TransformSystem());
-    reg->executeSystems();
-    tp->restart();
-    tp->wait();
-
-    printf("%g\n",pissofshit[0]);
 
     delete tp;
     delete reg;

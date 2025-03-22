@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Claymore" />
+		<Option makefile="makefile" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/Claymore" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g3 -O0" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/Claymore" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+			<Add directory="src" />
+			<Add directory="external" />
+		</Compiler>
+		<Unit filename="external/cutil/QueueQueue.hpp" />
+		<Unit filename="external/cutil/SmallVector.hpp" />
+		<Unit filename="external/cutil/StaticArray.hpp" />
+		<Unit filename="external/cutil/aStack.hpp" />
+		<Unit filename="external/cutil/advancedArray.h" />
+		<Unit filename="external/cutil/advancedQueue.hpp" />
+		<Unit filename="external/cutil/bitset.hpp" />
+		<Unit filename="external/cutil/gc_ptr.hpp" />
+		<Unit filename="external/cutil/range.hpp" />
+		<Unit filename="external/cutil/semaphore.hpp" />
+		<Unit filename="external/cutil/span.hpp" />
+		<Unit filename="external/cutil/string_view.hpp" />
+		<Unit filename="external/entt/entt2.hpp" />
+		<Unit filename="src/Engine/ECS/Archtype.hpp" />
+		<Unit filename="src/Engine/ECS/EntityCommandBuffer.hpp" />
+		<Unit filename="src/Engine/ECS/Register.hpp" />
+		<Unit filename="src/Engine/ECS/System.hpp" />
+		<Unit filename="src/Engine/ECS/ThreadPool.hpp" />
+		<Unit filename="src/Engine/ECS/defs.hpp" />
+		<Unit filename="test/ecs.cpp" />
+		<Extensions>
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
