@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <bits/algorithmfwd.h>
-
+#include <stdexcept>
 class bitset
 {
 private:
@@ -54,13 +54,13 @@ public:
         return *this;
     }
     bool operator [] (size_t index) const {
-        if(index < 0 || size == 0) return 0;
+        if(/*index < 0 || */size == 0) return 0;
         if(index >= capacity()) return 0;
         const unsigned char *buffer = this->data + (index>>3);
         return (*buffer >> (index & 0b111)) & 1;
     }
     void set(const size_t index, const bool val){
-        if(index < 0) return;
+        //if(index < 0) return;
         if(index >= capacity())
             this->resize((index>>3) + 1);
         unsigned char *pointer = this->data + (index>>3);
@@ -73,7 +73,7 @@ public:
     }
     template<typename T>
     void set(const T value){
-        unsigned char min_size = 0;
+        size_t min_size = 0;
         for (size_t i = 0; i < sizeof(T); i++)
             if( value & (0xFF<<(8*i)) )
                 min_size = i+1;
@@ -220,5 +220,132 @@ public:
         puts("");
     }
 };
+
+
+
+
+
+
+
+
+
+template<size_t BYTE>
+class bitset_static
+{
+private:
+    // data is stored like this (numbers represent index of bit)
+    // 7 6 5 4 3 2 1 0 - 15 14 13 12 11 10 9 8 - 23 22 21 20 19 18 17 16 - ...
+    unsigned char data[BYTE];
+public:
+    bitset_static() = default;
+    ~bitset_static() = default;
+    bitset_static(const bitset_static& src) = default;
+    bitset_static(bitset_static&& src) = default;
+    bitset_static& operator = (const bitset_static& src) = default;
+    bitset_static& operator = (bitset_static&& src) = default;
+
+    bool operator [] (size_t index) const {
+        if(index >= capacity())
+            throw std::out_of_range("");
+        return ( this->data[index>>3] >> (index & 0b111)) & 1;
+    }
+    void set(const size_t index, const bool val){
+        if(index >= capacity())
+            throw std::out_of_range("");
+        if(val == false)
+            this->data[index>>3] &= (unsigned char) ~(1 << (index & 0b111));
+        else
+            this->data[index>>3] |= 1 << (index & 0b111);
+    }
+    template<typename T>
+    void set(const T value){
+        unsigned char min_size = std::min(BYTE,sizeof(T));
+        for (size_t i = 0; i < min_size; i++)
+            this->data[i] = (value >> (8*i)) & 0xFF;
+    }
+    template<typename T>
+    T get() const {
+        const unsigned char min_size = std::min(BYTE,sizeof(T));
+        T value = 0;
+        for(size_t i = 0; i < min_size; i++)
+            value |= this->data[i] << (8*i);
+        return value;
+    }
+    // set every bit to 0
+    void clear(void){
+        memset(this->data,0,BYTE);
+    }
+    // number bit can hold
+    size_t capacity() const {
+        return BYTE * 8;
+    }
+    bool all_zero() const {
+        for (size_t i = 0; i < BYTE; i++)
+            if(this->data[i])
+                return false;
+        return true;
+    }
+protected:
+    struct bitset_iterator {
+        size_t bit_index = 0;
+        const unsigned char * data;
+
+        bool operator*(){
+            return (this->data[this->bit_index>>3] >> (this->bit_index & 0b111)) & 1;
+        }
+        inline void operator++(){
+            this->bit_index++;
+        }
+        inline bool operator!=(bitset_iterator end){
+            return bit_index < end.bit_index ? true : false;
+        }
+    };
+public:
+    // note: Shouldnt iterator iterate over 1 bit index?
+    bitset_iterator begin() const {return bitset_iterator{0,this->data};}
+    bitset_iterator end()   const {return bitset_iterator{this->capacity(),this->data};}
+
+    inline bool operator==(const bitset_static & set) const {
+        if(!memcmp(this->data,set.data,BYTE))
+            return true;
+        return false;
+    }
+    inline bool operator!=(const bitset_static & set) const {
+        return !(*this == set);
+    }
+    bitset_static operator | (const bitset_static& val) const {
+        bitset_static ret;
+        for (size_t i = 0; i < BYTE; i++)
+                ret.data[i]= this->data[i] | val.data[i];
+        return ret;
+    }
+    bitset_static operator & (const bitset_static& val) const {
+        bitset_static ret;
+        for (size_t i = 0; i < BYTE; i++)
+            ret.data[i]= this->data[i] & val.data[i];
+        return ret;
+    }
+    // this & ~val
+    bitset_static and_not(const bitset_static& val) const {
+        bitset_static ret;
+        for (size_t i = 0; i < BYTE; i++)
+                ret.data[i]= this->data[i] & ~(val.data[i]);
+        return ret;
+    }
+    // this & val == this
+    bool and_equal(const bitset_static& val) const {
+        for (size_t i = 0; i < BYTE; i++)
+            if((this->data[i] & val.data[i]) != this->data[i])
+                return false;
+        return true;
+    }
+    void debug() const {
+        for(bool bit:*this){
+            printf("%s",bit?"1":"0");
+        }
+        puts("");
+    }
+};
+
 
 #endif // BITSET_HPP

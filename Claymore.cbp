@@ -30,11 +30,19 @@
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-Wshadow" />
+			<Add option="-Weffc++" />
+			<Add option="-Wfatal-errors" />
+			<Add option="-Wextra" />
 			<Add option="-Wall" />
+			<Add option="-m64" />
 			<Add option="-fexceptions" />
 			<Add directory="src" />
 			<Add directory="external" />
 		</Compiler>
+		<Linker>
+			<Add option="-m64" />
+		</Linker>
 		<Unit filename="external/cutil/QueueQueue.hpp" />
 		<Unit filename="external/cutil/SmallVector.hpp" />
 		<Unit filename="external/cutil/StaticArray.hpp" />
@@ -48,7 +56,7 @@
 		<Unit filename="external/cutil/span.hpp" />
 		<Unit filename="external/cutil/string_view.hpp" />
 		<Unit filename="external/entt/entt2.hpp" />
-		<Unit filename="src/Engine/ECS/Archtype.hpp" />
+		<Unit filename="src/Engine/ECS/Archetype.hpp" />
 		<Unit filename="src/Engine/ECS/EntityCommandBuffer.hpp" />
 		<Unit filename="src/Engine/ECS/Register.hpp" />
 		<Unit filename="src/Engine/ECS/System.hpp" />

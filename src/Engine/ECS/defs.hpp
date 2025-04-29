@@ -13,24 +13,31 @@ namespace DOTS
     typedef uint32_t typeid_t;
     struct comp_info {
         // a unique id, starts from 0
-        typeid_t index;
+        typeid_t index=0;
         uint32_t size = 0;
         // destructor function
         void (*destructor)(void*) = nullptr;
     };
+    // must be multiply of 2
+    // this value is hard coded means
+    // modification in binary file is much harder
+    // so new component needs new version of compiled engine
+    // also the more component, the more memory is allocated exponentially
+    #define COMPOMEN_COUNT 32
     // contains runtime typeinfo,
     // technically array can be erased to reassign type ids
     // unless values are stored somewhere and spreaded
     // WARN: dont access this directly
-    extern StaticArray<comp_info,32> rtti;
+    extern StaticArray<comp_info,COMPOMEN_COUNT> rtti;
+    using archtype_bitset = bitset_static<COMPOMEN_COUNT/8>;
 
     // only use purpose is as index of archetype in archetype list
-    using archetypeId_t = uint16_t;
+    using archetypeIndex_t = uint16_t;
     // only use purpose is as index of entity in archetype array
-    using entityId_t = uint32_t;
+    using entityIndex_t = uint32_t;
     using version_t = uint8_t;
 
-    constexpr archetypeId_t null_archetype_index = 0xffff;
+    constexpr archetypeIndex_t null_archetype_index = 0xffff;
 
     struct Entity{
         constexpr Entity() :value{0xffffff}{}
@@ -74,9 +81,9 @@ namespace DOTS
 
     struct entity_t {
         // index in Archetype::components
-        entityId_t index;
+        entityIndex_t index;
         // NOTE: use the archetype index to validate an entity value
-        archetypeId_t archetype = null_archetype_index;
+        archetypeIndex_t archetype = null_archetype_index;
         version_t version = 0;
 
         entity_t() = default;
@@ -92,9 +99,8 @@ namespace DOTS
     };
 
     struct entity_range {
-        entityId_t begin;
-        entityId_t end;
-        archetypeId_t archetype;
+        archetypeIndex_t archetype_index;
+        size_t chunk_index;
     };
 
     [[nodiscard]] comp_info _new_id(uint32_t size, void (*destructor)(void*)) noexcept
@@ -124,8 +130,8 @@ namespace DOTS
     }
 
     template<typename...Args>
-    bitset componentsBitmask(){
-        bitset ret;
+    archtype_bitset componentsBitmask(){
+        archtype_bitset ret{};
         (ret.set(type_id<Args>().index,1) , ...);
         return ret;
     }

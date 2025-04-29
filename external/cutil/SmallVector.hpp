@@ -7,7 +7,7 @@
 
 template<typename T,unsigned int S>
 class SmallVector{
-    unsigned int _capacity, _size;
+    unsigned int _size=0,_capacity=0;
     union block
     {
         T small[S];
@@ -18,6 +18,22 @@ public:
     SmallVector():_capacity{S}, _size{0} {
         //
     }
+    SmallVector(const SmallVector &obj):_size{obj._size},_capacity{obj._capacity}
+    {
+        if(obj._capacity <= S){
+            memcpy(&this->data,&obj.data,obj._size*sizeof(T));
+        }else{
+            this->data.large = (T*)malloc(obj._capacity*sizeof(T));
+            memcpy(&this->data.large,&obj.data.large,obj._size*sizeof(T));
+        }
+    }
+    SmallVector(SmallVector &&obj){
+        this->_size = obj._size;
+        this->_capacity =  obj._capacity;
+        memcpy(&this->data,&obj.data,sizeof(this->data));
+        obj._size = 0;
+        obj._capacity = S;
+    };
     SmallVector(unsigned int count,const T& val = T()):_size{count} {
         if(count > 0){
             if(count <= S){

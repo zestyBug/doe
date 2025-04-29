@@ -34,8 +34,8 @@ namespace DOTS
         volatile unsigned int waiting_threads = 0;
         volatile unsigned int group_index = 0;
         volatile unsigned int job_index = 0;
-        volatile entityId_t entity_index = 0;
-        volatile archetypeId_t archetype_index = 0;
+        volatile entityIndex_t entity_index = 0;
+        volatile archetypeIndex_t archetype_index = 0;
 
         void func(){while(true){
                 std::unique_lock lock(this->gmutex);
