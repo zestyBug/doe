@@ -65,6 +65,7 @@ namespace DOTS
         static constexpr uint32_t max_entity_count= 0xfffffe;
         // entity id (index in entity_Value array)
         static constexpr uint32_t null = 0xffffff;
+        // simply checks entity index validity
         inline bool valid() const {
             return this->index() < max_entity_count;
         }
@@ -94,7 +95,8 @@ namespace DOTS
             return this->archetype < null_archetype_index;
         }
         inline void validate() const {
-            assert(this->valid());
+            if(!this->valid())
+                throw std::runtime_error("an entity with invalid index");
         }
     };
 

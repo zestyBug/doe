@@ -80,7 +80,7 @@ public:
         resize(min_size);
         clear();
         for (size_t i = 0; i < min_size; i++)
-            this->data[i] = (value >> (8*i)) & 0xFF;
+            this->data[i] = (unsigned char)((value >> (8*i)) & 0xFF);
     }
     template<typename T>
     T get() const {
@@ -261,7 +261,7 @@ public:
     void set(const T value){
         unsigned char min_size = std::min(BYTE,sizeof(T));
         for (size_t i = 0; i < min_size; i++)
-            this->data[i] = (value >> (8*i)) & 0xFF;
+            this->data[i] = (unsigned char)((value >> (8*i)) & 0xFF);
     }
     template<typename T>
     T get() const {

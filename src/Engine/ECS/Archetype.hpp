@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <vector>
 #include <array>
+#include <utility>
 #include "defs.hpp"
 #if !defined(ARCHETYPE_HPP)
 #define ARCHETYPE_HPP
@@ -15,7 +16,7 @@ namespace DOTS
             size_t count = 0;
             chunk(const size_t s){
                 this->memory = malloc(s);
-                printf("New memorypool at: %p\n",this->memory);
+                //printf("New memorypool at: %p\n",this->memory);
             }
             chunk(const chunk& ) = delete;
             chunk& operator = (const chunk& ) = delete;
@@ -36,15 +37,11 @@ namespace DOTS
             }
             ~chunk(){
                 if(this->memory){
-                    printf("free(%p)\n",this->memory);
+                    //printf("free(%p)\n",this->memory);
                     free(this->memory);
                     this->memory = nullptr;
                 }
             }
-        };
-        struct component_info {
-            comp_info info{};
-            size_t offset = 0;
         };
         friend class Register;
         static constexpr size_t CHUNK_SIZE = 4096;
@@ -54,17 +51,15 @@ namespace DOTS
         size_t chunk_capacity = 0;
         // note: chunks are united, means
         // if we remove a entity for a random chunk,
-        // last entity on lastg chunk will be
+        // last entity on last chunk will be
         // filled in it place so iterating more efficiently.
         std::vector<chunk> chunks{};
+        std::vector<Entity> entities_id{};
         // list of information about every component that exist in chunks
         // index is sorted as same sort as components in chunks
-        std::vector<component_info> components_info{};
-        std::vector<Entity> entities_id{};
-        // bit index ==> component offset
-        // first check if component extst using components_info,
-        // may contain ivalid number if component does not exist.
-        std::array<size_t,COMPOMEN_COUNT> component_offset{};
+        // optimal for 16 component per archtype or less
+        // otherwise use a std::map
+        std::vector<std::pair<typeid_t,size_t>> components_index{};
     public:
         Archetype(/* args */) = default;
         Archetype(const Archetype&) = delete;
@@ -100,20 +95,15 @@ namespace DOTS
                 if(this->chunk_capacity < 1)
                     throw std::length_error("LARGE COMPONENTS! X(");
                 this->chunks.reserve(8);
-                this->components_info.reserve(component_count);
-                //this->component_offset.resize(last_bit);
+                this->components_index.reserve(component_count);
                 this->entities_id.reserve(8);
             }
             {
                 size_t size_sum = 0;
                 for(size_t i=0;i < types.capacity();i++)
                     if(types[i]){
-                        component_info cinfo;
-                        cinfo.info=rtti[i];
-                        cinfo.offset=size_sum*this->chunk_capacity;
-                        size_sum += cinfo.info.size;
-                        this->components_info.emplace_back(cinfo);
-                        component_offset.at(i) = cinfo.offset;
+                        this->components_index.emplace_back(i,size_sum*this->chunk_capacity);
+                        size_sum += rtti[i].size;
                     }
             }
         }
@@ -123,8 +113,8 @@ namespace DOTS
         void destroy(){
             for(chunk &ck:chunks)
             {
-                for(const auto& c_info:this->components_info){
-                    const auto info = c_info.info;
+                for(const auto& c_info:this->components_index){
+                    const auto info = rtti[c_info.first];
                     uint8_t *mem = (uint8_t*)ck.memory;
                     const uint8_t *dest = (uint8_t *)mem + ck.count * info.size;
                     for(;mem<dest;mem+=info.size)
@@ -134,10 +124,9 @@ namespace DOTS
                 ck.count = 0;
             }
             this->chunk_capacity = 0;
-            this->chunks = std::vector<chunk>();
-            this->components_info = std::vector<component_info>();
-            //this->component_offset = std::vector<size_t>();
-            this->entities_id = std::vector<Entity>();
+            this->chunks.clear();
+            this->components_index.clear();
+            this->entities_id.clear();
         }
 
         entityIndex_t createEntity(Entity e){
@@ -154,16 +143,20 @@ namespace DOTS
             last_chk->count++;
             return res;
         }
+        // remove an entity from archtype and returns entity value of 
+        // the entity that has replaced it
         Entity destroyEntity(entityIndex_t entity_index, bool destruction = true){
-            assert(entity_index < this->entities_id.size());
-            assert(0 < this->chunks.size());
+            if(entity_index >= this->entities_id.size())
+                throw std::runtime_error("deleting entity that doesnt exist");
+            if(0 >= this->chunks.size())
+                throw std::runtime_error("delete operation on an empty archtype");
 
 
             entityIndex_t in_chunk_index;
             uint8_t* old_chk_memory;
             {
-                chunk& old_chk = this->chunks.at(getChunkIndex(entity_index));
-                in_chunk_index = getEntityIndex(entity_index);
+                chunk& old_chk = this->chunks.at(this->getChunkIndex(entity_index));
+                in_chunk_index = this->getEntityIndex(entity_index);
                 assert(in_chunk_index < old_chk.count && "destroying already destroyed entity! see version for more info.");
                 old_chk_memory = (uint8_t*) old_chk.memory;
             }
@@ -187,12 +180,12 @@ namespace DOTS
             //const entityIndex_t last_index = (this->chunks.size()-1) * this->chunk_capacity + last_chk.count;
 
             if(destruction)
-                for(size_t i=0;i<this->components_info.size();i++)
+                for(size_t i=0;i<this->components_index.size();i++)
                 {
-                    const component_info info = this->components_info.at(i);
-                    uint8_t * const ptr1 = old_chk_memory + info.offset + (info.info.size * in_chunk_index);
-                    if(info.info.destructor)
-                        info.info.destructor(ptr1);
+                    const auto& info = this->components_index[i];
+                    uint8_t * const ptr1 = old_chk_memory + info.second + (rtti[info.first].size * in_chunk_index);
+                    if(rtti[info.first].destructor)
+                        rtti[info.first].destructor(ptr1);
                 }
 
 
@@ -201,15 +194,15 @@ namespace DOTS
 
             // if last entity is the deleted entity
             if(last_chk_memory == old_chk_memory && last_in_chunk_index == in_chunk_index){
-                last_entity = INVALID_INDEX;
+                last_entity = Entity();
                 goto END;
             }
 
-            for(size_t i=0;i<this->components_info.size();i++){
-                const component_info info = this->components_info.at(i);
-                      uint8_t *ptr1 = old_chk_memory  + info.offset + (info.info.size*     in_chunk_index);
-                const uint8_t *ptr2 = last_chk_memory + info.offset + (info.info.size*last_in_chunk_index);
-                memcpy(ptr1,ptr2,info.info.size);
+            for(size_t i=0;i<this->components_index.size();i++){
+                const auto& info = this->components_index.at(i);
+                      uint8_t *ptr1 = old_chk_memory  + info.second + (rtti[info.first].size*     in_chunk_index);
+                const uint8_t *ptr2 = last_chk_memory + info.second + (rtti[info.first].size*last_in_chunk_index);
+                memcpy(ptr1,ptr2,rtti[info.first].size);
             }
             this->entities_id.at(entity_index) = last_entity;
 
@@ -228,7 +221,8 @@ namespace DOTS
             chunk& chk = this->chunks.at(getChunkIndex(entity_index));
             const entityIndex_t index = getEntityIndex(entity_index);
             assert(index < chk.count && "destroying already destroyed entity! see version for more info.");
-            return (uint8_t*)chk.memory + this->component_offset.at(component_id) + rtti[component_id].size*index;
+            
+            return (uint8_t*)chk.memory + this->getOffset(component_id) + rtti[component_id].size*index;
         }
         // requesting component that does not exist results undefined behaviour
         template<typename T>
@@ -237,12 +231,19 @@ namespace DOTS
             chunk& chk = this->chunks.at(getChunkIndex(entity_index));
             const entityIndex_t index = getEntityIndex(entity_index);
             assert(index < chk.count && "destroying already destroyed entity! see version for more info.");
-            return (T*)((uint8_t*)chk.memory + this->component_offset.at(type_id<T>().index))+ index;
+            return (T*)((uint8_t*)chk.memory + this->getOffset(type_id<T>().index))+ index;
         }
         ~Archetype(){
             this->destroy();
         }
     protected:
+        size_t getOffset(typeid_t id)const {
+            for(const auto& pair:this->components_index){
+                if(pair.first == id)
+                    return pair.second;
+            }
+            throw std::out_of_range("component id doesnot exist whitin this archtype");
+        }
         // the entity chunk index
         inline entityIndex_t getChunkIndex(const entityIndex_t i) const {
             return (entityIndex_t)((size_t)i / this->chunk_capacity);

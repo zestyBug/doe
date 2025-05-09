@@ -15,7 +15,7 @@ class SmallVector{
         block():large{nullptr}{}
     } data;
 public:
-    SmallVector():_capacity{S}, _size{0} {
+    SmallVector():_size{0},_capacity{S} {
         //
     }
     SmallVector(const SmallVector &obj):_size{obj._size},_capacity{obj._capacity}

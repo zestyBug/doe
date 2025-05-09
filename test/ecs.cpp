@@ -76,22 +76,50 @@ int main(){
     auto v0 = reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
     //reg->destroy(v0);
 
+    size_t rand_seed = 1;
 
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
+    for(size_t j=0;j<2;j++){
+        std::vector<DOTS::Entity> buffer;
+        buffer.reserve(512);
 
+        for(size_t i=0;i<64;i++){
+            rand_seed = (rand_seed ^ 0xDeadBee0BedBeaf) * 0x17 + 0xBADFEED;
+            uint8_t buff = rand_seed & 0xff;
+            if(buff&0x111)
+                buffer.emplace_back(reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0));
+            else if(buff&0x11)
+                buffer.emplace_back(reg->create<Hierarchy,float>(Hierarchy{},0.0f));
+            else
+                buffer.emplace_back(reg->create<Hierarchy>(Hierarchy{}));
+        }
+
+        for(size_t i=0;i<32;i++){
+            rand_seed = (rand_seed ^ 0xDeadBee0BedBeaf) * 0x17 + 0xBADFEED;
+            uint8_t buff = rand_seed & 0xff;
+            if(buff&0x111)
+                buffer.emplace_back(reg->create<Hierarchy,float>(Hierarchy{},0.0f));
+            else if(buff&0x1)
+                buffer.emplace_back(reg->create<Hierarchy>(Hierarchy{}));
+            else{
+                reg->destroy(buffer.back());
+                buffer.pop_back();
+            }
+        }
+
+        for(size_t i=0;i<32;i++){
+            rand_seed = (rand_seed ^ 0xDeadBee0BedBeaf) * 0x17 + 0xBADFEED;
+            uint8_t buff = rand_seed & 0xff;
+            // if(buff&0x111)
+            //     reg->addComponents(buffer.at(i),DOTS::componentsBitmask<bool>());
+            // if(buff&0x1)
+            //     reg->removeComponents(buffer.at(i),DOTS::componentsBitmask<Hierarchy>());
+        }
+
+        for(const auto v:buffer){
+            reg->destroy(v);
+        }
+    }
+    
     v0 = reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
     auto v1 = reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
     reg->addComponents(v1,DOTS::componentsBitmask<bool>());
@@ -121,5 +149,5 @@ int main(){
 
     //delete tp;
     delete reg;
-    printf("done\n");
+    //printf("done\n");
 }
