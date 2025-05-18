@@ -6,7 +6,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
-
+#include "cutil/prototype.hpp"
 StaticArray<DOTS::comp_info,32> DOTS::rtti;
 DOTS::Register *reg;
 //DOTS::ThreadPool *tp;
@@ -50,6 +50,7 @@ static glm::mat4 pissofshit = glm::mat4{0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,
 //         pissofshit=useless;
 //     }
 // };
+
 
 class TransformSystem : public DOTS::System {
     void update(){
@@ -107,8 +108,8 @@ int main(){
         }
 
         for(size_t i=0;i<32;i++){
-            rand_seed = (rand_seed ^ 0xDeadBee0BedBeaf) * 0x17 + 0xBADFEED;
-            uint8_t buff = rand_seed & 0xff;
+            //rand_seed = (rand_seed ^ 0xDeadBee0BedBeaf) * 0x17 + 0xBADFEED;
+            //uint8_t buff = rand_seed & 0xff;
             // if(buff&0x111)
             //     reg->addComponents(buffer.at(i),DOTS::componentsBitmask<bool>());
             // if(buff&0x1)
@@ -121,13 +122,14 @@ int main(){
     }
     
     v0 = reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    auto v1 = reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
-    reg->addComponents(v1,DOTS::componentsBitmask<bool>());
+    auto v1 = reg->create<GlobalTransform,Hierarchy>(GlobalTransform{},Hierarchy{});
+    reg->addComponents<int>(v1,0);
     auto v2 = reg->create<int>(0);
     auto v3 = reg->create<Hierarchy,GlobalTransform,int>(Hierarchy{},GlobalTransform{},0);
     auto v4 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
-    reg->removeComponents(v1,DOTS::componentsBitmask<bool>());
-    auto v5 = reg->create<Hierarchy,GlobalTransform>(Hierarchy{},GlobalTransform{});
+    reg->removeComponents<bool>(v1);
+    auto v5 = reg->create<Hierarchy,GlobalTransform,prototype>(Hierarchy{},GlobalTransform{},prototype{});
+    //reg->destroy(v5);
 
     reg->iterate<int>([](std::array<void*,1> arg,DOTS::Entity*,size_t chunk_size){
         for (size_t i = 0; i < chunk_size; i++)
@@ -144,6 +146,13 @@ int main(){
             printf("%d, ",((int*)arg[0])[i]);
         }
         printf("}\n");
+    });
+
+    reg->iterate<prototype>([](std::array<void*,1> arg,DOTS::Entity*,size_t chunk_size){
+        for (size_t i = 0; i < chunk_size; i++)
+        {
+            printf("prototype: %p\n",(prototype*)arg[0]+i);
+        }
     });
 
 

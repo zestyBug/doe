@@ -48,12 +48,14 @@ public:
             this->_data.array[this->count].~Type();
         }
     }
-    inline Type& operator[](size_t index) {
+    inline Type& at(size_t index) {
         assert(S > index);
         return this->_data.array[index];
     }
+    inline Type& operator[](size_t index) {
+        return this->_data.array[index];
+    }
     inline const Type& operator[](size_t index) const {
-        assert(S > index);
         return this->_data.array[index];
     }
     inline void pop(size_t index) {

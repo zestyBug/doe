@@ -1,6 +1,7 @@
 #ifndef SPAN_HPP_INCLUDED
 #define SPAN_HPP_INCLUDED
 
+#include <vector>
 
 template<typename _Type>
 class span
@@ -21,7 +22,9 @@ public:
 	using reverse_iterator       = pointer;
 
 	constexpr span(const span&) noexcept = default;
+	constexpr span():_M_ptr(nullptr),_M_count(0){}
 	constexpr span(_Type*data,size_t size):_M_ptr(data),_M_count(size){}
+	constexpr span(std::vector<_Type>& v):_M_ptr((_Type*)v.data()),_M_count(v.size()){}
 	constexpr span& operator=(const span&) noexcept = default;
 	~span() noexcept = default;
 

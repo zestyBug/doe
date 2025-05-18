@@ -5,6 +5,12 @@
 #include <string.h>
 #include <bits/algorithmfwd.h>
 #include <stdexcept>
+
+#include <typeindex>
+#include <typeinfo>
+
+#include "./hash128.hpp"
+
 class bitset
 {
 private:
@@ -345,6 +351,11 @@ public:
         }
         puts("");
     }
+    // Helper: Hash a vector of type_index (order-insensitive)
+    inline uint64_t hash() const {
+        return hash128::FNV1A64(this->data,BYTE);
+    }
+protected:
 };
 
 
