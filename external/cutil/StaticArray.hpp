@@ -18,7 +18,7 @@ private:
             _ = false;
         }
     };
-    container _data;
+    container _data{};
     size_t count = 0;
 public:
     static_assert(S > 0);

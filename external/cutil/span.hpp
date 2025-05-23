@@ -2,7 +2,6 @@
 #define SPAN_HPP_INCLUDED
 
 #include <vector>
-
 template<typename _Type>
 class span
 {
@@ -24,7 +23,7 @@ public:
 	constexpr span(const span&) noexcept = default;
 	constexpr span():_M_ptr(nullptr),_M_count(0){}
 	constexpr span(_Type*data,size_t size):_M_ptr(data),_M_count(size){}
-	constexpr span(std::vector<_Type>& v):_M_ptr((_Type*)v.data()),_M_count(v.size()){}
+	constexpr span(const std::vector<_Type>& v):_M_ptr((_Type*)v.data()),_M_count(v.size()){}
 	constexpr span& operator=(const span&) noexcept = default;
 	~span() noexcept = default;
 
@@ -85,6 +84,30 @@ public:
 	pointer data()
 	const noexcept
 	{ return this->_M_ptr; }
+
+	inline span<element_type>& operator++(){
+		if(_M_count>0){
+			_M_ptr++;
+			_M_count--;
+		}
+		return *this;
+	}
+	
+	inline span<element_type> operator+(uint32_t step) const {
+		if(_M_count > step)
+			return span<element_type>{_M_ptr+step,_M_count-step};
+		else
+			return span<element_type>{nullptr,0};
+	}
+
+	bool operator == (const span<element_type> v) const {
+		if(v.size_bytes() == this->size_bytes()){
+			if(0 == this->size_bytes())
+				return true;
+			return memcmp(this->data(),v.data(),this->size_bytes()) == 0;
+		}
+		return false;
+	}
 
 	// iterator support
 

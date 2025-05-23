@@ -13,7 +13,7 @@ class SmallVector{
         T small[S];
         T *large;
         block():large{nullptr}{}
-    } data;
+    } data{};
 public:
     SmallVector():_size{0},_capacity{S} {
         //

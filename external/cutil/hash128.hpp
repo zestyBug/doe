@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdexcept>
+#include "span.hpp"
 
 #if !defined(HASH128_HPP)
 #define HASH128_HPP
@@ -23,7 +24,7 @@ private:
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
     };
     static constexpr char k_HexToLiteral[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
-    
+
     static constexpr int k_GUIDStringLength = 32;
 
     // http://www.isthe.com/chongo/src/fnv/hash_64a.c
@@ -41,7 +42,7 @@ public:
         uint32_t z=0;
         uint32_t w=0;
         inline uint32_t& operator[](size_t i){
-            if(i<0 || i>3)
+            if(i>3)
                 throw std::out_of_range("out of range: uint128_t::operator[]");
             return ((uint32_t*)this)[i];
         }
@@ -84,8 +85,8 @@ public:
                 uint32_t currentInt = 0;
                 for (int j = 0; j < 4; ++j)
                 {
-                    currentInt |= (uint32_t)(hex[currentHex++] << j * 8 + 4);
-                    currentInt |= (uint32_t)(hex[currentHex++] << j * 8);
+                    currentInt |= (uint32_t)((hex[currentHex++] << j) * 8 + 4);
+                    currentInt |= (uint32_t)((hex[currentHex++] << j) * 8);
                 }
                 value[i] = currentInt;
             }
@@ -137,7 +138,6 @@ public:
         return hash;
     }
 
-    
 
 
 
@@ -146,18 +146,19 @@ public:
 
 
 
-    
+
+
     /// @brief Generates a FNV1A32 hash.
-    /// @param text Text(data) to hash.
+    /// @param data Text(data) to hash.
     /// @param l lenght of text
     /// @return Hash of input string.
-    static uint32_t FNV1A32(void *text,size_t l)
+    static uint32_t FNV1A32(void *data,size_t l)
     {
         uint32_t result = kFNV1A32OffsetBasis;
         for (size_t i = 0; i < l; i++)
         {
-            result = kFNV1A32Prime * (result ^ ( ((uint8_t*)text)[i] & 255));
-            result = kFNV1A32Prime * (result ^ ( ((uint8_t*)text)[i] >>  8));
+            result = kFNV1A32Prime * (result ^ ( ((uint8_t*)data)[i] & 255));
+            result = kFNV1A32Prime * (result ^ ( ((uint8_t*)data)[i] >>  8));
         }
         return result;
     }
@@ -187,6 +188,12 @@ public:
         hash ^= value;
         hash *= kFNV1A32Prime;
         return hash;
+    }
+
+    template<typename T>
+    static uint32_t FNV1A32(span<T> data)
+    {
+        return FNV1A32(data.data(),data.size_bytes());
     }
 
 

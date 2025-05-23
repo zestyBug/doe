@@ -19,9 +19,9 @@ namespace DOTS
         const uint32_t entityPerChunk=16;
 
         // version value: (suitable for single type iteration)
-        // note all type are same in archetype structure 
+        // note all type are same in archetype structure
         //    [ type[0]: [chunk[0] ... chunk[_capacity]]
-        //      type[...]: 
+        //      type[...]:
         //      type[componentCount]: [chunk[0] ... chunk[_capacity]]
 
         uint32_t VOffset=0;
@@ -30,6 +30,11 @@ namespace DOTS
 
         ArchetypeChunkData(){
         }
+
+        ArchetypeChunkData(const ArchetypeChunkData&)= delete;
+        ArchetypeChunkData& operator = (const ArchetypeChunkData&)= delete;
+        ArchetypeChunkData(ArchetypeChunkData&&)= default;
+
         void initialize(uint32_t _component_count) {
             componentCount=_component_count;
             if(_component_count < 1)
@@ -38,7 +43,7 @@ namespace DOTS
         ~ArchetypeChunkData(){
             allocator().deallocate(this->data);
         }
-        
+
     protected:
         Entity& _Entities(uint32_t index=0){
             return ((Entity*)(this->data))[index];
@@ -47,7 +52,7 @@ namespace DOTS
             return ((version_t*)(this->data+VOffset))[index];
         }
     public:
-        
+
         inline bool empty() const {
             return this->_count < 1;
         }
@@ -58,31 +63,31 @@ namespace DOTS
             return this->_count;
         }
 
-        inline span<Entity> getEntitiesArrayForChunk(int chunkIndex) {
-            if(chunkIndex < 0 || chunkIndex > this->_count)
+        inline span<Entity> getEntitiesArrayForChunk(uint32_t chunkIndex) {
+            if(chunkIndex > this->_count)
                 throw std::out_of_range("getChangeVersionArrayForType()");
             return span<Entity>(&_Entities(chunkIndex*entityPerChunk),entityPerChunk);
         }
 
-        span<version_t> getChangeVersionArrayForType(int component_index)
+        span<version_t> getChangeVersionArrayForType(uint32_t component_index)
         {
-            if(component_index < 0 || component_index > this->componentCount)
+            if(component_index > this->componentCount)
                 throw std::out_of_range("getChangeVersionArrayForType()");
             uint32_t index = component_index * this->_capacity;
             return span<version_t>(&_ChangeVersion(index),this->_count);
         }
-        version_t& getChangeVersion(int component_index, int chunkIndex)
+        version_t& getChangeVersion(uint32_t component_index, uint32_t chunkIndex)
         {
             auto changeVersions = getChangeVersionArrayForType(component_index);
             return changeVersions.at(chunkIndex);
         }
-        version_t& GetOrderVersion(int chunkIndex)
+        version_t& GetOrderVersion(uint32_t chunkIndex)
         {
             return getChangeVersion(0, chunkIndex);
         }
-        void SetAllChangeVersion(int chunkIndex, version_t version)
+        void SetAllChangeVersion(uint32_t chunkIndex, version_t version)
         {
-            if(chunkIndex < 0 || chunkIndex > this->_count)
+            if(chunkIndex > this->_count)
                 throw std::out_of_range("SetAllChangeVersion()");
             for (uint32_t i = 1; i < this->componentCount; ++i)
                 _ChangeVersion((i * this->_capacity) + chunkIndex) = version;
@@ -98,38 +103,38 @@ namespace DOTS
         /// @brief remove a chunk from array and fill it space with last chunk in the array if possible
         /// @param chunkIndex index of chunk to be deleted
         void removeAtSwapBack(uint32_t chunkIndex){
-            if(this->_count<1 || chunkIndex < 0 || chunkIndex >= this->_count)
+            if(this->_count<1 || chunkIndex >= this->_count)
                 throw std::out_of_range("removeAtSwapBack(): out of range index");
             this->_count--;
             if (chunkIndex == this->_count)
                 return;
 
-            for (int i = 0; i < this->componentCount; i++)
+            for (uint32_t i = 0; i < this->componentCount; i++)
                 this->_ChangeVersion((i * this->_capacity) + chunkIndex) = this->_ChangeVersion((i * this->_capacity) + this->_count);
             memcpy(&_Entities(chunkIndex), &_Entities(_count),sizeof(Entity)*entityPerChunk);
         }
 
         /// @brief add at end of list
         /// @param count set it, if chunk contains entities
-        void add(version_t version,uint32_t count=0){
+        void add(version_t version){
             uint32_t index = this->_count++;
             if(index>=this->_capacity)
                 this->grow(this->_capacity<1 ? 2 : this->_capacity*2);
 
             // New chunk, so all versions are reset.
-            for (int i = 0; i < this->componentCount; i++)
+            for (uint32_t i = 0; i < this->componentCount; i++)
                 this->_ChangeVersion((i * this->_capacity) + index) = version;
         }
         /// @brief append would be a more suitable name :)
         /// @param src source to be appended
         void moveChunks(ArchetypeChunkData& src){
-            if(this->componentCount != src.componentCount || 
+            if(this->componentCount != src.componentCount ||
                 this->entityPerChunk != src.entityPerChunk)
                 throw std::invalid_argument("moveChunks(): src doesnt fit this object");
             if (this->_capacity < this->_count + src._count)
                 this->grow(this->_count + src._count);
-            
-            memcpy(&_Entities(this->_count * entityPerChunk), 
+
+            memcpy(&_Entities(this->_count * entityPerChunk),
                     &src._Entities(),
                     sizeof(Entity) * entityPerChunk * src._count);
 
@@ -138,13 +143,13 @@ namespace DOTS
                      sizeof(version_t)* src._count * this->componentCount);
 
             this->_count += src._count;
-            
+
             //! src._count = 0;
         }
         void grow(uint32_t new_capacity){
             if(new_capacity <= this->_capacity)
                 throw std::invalid_argument("grow(): smaller new size");
-            
+
             // new_capacity * size_in_byte_per_one_chunk
 
             //chunk
@@ -156,13 +161,13 @@ namespace DOTS
 
 
             uint8_t *new_data = allocator().allocate(new_v_size + new_v_offset);
-            
+
             if(this->data != nullptr && this->_count > 0){
                 memcpy(new_data,
                     &this->_Entities(),
                     this->_count * sizeof(Entity));
-                
-                for(int i = 0; i < componentCount; ++i) {
+
+                for(uint32_t i = 0; i < componentCount; ++i) {
                     memcpy((version_t*)(new_data + new_v_offset) + (i * new_capacity),
                         &this->_ChangeVersion(i * this->_capacity),
                         this->_count * this->componentCount * sizeof(version_t));
@@ -175,7 +180,7 @@ namespace DOTS
             this->VOffset = new_v_offset;
         }
     };
-    
+
 } // namespace DOTS
 
 

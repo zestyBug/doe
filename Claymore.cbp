@@ -37,31 +37,30 @@
 			<Add option="-Wall" />
 			<Add option="-m64" />
 			<Add option="-fexceptions" />
-			<Add directory="src" />
 			<Add directory="external" />
+			<Add directory="include" />
 		</Compiler>
 		<Linker>
 			<Add option="-m64" />
 		</Linker>
-		<Unit filename="external/cutil/QueueQueue.hpp" />
 		<Unit filename="external/cutil/SmallVector.hpp" />
 		<Unit filename="external/cutil/StaticArray.hpp" />
-		<Unit filename="external/cutil/aStack.hpp" />
-		<Unit filename="external/cutil/advancedArray.h" />
-		<Unit filename="external/cutil/advancedQueue.hpp" />
 		<Unit filename="external/cutil/bitset.hpp" />
-		<Unit filename="external/cutil/gc_ptr.hpp" />
+		<Unit filename="external/cutil/hash128.hpp" />
+		<Unit filename="external/cutil/prototype.hpp" />
 		<Unit filename="external/cutil/range.hpp" />
-		<Unit filename="external/cutil/semaphore.hpp" />
 		<Unit filename="external/cutil/span.hpp" />
-		<Unit filename="external/cutil/string_view.hpp" />
-		<Unit filename="external/entt/entt2.hpp" />
-		<Unit filename="src/Engine/ECS/Archetype.hpp" />
-		<Unit filename="src/Engine/ECS/EntityCommandBuffer.hpp" />
-		<Unit filename="src/Engine/ECS/Register.hpp" />
-		<Unit filename="src/Engine/ECS/System.hpp" />
-		<Unit filename="src/Engine/ECS/ThreadPool.hpp" />
-		<Unit filename="src/Engine/ECS/defs.hpp" />
+		<Unit filename="external/cutil/unique_ptr.hpp" />
+		<Unit filename="include/ECS/Archetype.hpp" />
+		<Unit filename="include/ECS/ArchetypeChunkData.hpp" />
+		<Unit filename="include/ECS/ListMap.hpp" />
+		<Unit filename="include/ECS/Register.hpp" />
+		<Unit filename="include/ECS/defs.hpp" />
+		<Unit filename="include/basics.hpp" />
+		<Unit filename="src/Archetype.cpp" />
+		<Unit filename="src/ListMap.cpp" />
+		<Unit filename="src/Register.cpp" />
+		<Unit filename="src/defs.cpp" />
 		<Unit filename="test/ecs.cpp" />
 		<Extensions>
 			<lib_finder disable_auto="1" />

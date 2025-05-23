@@ -11,31 +11,36 @@ namespace DOTS
 {
     class Archetype;
 
-    class ListMap
+    class ArchetypeListMap
     {
         static const uint32_t _AValidHashCode = 0x00000001;
         static const uint32_t _SkipCode = 0xFFFFFFFF;
+        /// @brief generates hash code for a archetype
+        /// @param types note that type flags are also included, like disable-ness, prefab-being
+        /// @return (may-modified) hash value
+        static uint32_t getHashCode(span<TypeIndex> types)
+        {
+            uint32_t result = hash128::FNV1A32(types);
+            if (result == 0 || result == _SkipCode)
+                result = _AValidHashCode;
+            return result;
+        }
     public:
-        using Key = uint32_t;
-        using Value = uint32_t;
-        
-        static const Value invalideValue = 0xffffff;
 
-
-        ListMap() = default;
-        ListMap(const ListMap&) = delete;
-        ListMap(ListMap&& v){
+        ArchetypeListMap() = default;
+        ArchetypeListMap(const ArchetypeListMap&) = delete;
+        ArchetypeListMap(ArchetypeListMap&& v){
             *this = std::move(v);
         }
-        ListMap& operator=(const ListMap&) = delete;
-        ListMap& operator=(ListMap&& v){
+        ArchetypeListMap& operator=(const ArchetypeListMap&) = delete;
+        ArchetypeListMap& operator=(ArchetypeListMap&& v){
             if(this != &v){
                 this->emptyNodes = v.emptyNodes;
                 this->skipNodes = v.skipNodes;
                 v.emptyNodes=0;
                 v.skipNodes=0;
-                this->hashes = std::move(v.hashes);
-                this->value = std::move(v.value);
+                this->hashes     = std::move(v.hashes);
+                this->archetypes = std::move(v.archetypes);
             }
             return *this;
         }
@@ -58,46 +63,41 @@ namespace DOTS
         inline uint32_t minimumSize() const {
             return 64 / sizeof(uint32_t);
         }
-
-        void init(int count);
-        
-        //uint32_t TryGet(SharedComponentValues sharedComponentValues, int numSharedComponents);
-        
-        
-        
         inline void possiblyGrow()
         {
             if (unoccupiedNodes() < size() / 3)
-            resize(size() * 2);
+                resize(size() * 2);
         }
         inline void possiblyShrink()
         {
             if (occupiedNodes() < size() / 3)
-            resize(size() / 2);
+                resize(size() / 2);
         }
-        /// @brief add new entity to list, may throw an exception
-        /// @param hash hash of data
-        /// @param value a unique value, it is kept and can be retrieved by index, or by searching
-        /// @return returns index of value in array, keep it, index maybe invalidated on removing other entities!
-        uint32_t add(uint32_t hash,Value v);
-        void remove(int32_t index);
-        void removeByHash(uint32_t hash);
-        // 
-        bool contains(int32_t index);
-        inline bool containsByHash(uint32_t hash){
-            return indexOf(hash) != -1;
-        }
-        // retrieve index by value or -1
-        int32_t indexOf(uint32_t hash);
-        // the whole promise of it is that hash makes it faster
-        Value tryGetValue(uint32_t hash);
-        void appendFrom(const ListMap& src);
-        void resize(int size);
-    protected:
-        
-        std::vector<uint32_t> hashes;
-        std::vector<Value> value;
 
+
+        void setCapacity(uint32_t capacity);
+        void init(uint32_t count);
+        void appendFrom(ArchetypeListMap& src);
+        /// @brief find archtype using hash list
+        /// @return archtype or nullptr
+        Archetype* tryGet(span<TypeIndex> types) const;
+        // tryGet + exception if not found
+        Archetype* get(span<TypeIndex> types) const;
+        void resize(uint32_t size);
+        void add(Archetype* archetype);
+        int  indexOf(Archetype* archetype) const;
+        void remove(Archetype* archetype);
+        bool contains(Archetype* archetype) const;
+        // the whole popuse is to free space when object is unused but still in memory
+        void dispose(){
+            hashes= std::vector<uint32_t>();
+            archetypes = std::vector<Archetype*>();
+            emptyNodes=0;
+            skipNodes=0;
+        }
+    protected:
+        std::vector<uint32_t> hashes{};
+        std::vector<Archetype*> archetypes{};
         uint32_t emptyNodes=0;
         uint32_t skipNodes=0;
     };

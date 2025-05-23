@@ -1,3 +1,6 @@
+#if !defined(ARCHETYPE_HPP)
+#define ARCHETYPE_HPP
+
 #include <stdint.h>
 #include <vector>
 #include <array>
@@ -5,8 +8,6 @@
 #include "defs.hpp"
 #include "ArchetypeChunkData.hpp"
 #include "basics.hpp"
-#if !defined(ARCHETYPE_HPP)
-#define ARCHETYPE_HPP
 
 namespace DOTS
 {
@@ -40,308 +41,94 @@ namespace DOTS
     {
     protected:
 
+        friend class ArchetypeListMap;
         friend class Register;
-        // invalid index and max entity number
-        static constexpr uint32_t INVALID_INDEX = 0xffffff;
         // maximum number of entities that can be fit into a single chunk
-        size_t chunkCapacity = 0;
-        size_t lastChunkEntityCount = 0;
+        uint32_t chunkCapacity = 0;
+        uint32_t lastChunkEntityCount = 0;
         // note: chunks are united, means
         // if we remove a entity for a random chunk,
         // last entity on last chunk will be
         // filled in it place so iterating more efficiently.
-        std::vector<Chunk> chunksData;
-        ArchetypeChunkData chunks;
+        std::vector<Chunk> chunksData{};
+        ArchetypeChunkData chunks{};
+
+
         // optimal for 16 component per archtype or less
         // Entity are istored as first type
-        std::vector<TypeIndex> types;
-        // faster access to TypeIndex::realIndex() for iteration
-        std::vector<uint16_t> realIndex;
-        std::vector<uint32_t> offsets;
-        std::vector<uint16_t> sizeOfs;
+        span<TypeIndex> types{};
+        // faster access to TypeIndex::realIndecies() for iteration
+        span<uint16_t> realIndecies{};
+        span<uint32_t> offsets{};
+        span<uint16_t> sizeOfs{};
         // any index above/equal this is a tag and it size is equal to 0
         // firstTagIndex == 1 all tag, firstTagIndex == types.size() no tag
         uint16_t firstTagIndex = 0;
-        // index of Entity inside types and other arrays
-        uint16_t entitiesIndex = 0;
-        uint16_t flags;
+        uint16_t flags=0;
+        uint32_t archetypeIndex=0;
         Archetype(/* args */) = default;
     public:
+        ~Archetype(/* args */) {
+        }
+
+        // invalid index and max entity number
+        static constexpr uint32_t nullEntityIndex = 0xfffffff;
+        static constexpr uint32_t nullChunkIndex = 0xfffffff;
+        static constexpr uint32_t maxEntityPerChunk = 0x555;
+        
+
+        Archetype& operator =(const Archetype&) = delete;
         Archetype(const Archetype&) = delete;
-        Archetype(Archetype&&) = default;
+        // data structor stores pointer to itself
+        // any move operation requires recalculation
+        Archetype(Archetype&&) = delete;
 
         // estimated capacity
         // check before accessing an unallocated archtype
-        size_t capacity() const {
+        uint32_t capacity() const {
             return chunkCapacity * chunks.capacity();
         }
         bool empty() const {
             return this->chunks.empty();
         }
         // this fucntion is a little more expensive than empty
-        bool count() const {
-            uint32_t v = this->chunks.count();
+        uint32_t count() const {
+            const uint32_t v = this->chunksData.size();
             if(v < 1)
                 return 0;
             else
-                return --v * chunkCapacity + lastChunkEntityCount;
+                return (v-1) * chunkCapacity + lastChunkEntityCount;
         }
 
-        static Archetype* createArchetype(const std::vector<TypeIndex>& types) {
-            if(types.size() < 1 || types.size() > 0xFFF)
-                throw std::invalid_argument("createArchetype(): archetype with unexpected component count");
-
-            Archetype *arch = allocator<Archetype>().allocate(1);
-
-            new (arch) Archetype();
-            arch->types.resize(types.size()+1);
-            arch->realIndex.resize(arch->types.size());
-
-            TypeIndex ev = getTypeInfo<Entity>().value;
-
-            uint32_t i = 0;
-            for (;i < types.size(); ++i) {
-                if(ev < types[i])
-                    break;
-                arch->types[i]=types[i];
-                arch->realIndex[i] = types[i].realIndex();
-            }
-            arch->types[i] = ev;
-            arch->entitiesIndex = i;
-            i++;
-            for (;i < types.size(); ++i)
-                arch->types[i+1]=types[i];
-
-            
-            arch->chunks.initialize(arch->types.size());
-            arch->offsets.resize(arch->types.size());
-            arch->sizeOfs.resize(arch->types.size());
-            
-
-            {
-                uint16_t i = arch->types.size();
-                do arch->firstTagIndex = i;
-                while (i!=0 && getTypeInfo(arch->types[--i]).size == 0);
-                i++;
-            }
-            for (uint32_t i = 0; i < arch->types.size(); ++i)
-            {
-                if (i < arch->firstTagIndex){
-                    const auto& cType = getTypeInfo(arch->types[i]);
-                    arch->sizeOfs[i] = cType.size;
-                }else
-                    arch->sizeOfs[i] = 0;
-            }
-            for (TypeIndex type: arch->types)
-            {
-                if(type.isPrefab())
-                    arch->flags |= TypeIndex::prefab;
-            }
-
-            arch->chunkCapacity = calculateChunkCapacity(Chunk::_BufferSize,arch->sizeOfs);
-
-            if(arch->chunkCapacity < 4)
-                throw std::length_error("createArchetype(): LARGE COMPONENTS! X(");
-            
-            uint32_t usedBytes = Chunk::_BufferOffset;
-            for (uint32_t typeIndex = 0; typeIndex < arch->offsets.size(); typeIndex++)
-            {
-                uint32_t sizeOf = arch->sizeOfs[typeIndex];
-
-                // align usedBytes upwards (eating into alignExtraSpace) so that
-                // this component actually starts at its required alignment.
-                // Assumption is that the start of the entire data segment is at the
-                // maximum possible alignment.
-                arch->offsets[typeIndex] = usedBytes;
-                usedBytes += getComponentArraySize(sizeOf, arch->chunkCapacity);
-            }
-
-            return arch;
-        }
-        
-        uint32_t createEntity(Entity e) {
-            uint32_t res = 0;
-            uint8_t* lastChunkMem = nullptr;
-
-            if(this->chunksData.size() == 0 || lastChunkEntityCount == this->chunkCapacity){
-                lastChunkEntityCount=0;
-                Chunk &chunk = this->chunksData.emplace_back();
-                chunk.memory = allocator().allocate(Chunk::_ChunkSize);
-                lastChunkMem = (uint8_t*)chunk.memory;
-                chunks.add(0,0);
-            }else
-                lastChunkMem = (uint8_t*)this->chunksData.back().memory;
-            res = this->count();
-            if(res >= INVALID_INDEX)
-                throw std::out_of_range("entity count limit reached");
-            //
-            ((Entity*)(lastChunkMem+offsets[entitiesIndex]))[getInChunkIndex(res)] = e;
-            lastChunkEntityCount++;
-            return res;
+        uint16_t nonZeroSizedTypesCount() const {
+            return firstTagIndex;
         }
 
-        // remove an entity from archtype and returns entity value of 
-        // the entity that has replaced it
-        Entity removeEntity(uint32_t entityIndex, bool destruction = true){
-            if(this->chunksData.size() < 1)
-                throw std::runtime_error("removeEntity(): empty archetype");
-            if(lastChunkEntityCount < 1)
-                throw std::runtime_error("removeEntity(): unexpected internal error");
+        static Archetype* createArchetype(span<TypeIndex> types);
 
-             
-                
-            
-                const uint32_t chunkIndex = this->getChunkIndex(entityIndex);
-                const uint32_t inChunkIndex = this->getInChunkIndex(entityIndex);
-                // im not sure that it wont break, so a at() will do the job
-                uint8_t * const chunkMemory = (uint8_t*) this->chunksData.at(chunkIndex).memory;
+        /// @brief find or create an index on chunks list.
+        /// @param e
+        /// @return index within the archetype
+        uint32_t createEntity();
 
-                const uint32_t lastChunkIndex = this->chunksData.size() - 1;
-                const uint32_t inLastChunkIndex = lastChunkEntityCount - 1;
-                uint8_t const * const lastChunkMemory = (uint8_t*) this->chunksData.at(lastChunkIndex).memory;
+        /// @brief remove an entity from archtype and returns entity value of the entity that must replaced it
+        uint32_t removeEntity(uint32_t entityIndex);
 
-                if(chunkIndex >= lastChunkIndex)
-                    if(inChunkIndex > inLastChunkIndex)
-                        throw std::invalid_argument("removeEntity(): entity does not exists");
-            
-            Entity lastEntity = ((Entity*)(chunkMemory+offsets[entitiesIndex]))[inChunkIndex];
-            
-            if(destruction)
-                for(size_t i=0;i < this->types.size();i++) {
-                    const auto& info = getTypeInfo(types[i]);
-                    if(info.destructor){
-                        uint8_t * const ptr1 = chunkMemory + offsets[i] + (sizeOfs[i] * inChunkIndex);
-                        info.destructor(ptr1);
-                    }
-                }
-
-            // last entity in archetype
-
-            
-            // if last entity is the deleted entity
-            if(chunkIndex >= lastChunkIndex)
-                if(inChunkIndex == inLastChunkIndex)
-                    goto END;
-
-
-
-            for(size_t i=0;i < this->types.size();i++) {
-                const auto&    info = getTypeInfo(types[i]);
-                      uint8_t *ptr1 = chunkMemory + offsets[i] + (sizeOfs[i] * inChunkIndex);
-                const uint8_t *ptr2 = lastChunkMemory + offsets[i] + (sizeOfs[i] * inLastChunkIndex);
-                memcpy(ptr1,ptr2,info.size);
-            }
-
-            END:
-
-            lastChunkEntityCount--;
-
-            // 0 means last element on the chunk is either moved to
-            // the deleted entity position or is the deleted entity itself
-            // so chunk must be cleared
-            if(lastChunkEntityCount == 0){
-                this->chunksData.pop_back();
-                this->chunks.popBack();
-                if(lastChunkIndex != 0)
-                    lastChunkEntityCount = this->chunkCapacity;
-            }
-            return lastEntity;
-        }
-        
         // requesting component that does not exist results undefined behaviour
-        
+
         /// @brief returns memory address of a given component and entity
         /// @param componentIndex component inside the archetype index
         /// @param entityIndex entity inside the archetype index
         /// @return returns pointer or exception
-        void* getComponent(uint16_t componentIndex,uint32_t entityIndex){
-            uint32_t inChunkIndex = getInChunkIndex(entityIndex);
-            uint32_t chunkIndex = getChunkIndex(entityIndex);
-            uint8_t *chunkMemory = (uint8_t *)chunksData.at(chunkIndex).memory;
-            if((chunkIndex+1) >= chunksData.size())
-                if(inChunkIndex >= lastChunkEntityCount)
-                    throw std::out_of_range("getComponent(): invalid entityIndex");
-            return chunkMemory + offsets.at(componentIndex) + (sizeOfs.at(componentIndex) * inChunkIndex);
-        }
-        // requesting component that does not exist results undefined behaviour
-        template<typename T>
-        T* getComponent(uint32_t entityIndex){
-            int32_t componentIndex = getIndex<T>();
-            if(componentIndex < 0)
-                throw std::invalid_argument("getComponent<T>(): invalid Type");
-            return (T*)getComponent(componentIndex,entityIndex);
-        }
-        // requesting component that does not exist results undefined behaviour
-        template<typename T>
-        span<T> getChunkComponent(size_t chunkIndex){
-            int32_t componentIndex = getIndex<T>();
-            if(componentIndex < 0)
-                throw std::invalid_argument("getComponent<T>(): invalid Type");
-            uint8_t * const mem = (uint8_t*) this->chunksData.at(chunkIndex).memory;
-            if((1+chunkIndex) >= this->chunksData.size())
-                return span<T>( (T*)(mem + offsets.at(componentIndex)) , lastChunkEntityCount );
-            else 
-                return span<T>( (T*)(mem + offsets.at(componentIndex)) , chunkCapacity );
-        }
+        void* getComponent(uint16_t componentIndex,uint32_t entityIndex);
+
         void* getChunkComponent(uint16_t componentIndex,size_t chunkIndex){
             uint8_t * const mem = (uint8_t*) this->chunksData.at(chunkIndex).memory;
             return mem + offsets.at(componentIndex);
         }
 
-        /// @brief retriev entity id of given index
-        /// @param entityIndex accepts unsafe indecies
-        /// @return Entity::null on failure
-        Entity getEntity(uint32_t entityIndex) const {
-            
-            uint32_t lastChunkIndex = chunksData.size();
-
-            if(lastChunkIndex < 1)
-                return Entity::null;
-            lastChunkIndex--;
-
-            const uint32_t chunkIndex = getChunkIndex(entityIndex);
-
-            if(lastChunkIndex <= chunkIndex)
-                return Entity::null;
-
-            const uint32_t inChunkIndex = getInChunkIndex(entityIndex);
-            const uint32_t inLastChunkIndex = lastChunkEntityCount - 1;
-
-            if(chunkIndex >= lastChunkIndex)
-                if(inChunkIndex > inLastChunkIndex)
-                    return Entity::null;
-
-            uint8_t * const chunkMemory = (uint8_t*) chunksData.at(chunkIndex).memory;
-
-            
-            return ((Entity*)(chunkMemory+offsets[this->entitiesIndex]))[inChunkIndex];
-        }
-        Entity& getEntityUnsafe(uint32_t entityIndex) {
-            const uint32_t chunkIndex = getChunkIndex(entityIndex);
-            const uint32_t inChunkIndex = getInChunkIndex(entityIndex);
-            uint8_t * const chunkMemory = (uint8_t*) chunksData.at(chunkIndex).memory;
-            return ((Entity*)(chunkMemory+offsets[this->entitiesIndex]))[inChunkIndex];
-        }
         // TODO: binary search?
-        
-        /// @brief simple linear search to find index in archtype
-        /// @tparam T Type
-        /// @return index or -1 if archtype doesnt contain type T
-        template<typename T>
-        int32_t getIndex(){
-            uint16_t rIndex = getTypeInfo<T>().value.realIndex();
-            for (size_t i = 0; i < realIndex.size(); i++)
-                if(realIndex[i] == rIndex)
-                    return i;
-            return -1;
-        }
-        int32_t getIndex(TypeIndex t){
-            uint16_t rIndex = t.realIndex();
-            for (size_t i = 0; i < realIndex.size(); i++)
-                if(realIndex[i] == rIndex)
-                    return i;
-            return -1;
-        }
+        int32_t getIndex(TypeIndex t);
     protected:
         // the entity chunk index
         inline uint32_t getChunkIndex(const uint32_t i) const {

@@ -19,8 +19,9 @@ struct range final
             // a little tricky
             return this->VALUE < obj.VALUE;
         }
-        inline void operator ++ () {
+        inline Iterator& operator ++ () {
             this->VALUE += this->step;
+            return *this;
         }
         inline Iterator& operator += (const value b) {
             this->VALUE += b;

@@ -4,7 +4,17 @@ using namespace DOTS;
 
 #include "ECS/Archetype.hpp"
 
-void ListMap::init(int count)
+
+
+void ArchetypeListMap::setCapacity(uint32_t capacity)
+{
+    if (capacity < minimumSize())
+        capacity = minimumSize();
+    hashes.resize(capacity);
+    archetypes.resize(capacity);
+}
+
+void ArchetypeListMap::init(uint32_t count)
 {
     if (count < minimumSize())
         count = minimumSize();
@@ -14,104 +24,125 @@ void ListMap::init(int count)
         throw std::invalid_argument("Init(): count must be power of 2");
 
     hashes.resize(count);
-    value.resize(count);
+    archetypes.resize(count);
 
     emptyNodes = count;
     skipNodes = 0;
 }
 
-ListMap::Value ListMap::tryGetValue(uint32_t desiredHash)
+Archetype* ArchetypeListMap::tryGet(span<TypeIndex> types) const
 {
-    int32_t offset = desiredHash & hashMask();
-    int attempts = 0;
+    if(types.size() == 0)
+        return nullptr;
+    uint32_t desiredHash = getHashCode(types);
+    uint32_t offset = desiredHash & hashMask();
+    uint32_t attempts = 0;
     while (true)
     {
         uint32_t hash = hashes.at(offset);
         if (hash == 0)
-            return invalideValue;
+            return nullptr;
         if (hash == desiredHash)
         {
-            return offset;
+            Archetype *archetype = archetypes[offset];
+            // WARN: first component must be Entity
+            const auto dropFirst = archetype->types + 1;
+            if (dropFirst == types)
+                return archetype;
         }
         offset = (offset + 1) & hashMask();
         ++attempts;
         if (attempts == size())
-            return invalideValue;
+            return nullptr;
     }
 }
 
-void ListMap::appendFrom(const ListMap& src)
+Archetype* ArchetypeListMap::get(span<TypeIndex> types) const
 {
-    for (int offset = 0; offset < src.size(); ++offset)
+    Archetype* result = tryGet(types);
+    if(result == nullptr)
+        throw std::runtime_error("get(): found no suitable type");
+    return result;
+}
+
+void ArchetypeListMap::appendFrom(ArchetypeListMap& src)
+{
+    for (uint32_t offset = 0; offset < src.size(); ++offset)
     {
         uint32_t hash = src.hashes[offset];
         if (hash != 0 && hash != _SkipCode)
-            add(src.hashes[offset], src.value[offset]);
+            add(src.archetypes[offset]);
     }
+    src.dispose();
 }
-void ListMap::resize(int size)
+void ArchetypeListMap::resize(uint32_t size)
 {
     if (size < minimumSize())
         size = minimumSize();
     if (size == this->size())
         return;
-    ListMap temp;
+    ArchetypeListMap temp;
     temp.init(size);
     temp.appendFrom(*this);
     *this = std::move(temp);
 }
 
-uint32_t ListMap::add(uint32_t desiredHash, Value v)
+void ArchetypeListMap::add(Archetype* archetype)
 {
-    uint32_t offset = (desiredHash & hashMask());
+    if(archetype == nullptr)
+        throw std::invalid_argument("add(): null archtype");
+    uint32_t desiredHash = getHashCode(archetype->types+1);
+    uint32_t offset = (int)(desiredHash & hashMask());
     uint32_t attempts = 0;
     while (true)
     {
-        uint32_t hash = hashes[offset];
+        uint32_t hash = hashes.at(offset);
         if (hash == 0)
         {
             hashes[offset] = desiredHash;
-            value[offset] = v;
-            //chunk.ListWithEmptySlotsIndex = offset;
+            archetypes[offset] = archetype;
             --emptyNodes;
             possiblyGrow();
-            return offset;
+            return;
         }
 
         if (hash == _SkipCode)
         {
             hashes[offset] = desiredHash;
-            value[offset] = v;
-            //chunk.ListWithEmptySlotsIndex = offset;
+            archetypes[offset] = archetype;
             --skipNodes;
             possiblyGrow();
-            return offset;
+            return;
         }
 
         offset = (offset + 1) & hashMask();
         ++attempts;
         if(attempts >= size())
-            throw std::runtime_error("edd(): unable to find suitable location");
+            // we should nor reach here, a possiblyGrow() call must prevent it
+            throw std::runtime_error("add(): something wet wrong");
     }
 }
 
-void ListMap::remove(int32_t index)
+void ArchetypeListMap::remove(Archetype* archetype)
 {
-    // throws, because you must use contains first
-    if(index == -1)
-        throw std::runtime_error("remove(): invalid index");
-    hashes[index] = _SkipCode;
+    int32_t offset = indexOf(archetype);
+    if(offset != -1)
+        throw std::runtime_error("remove(): archtype not found");
+    hashes[offset] = _SkipCode;
     ++skipNodes;
     possiblyShrink();
 }
 
-bool ListMap::contains(int32_t index)
+bool ArchetypeListMap::contains(Archetype* archetype) const
 {
-    return index >= 0 && index < hashes.size();
+    return indexOf(archetype) != -1;
 }
 
-int32_t ListMap::indexOf(uint32_t desiredHash)
+int32_t ArchetypeListMap::indexOf(Archetype* archetype) const
 {
+    if(archetype == nullptr)
+        return -1;
+    uint32_t desiredHash = getHashCode(archetype->types);
     uint32_t offset = (desiredHash & hashMask());
     uint32_t attempts = 0;
     while (true)
@@ -121,6 +152,9 @@ int32_t ListMap::indexOf(uint32_t desiredHash)
             return -1;
         if (hash == desiredHash)
         {
+            Archetype *c = archetypes[offset];
+            if (c == archetype)
+                return offset;
             return offset;
         }
         offset = (offset + 1) & hashMask();
@@ -128,14 +162,4 @@ int32_t ListMap::indexOf(uint32_t desiredHash)
         if (attempts == size())
             return -1;
     }
-}
-
-void ListMap::removeByHash(uint32_t hash)
-{
-    int offset = indexOf(hash);
-    if(offset == -1)
-        throw std::runtime_error("remove(): invalid index");
-    hashes.at(offset) = _SkipCode;
-    ++skipNodes;
-    possiblyShrink();
 }

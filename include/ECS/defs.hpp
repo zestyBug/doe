@@ -3,9 +3,9 @@
 
 #include <assert.h>
 #include <vector>
+#include <algorithm>    // std::sort
 #include "cutil/StaticArray.hpp"
 #include "cutil/bitset.hpp"
-#define ENGINE_VERSION 0.0
 
 namespace DOTS
 {
@@ -15,12 +15,18 @@ namespace DOTS
     // this engine uses uint32 and int32 for all cases,
     // unless it is specified.
 
-    
+
+    // the value 1 on the first bit is important for determining value from pointer.
+    constexpr uint32_t nullArchetypeIndex = 0xfffffff;
+
+
     struct TypeIndex {
         enum TypeFlags : uint16_t {
             prefab = 0x1,
+            disabled = 0x2
         };
         uint16_t value=0;
+        // flags are archetype specific, hash no effect on data
         uint16_t flag=0;
 
         TypeIndex()=default;
@@ -33,45 +39,32 @@ namespace DOTS
         bool isPrefab() const {
             return this->flag & prefab;
         }
+        bool isDisabled() const {
+            return this->flag & disabled;
+        }
         uint16_t realIndex() const {
             return this->value & 0x1FFF;
         }
-        inline bool operator == (TypeIndex val) {return this->value == val.value;}
-        inline bool operator <  (TypeIndex val) {return this->value <  val.value;}
-        inline bool operator <= (TypeIndex val) {return this->value <= val.value;}
-        inline bool operator >  (TypeIndex val) {return this->value >  val.value;}
-        inline bool operator >= (TypeIndex val) {return this->value >= val.value;}
+        bool exactSame(const TypeIndex v){
+            return this->value == v.value && this->flag == v.flag;
+        }
     };
 
-    
-    
-    constexpr uint32_t nullArchetypeIndex = 0xfffffff;
-    // invalid index and max entity number
-    constexpr uint32_t nullEntityIndex = 0xfffffff;
-    constexpr uint32_t nullChunkIndex = 0xfffffff;
-
     struct Entity{
-        constexpr Entity() :value{null}{}
-        constexpr Entity(const uint32_t v):value{v}{}
+        constexpr Entity() :_value{null}{}
+        constexpr Entity(const uint32_t v,version_t version=0):_value{v},_version{version}{}
         constexpr Entity(const Entity&) = default;
         constexpr Entity(Entity&&) = default;
         inline Entity& operator = (const Entity&) = default;
-        inline Entity& operator = (const uint32_t v){this->value=v;return *this;}
-        inline bool operator == (const Entity& v) const {return this->index() == v.index();}
-        inline bool operator != (const Entity& v) const {return this->index() != v.index();}
+        inline bool operator == (const Entity& v) const {return this->index() == v.index() && this->_version == v._version;}
+        inline bool operator != (const Entity& v) const {return !(*this == v);}
         ~Entity() = default;
-        // removes version from entity
+        // index in entity_value array
         inline uint32_t index() const {
-            return this->value;
+            return this->_value;
         }
         inline version_t version() const {
             return this->_version;
-        }
-        inline operator uint32_t& (){
-            return this->value;
-        }
-        inline operator uint32_t () const {
-            return this->value;
         }
         static constexpr uint32_t maxEntityCount= 0xfffffe;
         // entity id (index in entity_Value array)
@@ -84,10 +77,10 @@ namespace DOTS
         // only use purpose is as index of entity in entity_value array + version
         // Entity >> 24: version
         // Entity & 0xffffff:
-        uint32_t value;
+        uint32_t _value;
         version_t _version=0;
     };
-    
+
     struct entity_t {
         // index in Archetype::components
         uint32_t index;
@@ -95,27 +88,18 @@ namespace DOTS
         uint32_t archetype = nullArchetypeIndex;
         // version is changed only entity is destroyed/created
         // to prevent mistake with entites with same entity_t::index field
-        version_t version = 0;
-        
+        version_t version=0;
+
         entity_t() = default;
         entity_t(const entity_t&) = default;
         entity_t& operator = (const entity_t&) = default;
-        // returns true if entity belongs to an archetype and contains valid indexes.
-        inline bool valid() const {
+        // returns true if entity contains (seems) valid archetype indexes.
+        inline bool validArchtype() const {
             return this->archetype < nullArchetypeIndex;
         }
-        inline void validate() const {
-            if(!this->valid())
-                throw std::runtime_error("an entity with invalid index");
-            }
-        };
-        
-    struct entity_range {
-        uint32_t archetype_index;
-        size_t chunk_index;
     };
-    
-    
+
+
     struct comp_info {
         TypeIndex value;
         uint32_t size = 0;
@@ -135,19 +119,12 @@ namespace DOTS
     // technically array can be erased to reassign type ids
     // unless values are stored somewhere and spreaded
     // WARN: dont access this directly
+    // WARN: TypeIndex index must be 0
     extern StaticArray<comp_info,COMPOMEN_COUNT> rtti;
-    
-    
-    [[nodiscard]] comp_info _new_id(uint32_t size, void (*destructor)(void*), void (*constructor)(void*)) noexcept
-    {
-        TypeIndex ti;
-        ti.value = rtti.size();
-        if(size < 1)
-            ti.value |= 0x2000;
-        comp_info info{ti, size, destructor, constructor};
-        rtti.push(info);
-        return info;
-    }
+
+    typedef void (*rttiFP)(void*);
+
+    [[nodiscard]] comp_info _new_id(uint32_t size, rttiFP destructor, rttiFP constructor);
 
     // actuall core of compile-time-type-information
     // returns real index of that type
@@ -156,13 +133,17 @@ namespace DOTS
     {
         if(sizeof(T) > 0x7FFF)
             throw std::length_error("__type_id__(): too large entity");
-        static const comp_info value = _new_id(sizeof(T), [](void* x){static_cast<T*>(x)->~T();},[](void* x){new (static_cast<T*>(x)) T();});
+        static const comp_info value = _new_id(
+            sizeof(T),
+            sizeof(T) > 0 ? [](void* x){static_cast<T*>(x)->~T();} : (rttiFP)nullptr,
+            sizeof(T) > 0 ? [](void* x){new (static_cast<T*>(x)) T();} : (rttiFP)nullptr
+        );
         return value.value.realIndex();
     }
 
     // type can be specialized to fix a type id
     template<typename T>
-    [[nodiscard]] inline comp_info& getTypeInfo()
+    inline comp_info& getTypeInfo()
     {
         return rtti[__type_id__<std::remove_const_t<std::remove_reference_t<T>>>()];
     }
@@ -175,19 +156,20 @@ namespace DOTS
         return rtti.at(realIndex);
     }
 
-    
-    // archtype_bitset componentsBitmask(){
-    //     archtype_bitset ret{};
-    //     (ret.set(getTypeInfo<Args>().index,1) , ...);
-    //     return ret;
-    // }
+
+    static bool customCompare (TypeIndex a,TypeIndex b) { return a.realIndex() < b.realIndex(); }
     template<typename ... T>
-    std::vector<TypeIndex> componentTypes() {
+    std::vector<TypeIndex> initComponentTypes() {
         std::vector<TypeIndex> ret;
         ret.reserve(sizeof...(T));
-        (ret.emplace_back(getTypeInfo<T>().index), ...);
-        std::sort(ret.begin(),ret.end());
-        return std::move(ret);
+        (ret.emplace_back(getTypeInfo<T>().value), ...);
+        std::sort(ret.begin(),ret.end(),customCompare);
+        return ret;
+    }
+    template<typename ... T>
+    std::vector<TypeIndex> componentTypes() {
+        static std::vector<TypeIndex> ret = initComponentTypes<T...>();
+        return ret;
     }
 
 }

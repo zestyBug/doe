@@ -148,8 +148,9 @@ protected:
         bool operator*(){
             return (this->data[this->bit_index>>3] >> (this->bit_index & 0b111)) & 1;
         }
-        void operator++(){
+        bitset_iterator& operator++(){
             this->bit_index++;
+            return *this;
         }
         bool operator!=(size_t end){
             return bit_index < end ? true : false;
@@ -299,8 +300,9 @@ protected:
         bool operator*(){
             return (this->data[this->bit_index>>3] >> (this->bit_index & 0b111)) & 1;
         }
-        inline void operator++(){
+        inline bitset_iterator& operator++(){
             this->bit_index++;
+            return *this;
         }
         inline bool operator!=(bitset_iterator end){
             return bit_index < end.bit_index ? true : false;
