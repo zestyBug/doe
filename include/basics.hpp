@@ -1,3 +1,7 @@
+/**
+ * this file includes minimum required C++ tools
+ */
+
 #if !defined(BASICS_HPP)
 #define BASICS_HPP
 
@@ -12,7 +16,29 @@
 // new () T() should be global
 #include <memory>
 
-namespace DOTS {
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+
+
+namespace ECS {
+
+/// @brief alignes array size to 64 byte for cache, perfermance and false sharing issues
+/// @param typeSize sizeof single entity
+/// @param count number of entities
+/// @return new array size
+inline size_t alignTo64(size_t typeSize, size_t count){
+    return (typeSize*count+0x3F)&0xFFFFFFC0;
+}
+
+
+/// @brief alignes array size to 8 byte for performance in SoA and AoS
+/// @param typeSize sizeof single entity
+/// @param count number of entities
+/// @return new array size
+inline size_t alignTo8(size_t typeSize, size_t count){
+    return (typeSize*count+0x7)&0xFFFFFFF8;
+}
+
 template<typename _Tp=uint8_t>
 class allocator
 {
@@ -25,9 +51,8 @@ class allocator
 
     _GLIBCXX_NODISCARD
     _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) {
-        __n = sizeof(_Tp)*__n;
-        _Tp* ret = (_Tp*) malloc(__n);
-        if(ret == nullptr) throw std::runtime_error("allocate(): null!");
+        _Tp* ret = (_Tp*) malloc(alignTo64(sizeof(_Tp),__n));
+        if(ret == nullptr) throw std::bad_alloc();
         printf("allocator::allocate(): %llu byte in %p\n",__n,ret);
         return ret;
     }

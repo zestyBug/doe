@@ -1,18 +1,20 @@
 //#include "Engine/ECS/ThreadPool.hpp"
-#include "ECS/Register.hpp"
+#include "ECS/EntityComponentManager.hpp"
 #include "cutil/range.hpp"
 #include "cutil/SmallVector.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "cutil/prototype.hpp"
-StaticArray<DOTS::comp_info,32> DOTS::rtti;
-DOTS::Register *reg;
-//DOTS::ThreadPool *tp;
+ECS::EntityComponentManager *reg;
+
+int prototype::counter = 0;
+
+//ECS::ThreadPool *tp;
 
 struct Hierarchy {
-    DOTS::Entity parent{};
-    SmallVector<DOTS::Entity,8> child{};
+    ECS::Entity parent{};
+    SmallVector<ECS::Entity,8> child{};
 };
 struct LocalTransform {
     glm::vec3 position = glm::vec3(0.0, 0.0, 0.0);
@@ -22,18 +24,45 @@ struct LocalTransform {
 typedef glm::mat<4, 4, float, glm::precision::defaultp> GlobalTransform;
 
 int main(){
-    reg = new DOTS::Register();
-    DOTS::getTypeInfo<DOTS::Entity>();
-    auto v0 = reg->createEntity<Hierarchy,GlobalTransform,int,prototype>();
-    auto v1 = reg->createEntity<Hierarchy,GlobalTransform,int,prototype>();
-    auto v2 = reg->createEntity<Hierarchy,GlobalTransform,int,prototype>();
-    reg->createEntity<Hierarchy,GlobalTransform,int,prototype>();
-    reg->createEntity<GlobalTransform,int,prototype>();
-    auto v3 = reg->createEntity<GlobalTransform,int,prototype>();
-    reg->createEntity<GlobalTransform,int,prototype>();
+    reg = new ECS::EntityComponentManager();
+    ECS::getTypeInfo<ECS::Entity>();
+
+    {
+        ECS::ArchetypeVersionManager chunks;
+        for (size_t i = 0; i < 100; i++)
+        {
+            chunks.add(0);
+        }
+        chunks.popBack();
+    }
+
+    auto v0 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    for (size_t i = 0; i < 100; i++)
+    {
+        reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    }
+    auto v1 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    for (size_t i = 0; i < 100; i++)
+    {
+        reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    }
+    auto v2 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    for (size_t i = 0; i < 100; i++)
+    {
+        reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    }
+    auto v4 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    
+    
     reg->destroyEntity(v1);
     reg->destroyEntity(v0);
+    reg->destroyEntity(v4);
     reg->destroyEntity(v2);
-    reg->destroyEntity(v3);
+    
+    reg->iterate<int>([](span<void*>,uint32_t count){
+        printf("count: %u\n",count);
+    });
+    printf("counter: %i\n",prototype::getCount());
+
     delete reg;
 }

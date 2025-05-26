@@ -1,7 +1,9 @@
 #include "ECS/defs.hpp"
-using namespace DOTS;
+using namespace ECS;
 
-comp_info DOTS::_new_id(uint32_t size, rttiFP destructor, rttiFP constructor)
+StaticArray<ECS::comp_info,32> ECS::rtti;
+
+comp_info ECS::_new_id(uint32_t size, rttiFP destructor, rttiFP constructor)
 {
     TypeIndex ti;
     ti.value = rtti.size();

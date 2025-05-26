@@ -6,10 +6,10 @@
 #include <array>
 #include <utility>
 #include "defs.hpp"
-#include "ArchetypeChunkData.hpp"
+#include "ArchetypeVersionManager.hpp"
 #include "basics.hpp"
 
-namespace DOTS
+namespace ECS
 {
     struct Chunk {
         void *memory = nullptr;
@@ -28,13 +28,13 @@ namespace DOTS
         }
         ~Chunk() {
             allocator().deallocate(this->memory);
-            this->memory = nullptr;
         }
 
-        static const int32_t _BufferOffset = 64; // (must be cache line aligned)
-        static const int _ChunkSize = 16 * 1024;
-        static const int _BufferSize = _ChunkSize - _BufferOffset;
-        static const int _MaximumEntitiesPerChunk = 1024;
+        static constexpr uint32_t memoryOffset = 64; // (must be cache line aligned)
+        static constexpr uint32_t memorySize = 16 * 1024;
+        static constexpr uint32_t bufferSize = memorySize - memoryOffset;
+        // lower the number, the better component version-ing perform
+        static constexpr uint32_t maximumEntitiesPerChunk = 512;
     };
 
     class Archetype final
@@ -42,7 +42,7 @@ namespace DOTS
     protected:
 
         friend class ArchetypeListMap;
-        friend class Register;
+        friend class EntityComponentManager;
         // maximum number of entities that can be fit into a single chunk
         uint32_t chunkCapacity = 0;
         uint32_t lastChunkEntityCount = 0;
@@ -51,7 +51,7 @@ namespace DOTS
         // last entity on last chunk will be
         // filled in it place so iterating more efficiently.
         std::vector<Chunk> chunksData{};
-        ArchetypeChunkData chunks{};
+        ArchetypeVersionManager chunks{};
 
 
         // optimal for 16 component per archtype or less
@@ -65,17 +65,36 @@ namespace DOTS
         // firstTagIndex == 1 all tag, firstTagIndex == types.size() no tag
         uint16_t firstTagIndex = 0;
         uint16_t flags=0;
+        /// @brief archetype index in ECS archetype list, used for backward access.
         uint32_t archetypeIndex=0;
         Archetype(/* args */) = default;
     public:
         ~Archetype(/* args */) {
+            span<uint16_t> archSizes = this->sizeOfs;
+            span<Chunk> archChunks = this->chunksData;
+            span<uint32_t> archOffsets = this->offsets;
+            span<TypeIndex> archTypes = this->types;
+            for (size_t typeIndex = 0; typeIndex < this->nonZeroSizedTypesCount(); typeIndex++)
+            {
+                auto destructor =  getTypeInfo(archTypes[typeIndex]).destructor;
+                for (size_t chunkIndex = 0; chunkIndex < archChunks.size(); chunkIndex++)
+                {
+                    uint8_t * const componentMemory =
+                        (uint8_t*)(archChunks[chunkIndex].memory) + archOffsets[typeIndex];
+                    const size_t entityCount = (chunkIndex + 1) == archChunks.size() ?
+                        this->lastChunkEntityCount : this->chunkCapacity;
+                    const size_t typeSize = archSizes[typeIndex];
+                    for (size_t valueIndex = 0; valueIndex < entityCount; valueIndex++)
+                        destructor(componentMemory + typeSize*valueIndex);
+
+                }
+            }
         }
 
         // invalid index and max entity number
         static constexpr uint32_t nullEntityIndex = 0xfffffff;
         static constexpr uint32_t nullChunkIndex = 0xfffffff;
-        static constexpr uint32_t maxEntityPerChunk = 0x555;
-        
+
 
         Archetype& operator =(const Archetype&) = delete;
         Archetype(const Archetype&) = delete;
@@ -100,14 +119,11 @@ namespace DOTS
                 return (v-1) * chunkCapacity + lastChunkEntityCount;
         }
 
-        uint16_t nonZeroSizedTypesCount() const {
+        inline uint16_t nonZeroSizedTypesCount() const {
             return firstTagIndex;
         }
 
-        static Archetype* createArchetype(span<TypeIndex> types);
-
         /// @brief find or create an index on chunks list.
-        /// @param e
         /// @return index within the archetype
         uint32_t createEntity();
 
@@ -138,19 +154,12 @@ namespace DOTS
         inline uint32_t getInChunkIndex(const uint32_t i) const {
             return (i % this->chunkCapacity);
         }
-        /// @brief alignes array size to 64 byte for cache and perfermance reasone
-        /// @param sizeofs sizeof single entity
-        /// @param count number of entities
-        /// @return new array size
-        inline static uint32_t getComponentArraySize(uint32_t sizeofs, uint32_t count){
-            return (sizeofs*count+0x3F)&0xFFFFFFC0;
-        }
         /// @brief calculate real aligned size of SOA
         /// @param sizeofs array of size of each component
         static uint32_t calculateSpaceRequirement(uint32_t entity_count,const span<uint16_t> sizeofs){
             int size = 0;
             for (uint16_t v:sizeofs)
-                size += getComponentArraySize(v, entity_count);
+                size += alignTo64(v, entity_count);
             return size;
         }
         /// @brief finds suitable capacity
@@ -165,8 +174,46 @@ namespace DOTS
                 --capacity;
             return capacity;
         }
+
+
+        static Archetype* createArchetype(span<TypeIndex> types);
+
+        /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
+        /// @param entity value of srcIndex to be updated
+        bool hasComponent(TypeIndex type);
+
+        /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
+        /// @param entity value of srcIndex to be updated
+        bool hasComponents(span<TypeIndex> types);
+
+
+        /// @brief in-archetype delete operation, handles deconstruction + memcpy by itself
+        /// @param entity srcIndex to be removed
+        /// @return value of entity that has replaced it, Entity::null if nothing happened
+        static Entity managedRemoveEntity(Archetype *archetype, uint32_t srcIndex);
+
+        /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
+        /// @param entity value of srcIndex to be updated
+        static Entity moveComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex);
+
+        /// @brief in-archetype move operation, handles only memcpy not destruction
+        /// @param entity value of srcIndex to be updated
+        static Entity replaceComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex);
+
+        /// @brief between-archetype move operation, handles deconstruction + construction + memcpy by itself
+        /// @param entity value of srcIndex to be updated
+        static Entity moveComponentValues(Archetype *dstArchetype, uint32_t dstIndex,Archetype *srcArchetype, uint32_t srcIndex);
+
+        /// @brief call destructor function of components
+        /// @param index index inside archetype
+        void callComponentDestructor(uint32_t entityIndex);
+
+        /// @brief call constructor function of components
+        /// @param index index inside archetype
+        /// @param entity entity value to be storeds
+        void callComponentConstructor(uint32_t entityIndex, Entity e = Entity::null);
     };
-} // namespace DOTS
+} // namespace ECS
 
 
 #endif // ARCHETYPE_HPP

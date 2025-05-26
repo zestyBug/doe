@@ -7,7 +7,7 @@
 #include "cutil/span.hpp"
 #include <vector>
 
-namespace DOTS
+namespace ECS
 {
     class Archetype;
 
@@ -75,21 +75,19 @@ namespace DOTS
         }
 
 
-        void setCapacity(uint32_t capacity);
         void init(uint32_t count);
         void appendFrom(ArchetypeListMap& src);
+        void resize(uint32_t size);
+        void setCapacity(uint32_t capacity);
+        void add(Archetype* archetype);
+        void remove(Archetype* archetype);
         /// @brief find archtype using hash list
         /// @return archtype or nullptr
         Archetype* tryGet(span<TypeIndex> types) const;
-        // tryGet + exception if not found
-        Archetype* get(span<TypeIndex> types) const;
-        void resize(uint32_t size);
-        void add(Archetype* archetype);
         int  indexOf(Archetype* archetype) const;
-        void remove(Archetype* archetype);
         bool contains(Archetype* archetype) const;
         // the whole popuse is to free space when object is unused but still in memory
-        void dispose(){
+        void reset(){
             hashes= std::vector<uint32_t>();
             archetypes = std::vector<Archetype*>();
             emptyNodes=0;

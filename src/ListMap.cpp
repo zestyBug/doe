@@ -1,6 +1,6 @@
 #include "ECS/ListMap.hpp"
 //#include "ECS/Archetype.hpp"
-using namespace DOTS;
+using namespace ECS;
 
 #include "ECS/Archetype.hpp"
 
@@ -56,15 +56,6 @@ Archetype* ArchetypeListMap::tryGet(span<TypeIndex> types) const
             return nullptr;
     }
 }
-
-Archetype* ArchetypeListMap::get(span<TypeIndex> types) const
-{
-    Archetype* result = tryGet(types);
-    if(result == nullptr)
-        throw std::runtime_error("get(): found no suitable type");
-    return result;
-}
-
 void ArchetypeListMap::appendFrom(ArchetypeListMap& src)
 {
     for (uint32_t offset = 0; offset < src.size(); ++offset)
@@ -73,7 +64,7 @@ void ArchetypeListMap::appendFrom(ArchetypeListMap& src)
         if (hash != 0 && hash != _SkipCode)
             add(src.archetypes[offset]);
     }
-    src.dispose();
+    src.reset();
 }
 void ArchetypeListMap::resize(uint32_t size)
 {

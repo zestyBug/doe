@@ -5,15 +5,15 @@ static int test_num=1;
 #define DEF_TEST_SUBJECT() { printf("%i: ",test_num++);
 #define END_TEST_SUBJECT(RES) printf((RES)?"Passed\n":"Failed\n");}
 
-StaticArray<DOTS::comp_info,32> DOTS::rtti;
+StaticArray<ECS::comp_info,32> ECS::rtti;
 
 int main(int argc, char const *argv[])
 {
-    std::vector<DOTS::TypeIndex> types;
+    std::vector<ECS::TypeIndex> types;
     types.reserve(10);
-    types.emplace_back(DOTS::getTypeInfo<int>().value);
-    types.emplace_back(DOTS::getTypeInfo<prototype>().value);
-    DOTS::Archetype *arch = DOTS::Archetype::createArchetype(types);
+    types.emplace_back(ECS::getTypeInfo<int>().value);
+    types.emplace_back(ECS::getTypeInfo<prototype>().value);
+    ECS::Archetype *arch = ECS::Archetype::createArchetype(types);
 
     DEF_TEST_SUBJECT()
     auto v1 = arch->createEntity(0);
@@ -37,7 +37,7 @@ int main(int argc, char const *argv[])
     END_TEST_SUBJECT(true)
 
     
-    allocator<DOTS::Archetype>().destroy(arch);
-    allocator<DOTS::Archetype>().deallocate(arch);
+    allocator<ECS::Archetype>().destroy(arch);
+    allocator<ECS::Archetype>().deallocate(arch);
     return 0;
 }

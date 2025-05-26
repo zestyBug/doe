@@ -2,6 +2,7 @@
 #define SPAN_HPP_INCLUDED
 
 #include <vector>
+#include <array>
 template<typename _Type>
 class span
 {
@@ -24,6 +25,9 @@ public:
 	constexpr span():_M_ptr(nullptr),_M_count(0){}
 	constexpr span(_Type*data,size_t size):_M_ptr(data),_M_count(size){}
 	constexpr span(const std::vector<_Type>& v):_M_ptr((_Type*)v.data()),_M_count(v.size()){}
+	template<size_t S>
+	constexpr span(const std::array<_Type,S>& v):_M_ptr((_Type*)v.data()),_M_count(S){}
+
 	constexpr span& operator=(const span&) noexcept = default;
 	~span() noexcept = default;
 
@@ -92,7 +96,7 @@ public:
 		}
 		return *this;
 	}
-	
+
 	inline span<element_type> operator+(uint32_t step) const {
 		if(_M_count > step)
 			return span<element_type>{_M_ptr+step,_M_count-step};

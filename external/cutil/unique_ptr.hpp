@@ -6,7 +6,7 @@
 
 
 // supports pointer marking for first bit, it disables destruction
-template <typename Type, typename Allocator = DOTS::allocator<Type>>
+template <typename Type, typename Allocator = ECS::allocator<Type>>
 class unique_ptr
 {
     Type *_M_t = nullptr;

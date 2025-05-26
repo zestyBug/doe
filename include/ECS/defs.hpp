@@ -6,8 +6,9 @@
 #include <algorithm>    // std::sort
 #include "cutil/StaticArray.hpp"
 #include "cutil/bitset.hpp"
+#include "basics.hpp"
 
-namespace DOTS
+namespace ECS
 {
     // variable type that can hold component(type) id as integer
     using version_t = uint32_t;
@@ -45,7 +46,7 @@ namespace DOTS
         uint16_t realIndex() const {
             return this->value & 0x1FFF;
         }
-        bool exactSame(const TypeIndex v){
+        bool exactSame(const TypeIndex v) const {
             return this->value == v.value && this->flag == v.flag;
         }
     };
@@ -149,17 +150,25 @@ namespace DOTS
     }
     [[nodiscard]] inline comp_info& getTypeInfo(const TypeIndex id)
     {
+        if(unlikely(rtti.size() < id.realIndex()))
+            throw std::bad_typeid();
         return rtti[id.realIndex()];
     }
     [[nodiscard]] inline comp_info& getTypeInfo(const uint16_t realIndex)
     {
-        return rtti.at(realIndex);
+        if(unlikely(rtti.size() < realIndex))
+            throw std::bad_typeid();
+        return rtti[realIndex];
     }
 
 
-    static bool customCompare (TypeIndex a,TypeIndex b) { return a.realIndex() < b.realIndex(); }
+    static bool customCompare (TypeIndex a,TypeIndex b) {
+        if(unlikely(a.value == b.value))
+            throw std::bad_typeid();
+        return a.value < b.value; 
+    }
     template<typename ... T>
-    std::vector<TypeIndex> initComponentTypes() {
+    std::vector<TypeIndex> _INIT_COMPONENTS_TYPES_() {
         std::vector<TypeIndex> ret;
         ret.reserve(sizeof...(T));
         (ret.emplace_back(getTypeInfo<T>().value), ...);
@@ -167,8 +176,8 @@ namespace DOTS
         return ret;
     }
     template<typename ... T>
-    std::vector<TypeIndex> componentTypes() {
-        static std::vector<TypeIndex> ret = initComponentTypes<T...>();
+    const span<TypeIndex> componentTypes() {
+        static std::vector<TypeIndex> ret = _INIT_COMPONENTS_TYPES_<T...>();
         return ret;
     }
 
