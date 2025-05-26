@@ -41,7 +41,7 @@ namespace ECS
     {
     protected:
 
-        friend class ArchetypeListMap;
+        friend class ArchetypeHashMap;
         friend class EntityComponentManager;
         // maximum number of entities that can be fit into a single chunk
         uint32_t chunkCapacity = 0;
@@ -56,8 +56,8 @@ namespace ECS
 
         // optimal for 16 component per archtype or less
         // Entity are istored as first type
-        span<TypeIndex> types{};
-        // faster access to TypeIndex::realIndecies() for iteration
+        span<Type> types{};
+        // faster access to Type::realIndecies() for iteration
         span<uint16_t> realIndecies{};
         span<uint32_t> offsets{};
         span<uint16_t> sizeOfs{};
@@ -73,7 +73,7 @@ namespace ECS
             span<uint16_t> archSizes = this->sizeOfs;
             span<Chunk> archChunks = this->chunksData;
             span<uint32_t> archOffsets = this->offsets;
-            span<TypeIndex> archTypes = this->types;
+            span<Type> archTypes = this->types;
             for (size_t typeIndex = 0; typeIndex < this->nonZeroSizedTypesCount(); typeIndex++)
             {
                 auto destructor =  getTypeInfo(archTypes[typeIndex]).destructor;
@@ -144,7 +144,7 @@ namespace ECS
         }
 
         // TODO: binary search?
-        int32_t getIndex(TypeIndex t);
+        int32_t getIndex(Type t);
     protected:
         // the entity chunk index
         inline uint32_t getChunkIndex(const uint32_t i) const {
@@ -176,15 +176,15 @@ namespace ECS
         }
 
 
-        static Archetype* createArchetype(span<TypeIndex> types);
+        static Archetype* createArchetype(span<Type> types);
 
         /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
         /// @param entity value of srcIndex to be updated
-        bool hasComponent(TypeIndex type);
+        bool hasComponent(Type type);
 
         /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
         /// @param entity value of srcIndex to be updated
-        bool hasComponents(span<TypeIndex> types);
+        bool hasComponents(span<Type> types);
 
 
         /// @brief in-archetype delete operation, handles deconstruction + memcpy by itself

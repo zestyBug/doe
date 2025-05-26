@@ -1,6 +1,11 @@
 # Data Oriented Engine
 
-The whole idea is to bring the performance of the DOD and the readability of other languages to C++.
+The whole idea is to bring the performance of the DOD and the readability of other languages to C++.  
+##### Similarities specific to Unity DOTS:
++ using archetype and cache friendly chunks.
++ using component version-ing
++ using hashmap for type to archetype access
++ using entity command buffer
 
 #### DISCLAIMER
 This project is an independent implementation that draws inspiration from certain architectural patterns and algorithms found in open-source projects, including the Unity DOTS and the ENTT library.

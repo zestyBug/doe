@@ -4,7 +4,7 @@ using namespace ECS;
 
 
 
-Archetype* EntityComponentManager::getOrCreateArchetype(span<TypeIndex> types){
+Archetype* EntityComponentManager::getOrCreateArchetype(span<Type> types){
     {
         Archetype* archetype = archetypeTypeMap.tryGet(types);
         if(archetype != nullptr)
@@ -48,11 +48,11 @@ void EntityComponentManager::destroyEmptyArchetype(const uint32_t archetypeIndex
         freeArchetypeIndex = archetypeIndex;
     }
 }
-Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *archetype,span<TypeIndex> componentTypeSet){
-    span<TypeIndex> srcTypes = archetype->types;
+Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *archetype,span<Type> componentTypeSet){
+    span<Type> srcTypes = archetype->types;
     uint32_t dstTypesCount = srcTypes.size() + componentTypeSet.size();
 
-    TypeIndex dstTypes[dstTypesCount];
+    Type dstTypes[dstTypesCount];
 
     // zipper the two sorted arrays
     // because this is done in-place,
@@ -66,9 +66,9 @@ Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *ar
         while (newThings >= 0) // oldThings[0] has value 0, newThings can't have anything lower than that
         {
             // there is no way oldThings be less than 0 if things goes currectly
-            // type arrays being sorted and getTypeInfo<TypeIndex>().value.value() == 0
-            TypeIndex oldThing = srcTypes[oldThings];
-            TypeIndex newThing = componentTypeSet[newThings];
+            // type arrays being sorted and getTypeInfo<Type>().value.value() == 0
+            Type oldThing = srcTypes[oldThings];
+            Type newThing = componentTypeSet[newThings];
             if (oldThing.value > newThing.value) // put whichever is bigger at the end of the array
             {
                 dstTypes[--mixedThings] = oldThing;
@@ -97,12 +97,12 @@ Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *ar
 
     return this->getOrCreateArchetype({dstTypes,dstTypesCount});
 }
-Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* archetype, TypeIndex componentType,uint32_t *indexInTypeArray)
+Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* archetype, Type componentType,uint32_t *indexInTypeArray)
 {
-    span<TypeIndex> srcTypes = archetype->types;
+    span<Type> srcTypes = archetype->types;
     uint32_t dstTypesCount = srcTypes.size() + 1;
 
-    TypeIndex newTypes[dstTypesCount];
+    Type newTypes[dstTypesCount];
 
     uint16_t t = 0;
     while (t < srcTypes.size() && srcTypes[t].value < componentType.value)
@@ -128,9 +128,9 @@ Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* arc
 
     return getOrCreateArchetype({newTypes,dstTypesCount});
 }
-Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *archetype,span<TypeIndex> typeSetToRemove){
+Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *archetype,span<Type> typeSetToRemove){
     const uint32_t typesCount = archetype->types.size();
-    TypeIndex newTypes[typesCount];
+    Type newTypes[typesCount];
 
     uint32_t numRemovedTypes = 0;
     for (uint32_t t = 0; t < typesCount; ++t)
@@ -138,7 +138,7 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *
         uint16_t existingTypeIndex = archetype->types[t].value;
 
         bool removed = false;
-        for(const TypeIndex type : typeSetToRemove)
+        for(const Type type : typeSetToRemove)
             if (existingTypeIndex == getTypeInfo(type).value.value)
             {
                 numRemovedTypes++;
@@ -154,10 +154,10 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *
         return archetype;
     return getOrCreateArchetype({newTypes, typesCount - numRemovedTypes});
 }
-Archetype* EntityComponentManager::getArchetypeWithRemovedComponent (Archetype* archetype,TypeIndex addedComponentType,uint32_t *indexInOldTypeArray)
+Archetype* EntityComponentManager::getArchetypeWithRemovedComponent (Archetype* archetype,Type addedComponentType,uint32_t *indexInOldTypeArray)
 {
     const uint32_t typesCount = archetype->types.size();
-    TypeIndex newTypes[typesCount];
+    Type newTypes[typesCount];
 
     uint32_t removedTypes = 0;
     for (uint32_t t = 0; t < typesCount; ++t)
@@ -195,7 +195,7 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponent (Archetype* 
 Entity EntityComponentManager::createEntity(){
     return recycleEntity();
 }
-void EntityComponentManager::addComponents(Entity entity, span<TypeIndex> componentTypeSet)
+void EntityComponentManager::addComponents(Entity entity, span<Type> componentTypeSet)
 {
     entity_t& srcValue = validate(entity);
 
@@ -229,7 +229,7 @@ void EntityComponentManager::addComponents(Entity entity, span<TypeIndex> compon
     srcValue.index = newIndex;
     srcValue.archetype = newArchetype->archetypeIndex;
 }
-void EntityComponentManager::removeComponents(Entity entity, span<TypeIndex> componentTypeSet){
+void EntityComponentManager::removeComponents(Entity entity, span<Type> componentTypeSet){
     entity_t& srcValue = validate(entity);
 
     Archetype *srcArchetype,*newArchetype;
@@ -255,7 +255,7 @@ void EntityComponentManager::removeComponents(Entity entity, span<TypeIndex> com
         }
     }
 }
-Entity EntityComponentManager::createEntity(span<TypeIndex> types) {
+Entity EntityComponentManager::createEntity(span<Type> types) {
     const Entity result = recycleEntity();
     if(!types.empty())
     {
@@ -291,7 +291,7 @@ void EntityComponentManager::removeComponents(Entity entity)
     }
 }
 
-bool EntityComponentManager::hasComponents(Entity entity,span<TypeIndex> types) const {
+bool EntityComponentManager::hasComponents(Entity entity,span<Type> types) const {
     // code copyied from validate()
     if(this->entity_value.size() <= entity.index())
         return false;
@@ -307,7 +307,7 @@ bool EntityComponentManager::hasComponents(Entity entity,span<TypeIndex> types) 
     return arch->hasComponents(types);
 }
 
-bool EntityComponentManager::hasComponent(Entity entity,TypeIndex type) const {
+bool EntityComponentManager::hasComponent(Entity entity,Type type) const {
     // code copyied from validate()
     if(this->entity_value.size() <= entity.index())
         return false;

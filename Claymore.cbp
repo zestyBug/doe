@@ -53,12 +53,12 @@
 		<Unit filename="external/cutil/unique_ptr.hpp" />
 		<Unit filename="include/ECS/Archetype.hpp" />
 		<Unit filename="include/ECS/ArchetypeChunkData.hpp" />
-		<Unit filename="include/ECS/ListMap.hpp" />
+		<Unit filename="include/ECS/Hashmap.hpp" />
 		<Unit filename="include/ECS/Register.hpp" />
 		<Unit filename="include/ECS/defs.hpp" />
 		<Unit filename="include/basics.hpp" />
 		<Unit filename="src/Archetype.cpp" />
-		<Unit filename="src/ListMap.cpp" />
+		<Unit filename="src/Hashmap.cpp" />
 		<Unit filename="src/Register.cpp" />
 		<Unit filename="src/defs.cpp" />
 		<Unit filename="test/ecs.cpp" />

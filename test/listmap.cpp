@@ -1,11 +1,11 @@
-#include "ECS/ListMap.hpp"
-#include "../src/ListMap.cpp"
+#include "ECS/Hashmap.hpp"
+#include "../src/Hashmap.cpp"
 
 StaticArray<ECS::comp_info,32> ECS::rtti;
 
 int main(int argc, char const *argv[])
 {
-    ECS::ListMap list;
+    ECS::Hashmap list;
     int test_num=1;
     #define DEF_TEST_SUBJECT() { printf("%i: ",test_num++);
     #define END_TEST_SUBJECT(RES) printf((RES)?"Passed\n":"Failed\n");}

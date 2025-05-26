@@ -1,4 +1,4 @@
-#include "ECS/ListMap.hpp"
+#include "ECS/Hashmap.hpp"
 //#include "ECS/Archetype.hpp"
 using namespace ECS;
 
@@ -6,7 +6,7 @@ using namespace ECS;
 
 
 
-void ArchetypeListMap::setCapacity(uint32_t capacity)
+void ArchetypeHashMap::setCapacity(uint32_t capacity)
 {
     if (capacity < minimumSize())
         capacity = minimumSize();
@@ -14,7 +14,7 @@ void ArchetypeListMap::setCapacity(uint32_t capacity)
     archetypes.resize(capacity);
 }
 
-void ArchetypeListMap::init(uint32_t count)
+void ArchetypeHashMap::init(uint32_t count)
 {
     if (count < minimumSize())
         count = minimumSize();
@@ -30,7 +30,7 @@ void ArchetypeListMap::init(uint32_t count)
     skipNodes = 0;
 }
 
-Archetype* ArchetypeListMap::tryGet(span<TypeIndex> types) const
+Archetype* ArchetypeHashMap::tryGet(span<Type> types) const
 {
     if(types.size() == 0)
         return nullptr;
@@ -56,7 +56,7 @@ Archetype* ArchetypeListMap::tryGet(span<TypeIndex> types) const
             return nullptr;
     }
 }
-void ArchetypeListMap::appendFrom(ArchetypeListMap& src)
+void ArchetypeHashMap::appendFrom(ArchetypeHashMap& src)
 {
     for (uint32_t offset = 0; offset < src.size(); ++offset)
     {
@@ -66,19 +66,19 @@ void ArchetypeListMap::appendFrom(ArchetypeListMap& src)
     }
     src.reset();
 }
-void ArchetypeListMap::resize(uint32_t size)
+void ArchetypeHashMap::resize(uint32_t size)
 {
     if (size < minimumSize())
         size = minimumSize();
     if (size == this->size())
         return;
-    ArchetypeListMap temp;
+    ArchetypeHashMap temp;
     temp.init(size);
     temp.appendFrom(*this);
     *this = std::move(temp);
 }
 
-void ArchetypeListMap::add(Archetype* archetype)
+void ArchetypeHashMap::add(Archetype* archetype)
 {
     if(archetype == nullptr)
         throw std::invalid_argument("add(): null archtype");
@@ -114,7 +114,7 @@ void ArchetypeListMap::add(Archetype* archetype)
     }
 }
 
-void ArchetypeListMap::remove(Archetype* archetype)
+void ArchetypeHashMap::remove(Archetype* archetype)
 {
     int32_t offset = indexOf(archetype);
     if(offset != -1)
@@ -124,12 +124,12 @@ void ArchetypeListMap::remove(Archetype* archetype)
     possiblyShrink();
 }
 
-bool ArchetypeListMap::contains(Archetype* archetype) const
+bool ArchetypeHashMap::contains(Archetype* archetype) const
 {
     return indexOf(archetype) != -1;
 }
 
-int32_t ArchetypeListMap::indexOf(Archetype* archetype) const
+int32_t ArchetypeHashMap::indexOf(Archetype* archetype) const
 {
     if(archetype == nullptr)
         return -1;

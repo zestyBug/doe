@@ -11,7 +11,7 @@
 #include "cutil/SmallVector.hpp"
 #include "cutil/span.hpp"
 #include "cutil/unique_ptr.hpp"
-#include "ListMap.hpp"
+#include "HashMap.hpp"
 
 namespace ECS
 {
@@ -23,7 +23,7 @@ namespace ECS
         std::vector<entity_t> entity_value{};
 
         std::vector<unique_ptr<Archetype>> archetypes{};
-        ArchetypeListMap archetypeTypeMap{};
+        ArchetypeHashMap archetypeTypeMap{};
 
 
         uint32_t freeEntityIndex = Entity::maxEntityCount;
@@ -32,7 +32,7 @@ namespace ECS
 
         /// @brief find or create a archetype with given types,
         /// @param types list of types, throws invalid_argument exception on empty list
-        Archetype* getOrCreateArchetype(span<TypeIndex> types);
+        Archetype* getOrCreateArchetype(span<Type> types);
 
         // destroys Archetype if empty otherwise nothing
         void destroyEmptyArchetype(const uint32_t archetypeIndex);
@@ -41,19 +41,19 @@ namespace ECS
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithAddedComponents(Archetype *archetype,span<TypeIndex> componentTypeSet);
+        Archetype* getArchetypeWithAddedComponents(Archetype *archetype,span<Type> componentTypeSet);
 
         /// @brief add component to an entity or in other word, move entity to another archetype, exception handled
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithRemovedComponents(Archetype *archetype,span<TypeIndex> typeSetToRemove);
+        Archetype* getArchetypeWithRemovedComponents(Archetype *archetype,span<Type> typeSetToRemove);
 
         /// @ref getArchetypeWithAddedComponents
-        Archetype* getArchetypeWithAddedComponent(Archetype* archetype,TypeIndex addedComponentType,uint32_t *indexInTypeArray = nullptr);
+        Archetype* getArchetypeWithAddedComponent(Archetype* archetype,Type addedComponentType,uint32_t *indexInTypeArray = nullptr);
 
         /// @ref getArchetypeWithAddedComponents
-        Archetype* getArchetypeWithRemovedComponent(Archetype* archetype,TypeIndex addedComponentType,uint32_t *indexInOldTypeArray = nullptr);
+        Archetype* getArchetypeWithRemovedComponent(Archetype* archetype,Type addedComponentType,uint32_t *indexInOldTypeArray = nullptr);
 
     /*
      * Only Public function verfy inputs validity.
@@ -70,7 +70,7 @@ namespace ECS
 
         template<typename ... Types>
         void iterate(void(*func)(span<void*>,uint32_t)) {
-            span<TypeIndex> types = componentTypes<Types...>();
+            span<Type> types = componentTypes<Types...>();
             std::array<size_t, (sizeof...(Types))> offset_buffer;
             std::array<void*, (sizeof...(Types))> arg_buffer;
 
@@ -81,7 +81,7 @@ namespace ECS
                     {
                         {
                             span<uint32_t> archOffsets{arch->offsets};
-                            span<TypeIndex> archTypes{arch->types};
+                            span<Type> archTypes{arch->types};
                             // fill offset_buffer
                             for(uint32_t typePosition=0;typePosition<offset_buffer.size();typePosition++)
                             {
@@ -164,7 +164,7 @@ namespace ECS
 
         /// @brief create entity and stores entity value and initilize entity
         /// @param types types you are loking for
-        Entity createEntity(span<TypeIndex> types);
+        Entity createEntity(span<Type> types);
 
         /// @brief releases components
         void removeComponents(Entity entity);
@@ -176,25 +176,25 @@ namespace ECS
         /// @brief add list of components, components are initialized with default constructor
         /// @param entity entity, can belong to no archetype
         /// @param componentTypeSet set of components to be added
-        void addComponents(Entity entity, span<TypeIndex> componentTypeSet);
+        void addComponents(Entity entity, span<Type> componentTypeSet);
 
         /// @brief add list of components, components are initialized with default constructor
         /// @param entity entity, can belong to no archetype
         /// @param componentTypeSet set of components to be added
-        void removeComponents(Entity entity, span<TypeIndex> componentTypeSet);
+        void removeComponents(Entity entity, span<Type> componentTypeSet);
 
         /// @brief simple linear check,
         /// @param types type flags are NOT ignored!
-        bool hasComponents(Entity e,span<TypeIndex> types) const;
+        bool hasComponents(Entity e,span<Type> types) const;
 
         /// @brief simple linear check
         /// @param type type flag is NOT ignored!
-        bool hasComponent(Entity e,TypeIndex type) const;
+        bool hasComponent(Entity e,Type type) const;
 
         // optimized: using archetype bitmap
         template<typename T>
         bool hasComponent(Entity e) const {
-            TypeIndex type = getTypeInfo<T>().value;
+            Type type = getTypeInfo<T>().value;
             return hasComponent(e,type);
         }
 

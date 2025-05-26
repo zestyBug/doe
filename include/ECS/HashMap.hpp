@@ -11,14 +11,14 @@ namespace ECS
 {
     class Archetype;
 
-    class ArchetypeListMap
+    class ArchetypeHashMap
     {
         static const uint32_t _AValidHashCode = 0x00000001;
         static const uint32_t _SkipCode = 0xFFFFFFFF;
         /// @brief generates hash code for a archetype
         /// @param types note that type flags are also included, like disable-ness, prefab-being
         /// @return (may-modified) hash value
-        static uint32_t getHashCode(span<TypeIndex> types)
+        static uint32_t getHashCode(span<Type> types)
         {
             uint32_t result = hash128::FNV1A32(types);
             if (result == 0 || result == _SkipCode)
@@ -27,13 +27,13 @@ namespace ECS
         }
     public:
 
-        ArchetypeListMap() = default;
-        ArchetypeListMap(const ArchetypeListMap&) = delete;
-        ArchetypeListMap(ArchetypeListMap&& v){
+        ArchetypeHashMap() = default;
+        ArchetypeHashMap(const ArchetypeHashMap&) = delete;
+        ArchetypeHashMap(ArchetypeHashMap&& v){
             *this = std::move(v);
         }
-        ArchetypeListMap& operator=(const ArchetypeListMap&) = delete;
-        ArchetypeListMap& operator=(ArchetypeListMap&& v){
+        ArchetypeHashMap& operator=(const ArchetypeHashMap&) = delete;
+        ArchetypeHashMap& operator=(ArchetypeHashMap&& v){
             if(this != &v){
                 this->emptyNodes = v.emptyNodes;
                 this->skipNodes = v.skipNodes;
@@ -76,14 +76,14 @@ namespace ECS
 
 
         void init(uint32_t count);
-        void appendFrom(ArchetypeListMap& src);
+        void appendFrom(ArchetypeHashMap& src);
         void resize(uint32_t size);
         void setCapacity(uint32_t capacity);
         void add(Archetype* archetype);
         void remove(Archetype* archetype);
         /// @brief find archtype using hash list
         /// @return archtype or nullptr
-        Archetype* tryGet(span<TypeIndex> types) const;
+        Archetype* tryGet(span<Type> types) const;
         int  indexOf(Archetype* archetype) const;
         bool contains(Archetype* archetype) const;
         // the whole popuse is to free space when object is unused but still in memory

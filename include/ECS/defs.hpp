@@ -21,7 +21,7 @@ namespace ECS
     constexpr uint32_t nullArchetypeIndex = 0xfffffff;
 
 
-    struct TypeIndex {
+    struct Type {
         enum TypeFlags : uint16_t {
             prefab = 0x1,
             disabled = 0x2
@@ -30,12 +30,12 @@ namespace ECS
         // flags are archetype specific, hash no effect on data
         uint16_t flag=0;
 
-        TypeIndex()=default;
-        TypeIndex(const TypeIndex&)=default;
-        TypeIndex& operator = (const TypeIndex&)=default;
-        TypeIndex(TypeIndex&&)=default;
-        TypeIndex& operator = (TypeIndex&&)=default;
-        TypeIndex(uint16_t v,uint16_t f=0):value{v},flag{f}{};
+        Type()=default;
+        Type(const Type&)=default;
+        Type& operator = (const Type&)=default;
+        Type(Type&&)=default;
+        Type& operator = (Type&&)=default;
+        Type(uint16_t v,uint16_t f=0):value{v},flag{f}{};
 
         bool isPrefab() const {
             return this->flag & prefab;
@@ -46,7 +46,7 @@ namespace ECS
         uint16_t realIndex() const {
             return this->value & 0x1FFF;
         }
-        bool exactSame(const TypeIndex v) const {
+        bool exactSame(const Type v) const {
             return this->value == v.value && this->flag == v.flag;
         }
     };
@@ -102,7 +102,7 @@ namespace ECS
 
 
     struct comp_info {
-        TypeIndex value;
+        Type value;
         uint32_t size = 0;
         // destructor function
         void (*destructor)(void*) = nullptr;
@@ -120,7 +120,7 @@ namespace ECS
     // technically array can be erased to reassign type ids
     // unless values are stored somewhere and spreaded
     // WARN: dont access this directly
-    // WARN: TypeIndex index must be 0
+    // WARN: Type index must be 0
     extern StaticArray<comp_info,COMPOMEN_COUNT> rtti;
 
     typedef void (*rttiFP)(void*);
@@ -148,7 +148,7 @@ namespace ECS
     {
         return rtti[__type_id__<std::remove_const_t<std::remove_reference_t<T>>>()];
     }
-    [[nodiscard]] inline comp_info& getTypeInfo(const TypeIndex id)
+    [[nodiscard]] inline comp_info& getTypeInfo(const Type id)
     {
         if(unlikely(rtti.size() < id.realIndex()))
             throw std::bad_typeid();
@@ -162,22 +162,22 @@ namespace ECS
     }
 
 
-    static bool customCompare (TypeIndex a,TypeIndex b) {
+    static bool customCompare (Type a,Type b) {
         if(unlikely(a.value == b.value))
             throw std::bad_typeid();
         return a.value < b.value; 
     }
     template<typename ... T>
-    std::vector<TypeIndex> _INIT_COMPONENTS_TYPES_() {
-        std::vector<TypeIndex> ret;
+    std::vector<Type> _INIT_COMPONENTS_TYPES_() {
+        std::vector<Type> ret;
         ret.reserve(sizeof...(T));
         (ret.emplace_back(getTypeInfo<T>().value), ...);
         std::sort(ret.begin(),ret.end(),customCompare);
         return ret;
     }
     template<typename ... T>
-    const span<TypeIndex> componentTypes() {
-        static std::vector<TypeIndex> ret = _INIT_COMPONENTS_TYPES_<T...>();
+    const span<Type> componentTypes() {
+        static std::vector<Type> ret = _INIT_COMPONENTS_TYPES_<T...>();
         return ret;
     }
 

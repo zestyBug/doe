@@ -5,7 +5,7 @@ StaticArray<ECS::comp_info,32> ECS::rtti;
 
 comp_info ECS::_new_id(uint32_t size, rttiFP destructor, rttiFP constructor)
 {
-    TypeIndex ti;
+    Type ti;
     ti.value = rtti.size();
     if(size < 1)
         ti.value |= 0x2000;

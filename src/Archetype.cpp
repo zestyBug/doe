@@ -2,7 +2,7 @@
 using namespace ECS;
 
 
-Archetype* Archetype::createArchetype(span<TypeIndex> types) {
+Archetype* Archetype::createArchetype(span<Type> types) {
     const size_t typesCount = types.size() + 1;
     if(unlikely(typesCount < 1 || typesCount > 0xFFF))
         throw std::invalid_argument("createArchetype(): archetype with unexpected component count");
@@ -10,7 +10,7 @@ Archetype* Archetype::createArchetype(span<TypeIndex> types) {
     uint32_t additional = 0;
     uint16_t offsets[4];
     offsets[0] =              alignTo64(sizeof(Archetype),1);
-    offsets[1] = offsets[0] + alignTo64(sizeof(TypeIndex),typesCount);
+    offsets[1] = offsets[0] + alignTo64(sizeof(Type),typesCount);
     offsets[2] = offsets[1] + alignTo64(sizeof(uint16_t),typesCount);
     offsets[3] = offsets[2] + alignTo64(sizeof(uint32_t),typesCount);
     additional = offsets[3] + alignTo64(sizeof(uint16_t),typesCount);
@@ -20,7 +20,7 @@ Archetype* Archetype::createArchetype(span<TypeIndex> types) {
 
     new (arch) Archetype();
 
-    arch->types = span<TypeIndex>{(TypeIndex*)((uint8_t*)(arch) + offsets[0]),typesCount};
+    arch->types = span<Type>{(Type*)((uint8_t*)(arch) + offsets[0]),typesCount};
     arch->realIndecies = span<uint16_t>{(uint16_t*)((uint8_t*)(arch) + offsets[1]),typesCount};
     arch->offsets = span<uint32_t>{(uint32_t*)((uint8_t*)(arch) + offsets[2]),typesCount};
     arch->sizeOfs = span<uint16_t>{(uint16_t*)((uint8_t*)(arch) + offsets[3]),typesCount};
@@ -54,10 +54,10 @@ Archetype* Archetype::createArchetype(span<TypeIndex> types) {
         }else
             arch->sizeOfs[i] = 0;
     }
-    for (TypeIndex type: arch->types)
+    for (Type type: arch->types)
     {
         if(type.isPrefab())
-            arch->flags |= TypeIndex::prefab;
+            arch->flags |= Type::prefab;
     }
 
     arch->chunkCapacity = std::min( 
@@ -136,7 +136,7 @@ void* Archetype::getComponent(uint16_t componentIndex,uint32_t entityIndex){
     return chunkMemory + offsets.at(componentIndex) + (sizeOfs.at(componentIndex) * inChunkIndex);
 }
 
-int32_t Archetype::getIndex(TypeIndex t){
+int32_t Archetype::getIndex(Type t){
     uint16_t rIndex = t.realIndex();
     for (size_t i = 0; i < realIndecies.size(); i++){
         if(realIndecies[i] == rIndex)
@@ -157,8 +157,8 @@ int32_t Archetype::getIndex(TypeIndex t){
 
 
 
-bool Archetype::hasComponent(TypeIndex type) {
-    span<TypeIndex> archetypeTypes = this->types;
+bool Archetype::hasComponent(Type type) {
+    span<Type> archetypeTypes = this->types;
     if(archetypeTypes.size() < 1) return false;
 
     uint16_t archetypeTypesIndex = 0;
@@ -179,9 +179,9 @@ bool Archetype::hasComponent(TypeIndex type) {
     }
     return false;
 }
-bool Archetype::hasComponents(span<TypeIndex> rtypes)
+bool Archetype::hasComponents(span<Type> rtypes)
 {
-    span<TypeIndex> archetypeTypes = this->types;
+    span<Type> archetypeTypes = this->types;
     if(archetypeTypes.size() < rtypes.size()) return false;
 
     uint16_t archetypeTypesIndex = 0;
