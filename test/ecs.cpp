@@ -7,7 +7,7 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "cutil/prototype.hpp"
 ECS::EntityComponentManager *reg;
-
+ssize_t allocator_counter = 0;
 int prototype::counter = 0;
 
 //ECS::ThreadPool *tp;
@@ -29,6 +29,7 @@ int main(){
 
     {
         ECS::ArchetypeVersionManager chunks;
+        chunks.initialize(4);
         for (size_t i = 0; i < 100; i++)
         {
             chunks.add(0);
@@ -37,11 +38,13 @@ int main(){
     }
 
     auto v0 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    reg->destroyEntity(v0);
     for (size_t i = 0; i < 100; i++)
     {
         reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
     }
     auto v1 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    reg->destroyEntity(v1);
     for (size_t i = 0; i < 100; i++)
     {
         reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
@@ -54,15 +57,13 @@ int main(){
     auto v4 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
     
     
-    reg->destroyEntity(v1);
-    reg->destroyEntity(v0);
     reg->destroyEntity(v4);
     reg->destroyEntity(v2);
     
     reg->iterate<int>([](span<void*>,uint32_t count){
         printf("count: %u\n",count);
     });
-    printf("counter: %i\n",prototype::getCount());
 
     delete reg;
+    printf("counter: %li\n",allocator_counter);
 }

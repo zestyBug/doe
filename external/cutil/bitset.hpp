@@ -9,7 +9,7 @@
 #include <typeindex>
 #include <typeinfo>
 
-#include "./hash128.hpp"
+#include "./HashHelper.hpp"
 
 class bitset
 {
@@ -152,12 +152,12 @@ protected:
             this->bit_index++;
             return *this;
         }
-        bool operator!=(size_t end){
-            return bit_index < end ? true : false;
+        bool operator!=(bitset_iterator end){
+            return bit_index < end.bit_index ? true : false;
         }
     };
 public:
-    size_t end() const {return this->size * 8;}
+    bitset_iterator end() const {return bitset_iterator{this->size * 8,this->data};}
     bitset_iterator begin() const {return bitset_iterator{0,this->data};}
 
     bool operator==(const bitset & set) const {
@@ -355,7 +355,7 @@ public:
     }
     // Helper: Hash a vector of type_index (order-insensitive)
     inline uint64_t hash() const {
-        return hash128::FNV1A64(this->data,BYTE);
+        return HashHelper::FNV1A64(this->data,BYTE);
     }
 protected:
 };

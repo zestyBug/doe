@@ -7,7 +7,7 @@
 #include <utility>
 #include "defs.hpp"
 #include "ArchetypeVersionManager.hpp"
-#include "basics.hpp"
+#include "cutil/basics.hpp"
 
 namespace ECS
 {
@@ -50,14 +50,14 @@ namespace ECS
         // if we remove a entity for a random chunk,
         // last entity on last chunk will be
         // filled in it place so iterating more efficiently.
-        std::vector<Chunk> chunksData{};
-        ArchetypeVersionManager chunks{};
+        std::vector<Chunk,allocator<Chunk>> chunksData{};
+        ArchetypeVersionManager chunksVersion{};
 
 
         // optimal for 16 component per archtype or less
         // Entity are istored as first type
-        span<Type> types{};
-        // faster access to Type::realIndecies() for iteration
+        span<TypeID> types{};
+        // faster access to TypeID::realIndecies() for iteration
         span<uint16_t> realIndecies{};
         span<uint32_t> offsets{};
         span<uint16_t> sizeOfs{};
@@ -69,31 +69,39 @@ namespace ECS
         uint32_t archetypeIndex=0;
         Archetype(/* args */) = default;
     public:
+
+        static Archetype* createArchetype(span<TypeID> types);
+
         ~Archetype(/* args */) {
             span<uint16_t> archSizes = this->sizeOfs;
             span<Chunk> archChunks = this->chunksData;
             span<uint32_t> archOffsets = this->offsets;
-            span<Type> archTypes = this->types;
-            for (size_t typeIndex = 0; typeIndex < this->nonZeroSizedTypesCount(); typeIndex++)
+            span<TypeID> archTypes = this->types;
+            for (uint32_t typeIndex = 0; typeIndex < this->nonZeroSizedTypesCount(); typeIndex++)
             {
                 auto destructor =  getTypeInfo(archTypes[typeIndex]).destructor;
-                for (size_t chunkIndex = 0; chunkIndex < archChunks.size(); chunkIndex++)
+                for (uint32_t chunkIndex = 0; chunkIndex < archChunks.size(); chunkIndex++)
                 {
                     uint8_t * const componentMemory =
                         (uint8_t*)(archChunks[chunkIndex].memory) + archOffsets[typeIndex];
-                    const size_t entityCount = (chunkIndex + 1) == archChunks.size() ?
+                    const uint32_t entityCount = (chunkIndex + 1) == archChunks.size() ?
                         this->lastChunkEntityCount : this->chunkCapacity;
-                    const size_t typeSize = archSizes[typeIndex];
-                    for (size_t valueIndex = 0; valueIndex < entityCount; valueIndex++)
+                    const uint32_t typeSize = archSizes[typeIndex];
+                    for (uint32_t valueIndex = 0; valueIndex < entityCount; valueIndex++)
                         destructor(componentMemory + typeSize*valueIndex);
 
                 }
             }
         }
 
-        // invalid index and max entity number
-        static constexpr uint32_t nullEntityIndex = 0xfffffff;
-        static constexpr uint32_t nullChunkIndex = 0xfffffff;
+        /// @brief maximum number of entities an archetype can hold any value equal higther that this can be used as invalid value
+        static constexpr uint32_t MaxEntityIndex =  0xfffffff;
+        static constexpr uint32_t NullEntityIndex =0x10000000;
+        /// @brief maximum number of chunks an archetype can hold any value equal higther that this can be used as invalid value
+        static constexpr uint32_t MaxChunkIndex =  0xfffffff;
+        static constexpr uint32_t NullChunkIndex =0x10000000;
+        /// @brief maximum number of type an archetype can manage, any number higher than this may lead to overflow
+        static constexpr uint32_t MaxTypePerArchetype = 0xff;
 
 
         Archetype& operator =(const Archetype&) = delete;
@@ -105,14 +113,14 @@ namespace ECS
         // estimated capacity
         // check before accessing an unallocated archtype
         uint32_t capacity() const {
-            return chunkCapacity * chunks.capacity();
+            return chunkCapacity * chunksVersion.capacity();
         }
         bool empty() const {
-            return this->chunks.empty();
+            return this->chunksVersion.empty();
         }
         // this fucntion is a little more expensive than empty
         uint32_t count() const {
-            const uint32_t v = this->chunksData.size();
+            const uint32_t v = (uint32_t) this->chunksData.size();
             if(v < 1)
                 return 0;
             else
@@ -144,7 +152,17 @@ namespace ECS
         }
 
         // TODO: binary search?
-        int32_t getIndex(Type t);
+        int32_t getIndex(TypeID t);
+
+        uint32_t getHash() const {
+            uint32_t result = HashHelper::FNV1A32(this->types+1);
+            if (result == 0xFFFFFFFF || result == 0)
+                result = 1;
+            return result;
+        }
+        inline bool operator ==(span<TypeID> _types) const {
+            return (this->types+1) == _types;
+        }
     protected:
         // the entity chunk index
         inline uint32_t getChunkIndex(const uint32_t i) const {
@@ -157,9 +175,9 @@ namespace ECS
         /// @brief calculate real aligned size of SOA
         /// @param sizeofs array of size of each component
         static uint32_t calculateSpaceRequirement(uint32_t entity_count,const span<uint16_t> sizeofs){
-            int size = 0;
+            uint32_t size = 0;
             for (uint16_t v:sizeofs)
-                size += alignTo64(v, entity_count);
+                size += (uint32_t) alignTo64(v, entity_count);
             return size;
         }
         /// @brief finds suitable capacity
@@ -175,16 +193,13 @@ namespace ECS
             return capacity;
         }
 
-
-        static Archetype* createArchetype(span<Type> types);
+        /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
+        /// @param entity value of srcIndex to be updated
+        bool hasComponent(TypeID type);
 
         /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
         /// @param entity value of srcIndex to be updated
-        bool hasComponent(Type type);
-
-        /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
-        /// @param entity value of srcIndex to be updated
-        bool hasComponents(span<Type> types);
+        bool hasComponents(span<TypeID> types);
 
 
         /// @brief in-archetype delete operation, handles deconstruction + memcpy by itself

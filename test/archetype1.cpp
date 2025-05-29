@@ -9,7 +9,7 @@ StaticArray<ECS::comp_info,32> ECS::rtti;
 
 int main(int argc, char const *argv[])
 {
-    std::vector<ECS::Type> types;
+    std::vector<ECS::TypeID> types;
     types.reserve(10);
     types.emplace_back(ECS::getTypeInfo<int>().value);
     types.emplace_back(ECS::getTypeInfo<prototype>().value);

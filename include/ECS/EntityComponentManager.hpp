@@ -4,14 +4,12 @@
 #include "defs.hpp"
 #include <vector>
 #include <array>
-#include <assert.h>
 #include <memory>
 #include "Archetype.hpp"
 #include "cutil/bitset.hpp"
-#include "cutil/SmallVector.hpp"
 #include "cutil/span.hpp"
 #include "cutil/unique_ptr.hpp"
-#include "HashMap.hpp"
+#include "cutil/map.hpp"
 
 namespace ECS
 {
@@ -20,19 +18,19 @@ namespace ECS
         friend class EntityComponentSystem;
         // array of entities value,
         // contains index of it archetype and it index in that archetype
-        std::vector<entity_t> entity_value{};
+        std::vector<entity_t,allocator<entity_t>> entity_value{};
 
-        std::vector<unique_ptr<Archetype>> archetypes{};
-        ArchetypeHashMap archetypeTypeMap{};
+        std::vector<unique_ptr<Archetype>,allocator<unique_ptr<Archetype>>> archetypes{};
+        map<span<TypeID>,Archetype> archetypeTypeMap{};
 
 
-        uint32_t freeEntityIndex = Entity::maxEntityCount;
-        uint32_t freeArchetypeIndex = nullArchetypeIndex;
+        int32_t FreeEntityIndex = Entity::null;
+        uint32_t FreeArchetypeIndex = NullArchetypeIndex;
 
 
         /// @brief find or create a archetype with given types,
         /// @param types list of types, throws invalid_argument exception on empty list
-        Archetype* getOrCreateArchetype(span<Type> types);
+        Archetype* getOrCreateArchetype(span<TypeID> types);
 
         // destroys Archetype if empty otherwise nothing
         void destroyEmptyArchetype(const uint32_t archetypeIndex);
@@ -41,19 +39,19 @@ namespace ECS
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithAddedComponents(Archetype *archetype,span<Type> componentTypeSet);
+        Archetype* getArchetypeWithAddedComponents(Archetype *archetype,span<TypeID> componentTypeSet);
 
         /// @brief add component to an entity or in other word, move entity to another archetype, exception handled
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithRemovedComponents(Archetype *archetype,span<Type> typeSetToRemove);
+        Archetype* getArchetypeWithRemovedComponents(Archetype *archetype,span<TypeID> typeSetToRemove);
 
         /// @ref getArchetypeWithAddedComponents
-        Archetype* getArchetypeWithAddedComponent(Archetype* archetype,Type addedComponentType,uint32_t *indexInTypeArray = nullptr);
+        Archetype* getArchetypeWithAddedComponent(Archetype* archetype,TypeID addedComponentType,uint32_t *indexInTypeArray = nullptr);
 
         /// @ref getArchetypeWithAddedComponents
-        Archetype* getArchetypeWithRemovedComponent(Archetype* archetype,Type addedComponentType,uint32_t *indexInOldTypeArray = nullptr);
+        Archetype* getArchetypeWithRemovedComponent(Archetype* archetype,TypeID addedComponentType,uint32_t *indexInOldTypeArray = nullptr);
 
     /*
      * Only Public function verfy inputs validity.
@@ -70,80 +68,27 @@ namespace ECS
 
         template<typename ... Types>
         void iterate(void(*func)(span<void*>,uint32_t)) {
-            span<Type> types = componentTypes<Types...>();
-            std::array<size_t, (sizeof...(Types))> offset_buffer;
-            std::array<void*, (sizeof...(Types))> arg_buffer;
-
-            for (uint32_t i = 0; i < this->archetypes.size(); i++){
-                Archetype *arch = this->archetypes[i].get();
-                if(arch)
-                    if(arch->hasComponents(types))
-                    {
-                        {
-                            span<uint32_t> archOffsets{arch->offsets};
-                            span<Type> archTypes{arch->types};
-                            // fill offset_buffer
-                            for(uint32_t typePosition=0;typePosition<offset_buffer.size();typePosition++)
-                            {
-                                for(uint32_t archetypeTypeIndex=0;archetypeTypeIndex<archTypes.size();archetypeTypeIndex++)
-                                    if(types[typePosition].exactSame(archTypes[archetypeTypeIndex])){
-                                        offset_buffer[typePosition] = archOffsets[archetypeTypeIndex];
-                                        goto JMPING;
-                                    }
-                                throw std::runtime_error("failed to find a component offset");
-                                JMPING:;
-                            }
-                        }
-                        {
-                            span<Chunk> archChunks{arch->chunksData};
-                            const uint32_t lastChunkEntityCount = arch->lastChunkEntityCount;
-                            const uint32_t chunkCapacity = arch->chunkCapacity;
-                            const uint32_t lastChunkIndex = archChunks.size() - 1;
-                            for(size_t chunckIndex = 0; chunckIndex < archChunks.size(); chunckIndex++) {
-                                uint8_t * const chunkMemory = (uint8_t *)archChunks[chunckIndex].memory;
-                                const uint32_t count = chunckIndex == lastChunkIndex ? lastChunkEntityCount : chunkCapacity ;
-                                if(unlikely(chunkMemory == nullptr || count == 0))
-                                    throw std::runtime_error("found an empty chunk");
-                                for (size_t index = 0; index < arg_buffer.size(); index++)
-                                    arg_buffer[index] = chunkMemory + offset_buffer[index];
-                                func( arg_buffer,count);
-                            }
-                        }
-                    }
-            }
+            span<TypeID> types = componentTypesRaw<Types...>();
+            iterate_helper(func,types);
         }
         void iterate(void(*func)(span<void*>,uint32_t)) {
-            void* arg_buffer;
-            for (uint32_t i = 0; i < this->archetypes.size(); i++){
-                Archetype *arch = this->archetypes[i].get();
-                if(arch)
-                {
-                            span<Chunk> archChunks{arch->chunksData};
-                            uint32_t entity_offset = arch->offsets.at(0);
-                            const uint32_t lastChunkEntityCount = arch->lastChunkEntityCount;
-                            const uint32_t chunkCapacity = arch->chunkCapacity;
-                            const uint32_t lastChunkIndex = archChunks.size() - 1;
-                            for(size_t chunckIndex = 0; chunckIndex < archChunks.size(); chunckIndex++) {
-                                uint8_t * const chunkMemory = (uint8_t *)archChunks[chunckIndex].memory;
-                                const uint32_t count = chunckIndex == lastChunkIndex ? lastChunkEntityCount : chunkCapacity ;
-                                if(unlikely(chunkMemory == nullptr || count == 0))
-                                    throw std::runtime_error("found an empty chunk");
-                                arg_buffer = chunkMemory + entity_offset;
-                                func({&arg_buffer,1},count);
-                            }
-                }
-            }
+            std::array<TypeID,1> types;
+            types[0] = getTypeInfo<Entity>().value;
+            iterate_helper(func,types);
         }
 
         bool valid(Entity e) const {
             if(
-                e.index() >= this->entity_value.size() ||
+                !e.valid() || 
+                (uint32_t)e.index() >= this->entity_value.size() ||
                 this->entity_value.at(e.index()).version != e.version()
             ) return false;
             return true;
         }
 
         const entity_t& validate(Entity entity) const {
+            if(!entity.valid())
+                throw std::invalid_argument("validate(): invalid entity");
             const entity_t& value = this->entity_value.at(entity.index());
             // version check to avoid double destroy
             if(value.version != entity.version())
@@ -164,7 +109,7 @@ namespace ECS
 
         /// @brief create entity and stores entity value and initilize entity
         /// @param types types you are loking for
-        Entity createEntity(span<Type> types);
+        Entity createEntity(span<TypeID> types);
 
         /// @brief releases components
         void removeComponents(Entity entity);
@@ -176,29 +121,72 @@ namespace ECS
         /// @brief add list of components, components are initialized with default constructor
         /// @param entity entity, can belong to no archetype
         /// @param componentTypeSet set of components to be added
-        void addComponents(Entity entity, span<Type> componentTypeSet);
+        void addComponents(Entity entity, span<TypeID> componentTypeSet);
 
         /// @brief add list of components, components are initialized with default constructor
         /// @param entity entity, can belong to no archetype
         /// @param componentTypeSet set of components to be added
-        void removeComponents(Entity entity, span<Type> componentTypeSet);
+        void removeComponents(Entity entity, span<TypeID> componentTypeSet);
 
         /// @brief simple linear check,
         /// @param types type flags are NOT ignored!
-        bool hasComponents(Entity e,span<Type> types) const;
+        bool hasComponents(Entity e,span<TypeID> types) const;
 
         /// @brief simple linear check
         /// @param type type flag is NOT ignored!
-        bool hasComponent(Entity e,Type type) const;
+        bool hasComponent(Entity e,TypeID type) const;
 
         // optimized: using archetype bitmap
         template<typename T>
         bool hasComponent(Entity e) const {
-            Type type = getTypeInfo<T>().value;
+            TypeID type = getTypeInfo<T>().value;
             return hasComponent(e,type);
         }
 
     protected:
+
+        void iterate_helper(void(*func)(span<void*>,uint32_t),span<TypeID> types = span<TypeID>()) {
+            size_t offset_buffer[types.size()];
+            void* arg_buffer[types.size()];
+
+            for (uint32_t i = 0; i < this->archetypes.size(); i++){
+                Archetype *arch = this->archetypes[i].get();
+                if(arch)
+                    if(arch->hasComponents(types))
+                    {
+                        {
+                            span<uint32_t> archOffsets{arch->offsets};
+                            span<TypeID> archTypes{arch->types};
+                            // fill offset_buffer
+                            for(uint32_t typePosition=0;typePosition<types.size();typePosition++)
+                            {
+                                for(uint32_t archetypeTypeIndex=0;archetypeTypeIndex<archTypes.size();archetypeTypeIndex++)
+                                    if(types[typePosition].exactSame(archTypes[archetypeTypeIndex])){
+                                        offset_buffer[typePosition] = archOffsets[archetypeTypeIndex];
+                                        goto JMPING;
+                                    }
+                                throw std::runtime_error("failed to find a component offset");
+                                JMPING:;
+                            }
+                        }
+                        {
+                            span<Chunk> archChunks{arch->chunksData};
+                            const uint32_t lastChunkEntityCount = arch->lastChunkEntityCount;
+                            const uint32_t chunkCapacity = arch->chunkCapacity;
+                            const uint32_t lastChunkIndex = archChunks.size() - 1;
+                            for(uint32_t chunckIndex = 0; chunckIndex < archChunks.size(); chunckIndex++) {
+                                uint8_t * const chunkMemory = (uint8_t *)archChunks[chunckIndex].memory;
+                                const uint32_t count = chunckIndex == lastChunkIndex ? lastChunkEntityCount : chunkCapacity ;
+                                if(unlikely(chunkMemory == nullptr || count == 0))
+                                    throw std::runtime_error("found an empty chunk");
+                                for (size_t index = 0; index < types.size(); index++)
+                                    arg_buffer[index] = chunkMemory + offset_buffer[index];
+                                func( {arg_buffer,types.size()},count);
+                            }
+                        }
+                    }
+            }
+        }
 
         // chain entity to free entities
         void recycleEntity(Entity entity);

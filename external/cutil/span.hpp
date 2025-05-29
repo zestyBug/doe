@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <array>
+#include "StaticArray.hpp"
 template<typename _Type>
 class span
 {
@@ -11,8 +12,7 @@ public:
 	// member types
 	using element_type           = _Type;
 	using value_type             = _Type;
-	using size_type              = size_t;
-	using difference_type        = ptrdiff_t;
+	using size_type              = uint32_t;
 	using pointer                = _Type*;
 	using const_pointer          = const _Type*;
 	using reference              = element_type&;
@@ -23,10 +23,13 @@ public:
 
 	constexpr span(const span&) noexcept = default;
 	constexpr span():_M_ptr(nullptr),_M_count(0){}
-	constexpr span(_Type*data,size_t size):_M_ptr(data),_M_count(size){}
-	constexpr span(const std::vector<_Type>& v):_M_ptr((_Type*)v.data()),_M_count(v.size()){}
+	constexpr span(_Type*data,uint32_t size):_M_ptr(data),_M_count(size){}
+	template<typename Allocator>
+	constexpr span(const std::vector<_Type,Allocator>& v):_M_ptr((_Type*)v.data()),_M_count((uint32_t)v.size()){}
 	template<size_t S>
 	constexpr span(const std::array<_Type,S>& v):_M_ptr((_Type*)v.data()),_M_count(S){}
+	template<size_t S>
+	constexpr span(const StaticArray<_Type,S>& v):_M_ptr((_Type*)v.data()),_M_count((uint32_t)v.size()){}
 
 	constexpr span& operator=(const span&) noexcept = default;
 	~span() noexcept = default;

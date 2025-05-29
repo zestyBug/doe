@@ -2,8 +2,8 @@
 obj
 bin
 dump
-Claymore.*
-!Claymore.cbp
+*.depend
+*.layout
 *.exe
 *.o
 *.a

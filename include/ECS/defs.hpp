@@ -1,12 +1,11 @@
 #if !defined(DEFS_HPP)
 #define DEFS_HPP
 
-#include <assert.h>
 #include <vector>
 #include <algorithm>    // std::sort
 #include "cutil/StaticArray.hpp"
 #include "cutil/bitset.hpp"
-#include "basics.hpp"
+#include "cutil/basics.hpp"
 
 namespace ECS
 {
@@ -18,24 +17,30 @@ namespace ECS
 
 
     // the value 1 on the first bit is important for determining value from pointer.
-    constexpr uint32_t nullArchetypeIndex = 0xfffffff;
+    constexpr uint32_t NullArchetypeIndex = 0xfffffff;
 
 
-    struct Type {
+    struct TypeID {
         enum TypeFlags : uint16_t {
             prefab = 0x1,
             disabled = 0x2
         };
+        /**
+         * leftmost bit measning:
+         * 1: invalid value
+         * 2: reserved
+         * 3: flags and zero sized entities
+         */
         uint16_t value=0;
         // flags are archetype specific, hash no effect on data
         uint16_t flag=0;
 
-        Type()=default;
-        Type(const Type&)=default;
-        Type& operator = (const Type&)=default;
-        Type(Type&&)=default;
-        Type& operator = (Type&&)=default;
-        Type(uint16_t v,uint16_t f=0):value{v},flag{f}{};
+        TypeID()=default;
+        TypeID(const TypeID&)=default;
+        TypeID& operator = (const TypeID&)=default;
+        TypeID(TypeID&&)=default;
+        TypeID& operator = (TypeID&&)=default;
+        TypeID(uint16_t v,uint16_t f=0):value{v},flag{f}{};
 
         bool isPrefab() const {
             return this->flag & prefab;
@@ -46,14 +51,16 @@ namespace ECS
         uint16_t realIndex() const {
             return this->value & 0x1FFF;
         }
-        bool exactSame(const Type v) const {
+        bool exactSame(const TypeID v) const {
             return this->value == v.value && this->flag == v.flag;
         }
+        // can be 1,2,3,...
+        static constexpr uint16_t maxTypeCount = 0x2000;
     };
 
     struct Entity{
         constexpr Entity() :_value{null}{}
-        constexpr Entity(const uint32_t v,version_t version=0):_value{v},_version{version}{}
+        constexpr Entity(const int32_t v,version_t version=0):_value{v},_version{version}{}
         constexpr Entity(const Entity&) = default;
         constexpr Entity(Entity&&) = default;
         inline Entity& operator = (const Entity&) = default;
@@ -61,24 +68,20 @@ namespace ECS
         inline bool operator != (const Entity& v) const {return !(*this == v);}
         ~Entity() = default;
         // index in entity_value array
-        inline uint32_t index() const {
+        inline int32_t index() const {
             return this->_value;
         }
         inline version_t version() const {
             return this->_version;
         }
-        static constexpr uint32_t maxEntityCount= 0xfffffe;
         // entity id (index in entity_Value array)
-        static constexpr uint32_t null = 0xffffff;
+        static constexpr int32_t null = -1;
         // simply checks entity index validity
         inline bool valid() const {
-            return this->index() <= maxEntityCount;
+            return this->index() >= 0;
         }
         protected:
-        // only use purpose is as index of entity in entity_value array + version
-        // Entity >> 24: version
-        // Entity & 0xffffff:
-        uint32_t _value;
+        int32_t _value;
         version_t _version=0;
     };
 
@@ -86,7 +89,7 @@ namespace ECS
         // index in Archetype::components
         uint32_t index;
         // NOTE: use the archetype index to validate an entity value
-        uint32_t archetype = nullArchetypeIndex;
+        uint32_t archetype = NullArchetypeIndex;
         // version is changed only entity is destroyed/created
         // to prevent mistake with entites with same entity_t::index field
         version_t version=0;
@@ -96,21 +99,19 @@ namespace ECS
         entity_t& operator = (const entity_t&) = default;
         // returns true if entity contains (seems) valid archetype indexes.
         inline bool validArchtype() const {
-            return this->archetype < nullArchetypeIndex;
+            return this->archetype < NullArchetypeIndex;
         }
     };
 
 
     struct comp_info {
-        Type value;
+        TypeID value;
         uint32_t size = 0;
         // destructor function
         void (*destructor)(void*) = nullptr;
         // default no-argument constructor function
         void (*constructor)(void*) = nullptr;
     };
-    // must be multiply of 2
-    // maximum is 4096
     // this value is hard coded means
     // modification in binary file is much harder
     // so new component needs new version of compiled engine
@@ -120,7 +121,7 @@ namespace ECS
     // technically array can be erased to reassign type ids
     // unless values are stored somewhere and spreaded
     // WARN: dont access this directly
-    // WARN: Type index must be 0
+    // WARN: TypeID index must be 0
     extern StaticArray<comp_info,COMPOMEN_COUNT> rtti;
 
     typedef void (*rttiFP)(void*);
@@ -148,7 +149,7 @@ namespace ECS
     {
         return rtti[__type_id__<std::remove_const_t<std::remove_reference_t<T>>>()];
     }
-    [[nodiscard]] inline comp_info& getTypeInfo(const Type id)
+    [[nodiscard]] inline comp_info& getTypeInfo(const TypeID id)
     {
         if(unlikely(rtti.size() < id.realIndex()))
             throw std::bad_typeid();
@@ -162,22 +163,32 @@ namespace ECS
     }
 
 
-    static bool customCompare (Type a,Type b) {
+    static bool customCompare (TypeID a,TypeID b) {
         if(unlikely(a.value == b.value))
             throw std::bad_typeid();
-        return a.value < b.value; 
+        return a.value < b.value;
     }
     template<typename ... T>
-    std::vector<Type> _INIT_COMPONENTS_TYPES_() {
-        std::vector<Type> ret;
-        ret.reserve(sizeof...(T));
+    StaticArray<TypeID,sizeof...(T)> _INIT_COMPONENTS_TYPES_() {
+        StaticArray<TypeID,sizeof...(T)> ret;
         (ret.emplace_back(getTypeInfo<T>().value), ...);
         std::sort(ret.begin(),ret.end(),customCompare);
         return ret;
     }
     template<typename ... T>
-    const span<Type> componentTypes() {
-        static std::vector<Type> ret = _INIT_COMPONENTS_TYPES_<T...>();
+    StaticArray<TypeID,sizeof...(T)> _INIT_COMPONENTS_TYPES_RAW_() {
+        StaticArray<TypeID,sizeof...(T)> ret;
+        (ret.emplace_back(getTypeInfo<T>().value), ...);
+        return ret;
+    }
+    template<typename ... T>
+    const span<TypeID> componentTypes() {
+        static StaticArray<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_<T...>();
+        return ret;
+    }
+    template<typename ... T>
+    const span<TypeID> componentTypesRaw() {
+        static StaticArray<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_RAW_<T...>();
         return ret;
     }
 

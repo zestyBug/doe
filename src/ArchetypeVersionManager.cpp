@@ -39,7 +39,7 @@ void ArchetypeVersionManager::grow(uint32_t new_capacity){
     if(new_capacity <= this->_capacity)
         throw std::invalid_argument("grow(): smaller new size");
 
-    const uint32_t new_v_size = new_capacity * sizeof(version_t) * this->componentCount;
+    const size_t new_v_size = new_capacity * sizeof(version_t) * this->componentCount;
 
     uint8_t *new_data = allocator().allocate(new_v_size);
 

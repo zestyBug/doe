@@ -20,13 +20,11 @@
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
 
-namespace ECS {
-
 /// @brief alignes array size to 64 byte for cache, perfermance and false sharing issues
 /// @param typeSize sizeof single entity
 /// @param count number of entities
 /// @return new array size
-inline size_t alignTo64(size_t typeSize, size_t count){
+inline uint32_t alignTo64(uint32_t typeSize, uint32_t count){
     return (typeSize*count+0x3F)&0xFFFFFFC0;
 }
 
@@ -35,33 +33,45 @@ inline size_t alignTo64(size_t typeSize, size_t count){
 /// @param typeSize sizeof single entity
 /// @param count number of entities
 /// @return new array size
-inline size_t alignTo8(size_t typeSize, size_t count){
+inline uint32_t alignTo8(uint32_t typeSize, uint32_t count){
     return (typeSize*count+0x7)&0xFFFFFFF8;
 }
+
+extern ssize_t allocator_counter;
 
 template<typename _Tp=uint8_t>
 class allocator
 {
     public:
+    using value_type=_Tp;
     constexpr allocator() { }
-    allocator(const allocator& __a){ }
+    allocator(const allocator&){ }
     allocator& operator=(const allocator&) = default;
     template<typename _Tp1> allocator(const allocator<_Tp1>&) { }
     ~allocator() { }
 
     _GLIBCXX_NODISCARD
     _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) {
-        _Tp* ret = (_Tp*) malloc(alignTo64(sizeof(_Tp),__n));
-        if(ret == nullptr) throw std::bad_alloc();
-        printf("allocator::allocate(): %llu byte in %p\n",__n,ret);
+        if(__n>0xFFFFFFF)
+            throw std::bad_alloc();
+        _Tp* ret = nullptr;
+        if(likely(__n > 0)){
+            __n = alignTo64(sizeof(_Tp),(uint32_t)__n);
+            ret = (_Tp*) malloc(__n);
+            if(ret == nullptr) throw std::bad_alloc();
+            allocator_counter++;
+        }
+        printf("allocator::allocate(): %u byte in %p\n",(uint32_t)__n,ret);
         return ret;
     }
 
     // nulity safe
-    void deallocate(void* __p, size_t=0) {
+    void deallocate(void* __p, uint32_t __n=0) {
+        (void)__n;
         if(__p != nullptr){
             printf("allocator::deallocate(): %p\n",__p);
             free(__p);
+            allocator_counter--;
         }
 
     }
@@ -86,16 +96,13 @@ class allocator
     void construct(_Tp* __p, const _Tp& __val)
     { ::new((void *)__p) _Tp(__val); }
 
-    template<typename _Up>
-    void destroy(_Up* __p) noexcept(std::is_nothrow_destructible<_Up>::value)
-    { __p->~_Up(); }
-
     void destroy(_Tp* __p)
     { __p->~_Tp(); }
+
+    void destroy(_Tp* __p, uint32_t __n)
+    { for (;__n;) __p[--__n].~_Tp(); }
 private:
     size_t _M_max_size() const {return std::size_t(-1) / sizeof(_Tp);}
 };
-
-}
 
 #endif // BASICS_HPP

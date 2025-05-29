@@ -2,7 +2,7 @@
 #define ARCHTYPECHUNKDATA_HPP
 
 #include "cutil/span.hpp"
-#include "basics.hpp"
+#include "cutil/basics.hpp"
 #include "defs.hpp"
 
 namespace ECS
@@ -13,7 +13,7 @@ namespace ECS
      * for performance reason, this value is not per entity/component but per chunk/component.
      * @note using version check may brings efficiency to your system by avoiding unnecesary computation.
      */
-    struct ArchetypeVersionManager final
+    class ArchetypeVersionManager final
     {
         // SOA for chunks in a archetype : index, shared component index, version, count
         uint8_t *data=nullptr;
@@ -31,6 +31,7 @@ namespace ECS
 
         friend class Archetype;
 
+    public:
         ArchetypeVersionManager(){}
 
         ArchetypeVersionManager(const ArchetypeVersionManager&)= delete;
@@ -42,8 +43,8 @@ namespace ECS
             if(_component_count < 1)
                 throw std::invalid_argument("ArchetypeVersionManager(): zero component archetype chunk data");
         }
-
     protected:
+
         version_t& _ChangeVersion(uint32_t index=0){
             return ((version_t*)(this->data))[index];
         }

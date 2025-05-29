@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <assert.h>
-#include <stdio.h>
+#include <string.h>
 
 template<typename T, size_t S>
 class StaticArray
@@ -23,22 +23,37 @@ private:
 public:
     static_assert(S > 0);
     StaticArray(){}
+    StaticArray(const StaticArray& value){
+        *this=value;
+    }
+    StaticArray& operator = (const StaticArray& value){
+        if(this!=&value){
+            for (size_t i = 0; i < value.count; i++)
+            {
+                new (this->_data.array + i) Type(value._data.array[i]);
+            }
+            this->count=value.count;
+        }return *this;
+    }
     ~StaticArray(){}
+
     inline size_t capacity()const {return S;}
     inline size_t size()const {return this->count;}
+    inline size_t size_byte()const {return this->count*sizeof(Type);}
     inline bool   empty()const {return this->count < 1;}
     inline bool   full()const {return this->count == S;}
     inline Type*  begin(){return this->_data.array;}
     inline Type*  end(){return this->_data.array + S;}
     inline const Type* begin()const {return this->_data.array;}
     inline const Type* end()const {return this->_data.array + S;}
-    inline T* data ()const {return this->_data.array;}
+    inline const T* data () const {return this->_data.array;}
+    inline T* data () {return this->_data.array;}
     template<typename ... Args>
-    inline void emplace(Args ... arg){
+    inline void emplace_back(Args ... arg){
         assert(!this->full());
         new (&(this->_data.array[this->count++])) Type(arg...);
     }
-    inline void push(const Type& v){
+    inline void push_back(const Type& v){
         assert(!this->full());
         new (&(this->_data.array[this->count++])) Type(v);
     }

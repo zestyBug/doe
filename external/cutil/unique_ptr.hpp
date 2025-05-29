@@ -1,12 +1,12 @@
 #if !defined(UNIQUEPTR_HPP)
 #define UNIQUEPTR_HPP
 
-#include "basics.hpp"
+#include "cutil/basics.hpp"
 
 
 
 // supports pointer marking for first bit, it disables destruction
-template <typename Type, typename Allocator = ECS::allocator<Type>>
+template <typename Type, typename Allocator = allocator<Type>>
 class unique_ptr
 {
     Type *_M_t = nullptr;

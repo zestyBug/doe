@@ -4,7 +4,7 @@ using namespace ECS;
 
 
 
-Archetype* EntityComponentManager::getOrCreateArchetype(span<Type> types){
+Archetype* EntityComponentManager::getOrCreateArchetype(span<TypeID> types){
     {
         Archetype* archetype = archetypeTypeMap.tryGet(types);
         if(archetype != nullptr)
@@ -21,38 +21,38 @@ Archetype* EntityComponentManager::getOrCreateArchetype(span<Type> types){
 
         archetypeTypeMap.add(archetype);
 
-        if(freeArchetypeIndex >= nullArchetypeIndex){
-            uint32_t archetypeIndex = archetypes.size();
-            if((archetypeIndex+1) >= nullArchetypeIndex)
+        if(FreeArchetypeIndex >= NullArchetypeIndex){
+            uint32_t archetypeIndex = (uint32_t) archetypes.size();
+            if((archetypeIndex+1) >= NullArchetypeIndex)
                 throw std::out_of_range("archtype index full");
             archetype->archetypeIndex = archetypeIndex;
             archetypes.push_back(std::move(archetype_ptr));
         }else{
-            unique_ptr<Archetype>& ptr = archetypes.at(freeArchetypeIndex);
+            unique_ptr<Archetype>& ptr = archetypes.at(FreeArchetypeIndex);
             /// TODO: may a invalid index check be good
             if(( (intptr_t)ptr.get_raw() & 0x1) != 1)
                 throw std::runtime_error("getOrCreateArchetype(): unexpected free archetype");
-            archetype->archetypeIndex = freeArchetypeIndex;
-            freeArchetypeIndex = (intptr_t)ptr.get_raw() >> 1;
+            archetype->archetypeIndex = FreeArchetypeIndex;
+            FreeArchetypeIndex = (uint32_t)((intptr_t)ptr.get_raw() >> 1);
             ptr = std::move(archetype_ptr);
         }
         return archetype;
     }
 }
 void EntityComponentManager::destroyEmptyArchetype(const uint32_t archetypeIndex){
-    // assuming archetypeIndex is less that nullArchetypeIndex
+    // assuming archetypeIndex is less that NullArchetypeIndex
     Archetype * arch = this->archetypes[archetypeIndex].get();
     if(arch && arch->empty()) {
         //printf("Debug: destroy archetype bitmask %u\n",this->archetypes_id[archetype_index]);
-        this->archetypes[archetypeIndex].reset((Archetype*)( (intptr_t)(freeArchetypeIndex << 1)&1 ) );
-        freeArchetypeIndex = archetypeIndex;
+        this->archetypes[archetypeIndex].reset((Archetype*)( (intptr_t)(FreeArchetypeIndex << 1)&1 ) );
+        FreeArchetypeIndex = archetypeIndex;
     }
 }
-Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *archetype,span<Type> componentTypeSet){
-    span<Type> srcTypes = archetype->types;
+Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *archetype,span<TypeID> componentTypeSet){
+    span<TypeID> srcTypes = archetype->types;
     uint32_t dstTypesCount = srcTypes.size() + componentTypeSet.size();
 
-    Type dstTypes[dstTypesCount];
+    TypeID dstTypes[dstTypesCount];
 
     // zipper the two sorted arrays
     // because this is done in-place,
@@ -60,15 +60,15 @@ Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *ar
 
     uint32_t unusedIndices = 0;
     {
-        int32_t oldThings = srcTypes.size() - 1;
-        int32_t newThings = componentTypeSet.size() - 1;
+        int32_t oldThings = (int32_t)srcTypes.size() - 1;
+        int32_t newThings = (int32_t)componentTypeSet.size() - 1;
         uint32_t mixedThings = dstTypesCount;
         while (newThings >= 0) // oldThings[0] has value 0, newThings can't have anything lower than that
         {
             // there is no way oldThings be less than 0 if things goes currectly
-            // type arrays being sorted and getTypeInfo<Type>().value.value() == 0
-            Type oldThing = srcTypes[oldThings];
-            Type newThing = componentTypeSet[newThings];
+            // type arrays being sorted and getTypeInfo<TypeID>().value.value() == 0
+            TypeID oldThing = srcTypes[oldThings];
+            TypeID newThing = componentTypeSet[newThings];
             if (oldThing.value > newThing.value) // put whichever is bigger at the end of the array
             {
                 dstTypes[--mixedThings] = oldThing;
@@ -97,12 +97,12 @@ Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *ar
 
     return this->getOrCreateArchetype({dstTypes,dstTypesCount});
 }
-Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* archetype, Type componentType,uint32_t *indexInTypeArray)
+Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* archetype, TypeID componentType,uint32_t *indexInTypeArray)
 {
-    span<Type> srcTypes = archetype->types;
-    uint32_t dstTypesCount = srcTypes.size() + 1;
+    span<TypeID> srcTypes = archetype->types;
+    uint32_t dstTypesCount = (uint32_t)srcTypes.size() + 1;
 
-    Type newTypes[dstTypesCount];
+    TypeID newTypes[dstTypesCount];
 
     uint16_t t = 0;
     while (t < srcTypes.size() && srcTypes[t].value < componentType.value)
@@ -128,9 +128,9 @@ Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* arc
 
     return getOrCreateArchetype({newTypes,dstTypesCount});
 }
-Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *archetype,span<Type> typeSetToRemove){
+Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *archetype,span<TypeID> typeSetToRemove){
     const uint32_t typesCount = archetype->types.size();
-    Type newTypes[typesCount];
+    TypeID newTypes[typesCount];
 
     uint32_t numRemovedTypes = 0;
     for (uint32_t t = 0; t < typesCount; ++t)
@@ -138,7 +138,7 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *
         uint16_t existingTypeIndex = archetype->types[t].value;
 
         bool removed = false;
-        for(const Type type : typeSetToRemove)
+        for(const TypeID type : typeSetToRemove)
             if (existingTypeIndex == getTypeInfo(type).value.value)
             {
                 numRemovedTypes++;
@@ -154,10 +154,10 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *
         return archetype;
     return getOrCreateArchetype({newTypes, typesCount - numRemovedTypes});
 }
-Archetype* EntityComponentManager::getArchetypeWithRemovedComponent (Archetype* archetype,Type addedComponentType,uint32_t *indexInOldTypeArray)
+Archetype* EntityComponentManager::getArchetypeWithRemovedComponent (Archetype* archetype,TypeID addedComponentType,uint32_t *indexInOldTypeArray)
 {
     const uint32_t typesCount = archetype->types.size();
-    Type newTypes[typesCount];
+    TypeID newTypes[typesCount];
 
     uint32_t removedTypes = 0;
     for (uint32_t t = 0; t < typesCount; ++t)
@@ -195,7 +195,7 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponent (Archetype* 
 Entity EntityComponentManager::createEntity(){
     return recycleEntity();
 }
-void EntityComponentManager::addComponents(Entity entity, span<Type> componentTypeSet)
+void EntityComponentManager::addComponents(Entity entity, span<TypeID> componentTypeSet)
 {
     entity_t& srcValue = validate(entity);
 
@@ -229,7 +229,7 @@ void EntityComponentManager::addComponents(Entity entity, span<Type> componentTy
     srcValue.index = newIndex;
     srcValue.archetype = newArchetype->archetypeIndex;
 }
-void EntityComponentManager::removeComponents(Entity entity, span<Type> componentTypeSet){
+void EntityComponentManager::removeComponents(Entity entity, span<TypeID> componentTypeSet){
     entity_t& srcValue = validate(entity);
 
     Archetype *srcArchetype,*newArchetype;
@@ -255,7 +255,7 @@ void EntityComponentManager::removeComponents(Entity entity, span<Type> componen
         }
     }
 }
-Entity EntityComponentManager::createEntity(span<Type> types) {
+Entity EntityComponentManager::createEntity(span<TypeID> types) {
     const Entity result = recycleEntity();
     if(!types.empty())
     {
@@ -287,18 +287,15 @@ void EntityComponentManager::removeComponents(Entity entity)
         // if it index was filled with other entity
         if(replacedEntity.valid())
                 this->entity_value.at(replacedEntity.index()).index = value.index;
-        value.archetype = nullArchetypeIndex;
+        value.archetype = NullArchetypeIndex;
     }
 }
 
-bool EntityComponentManager::hasComponents(Entity entity,span<Type> types) const {
+bool EntityComponentManager::hasComponents(Entity entity,span<TypeID> types) const {
     // code copyied from validate()
-    if(this->entity_value.size() <= entity.index())
+    if(!valid(entity))
         return false;
     const entity_t value = this->entity_value[entity.index()];
-    // version check to avoid double destroy
-    if(value.version != entity.version())
-        return false;
 
     if(types.size() < 1) return true;
 
@@ -307,14 +304,11 @@ bool EntityComponentManager::hasComponents(Entity entity,span<Type> types) const
     return arch->hasComponents(types);
 }
 
-bool EntityComponentManager::hasComponent(Entity entity,Type type) const {
+bool EntityComponentManager::hasComponent(Entity entity,TypeID type) const {
     // code copyied from validate()
-    if(this->entity_value.size() <= entity.index())
+    if(!valid(entity))
         return false;
     const entity_t value = this->entity_value[entity.index()];
-    // version check to avoid double destroy
-    if(value.version != entity.version())
-        return false;
 
     Archetype *arch = this->archetypes.at(value.archetype).get();
     return arch->hasComponent(type);
@@ -341,42 +335,42 @@ bool EntityComponentManager::hasComponent(Entity entity,Type type) const {
 
 /*
 
-        template<typename Type>
-        inline Type chunk_wrapper(const size_t chunk_index, const std::array<size_t,COMPOMEN_COUNT>& offsets, void*chunk){
-            getTypeInfo<Type>().ko;
-            return (Type*)(((char*)chunk) + offsets[type_id<Type>().index])[chunk_index];
+        template<typename TypeID>
+        inline TypeID chunk_wrapper(const size_t chunk_index, const std::array<size_t,COMPOMEN_COUNT>& offsets, void*chunk){
+            getTypeInfo<TypeID>().ko;
+            return (TypeID*)(((char*)chunk) + offsets[type_id<TypeID>().index])[chunk_index];
         }
 
-        template<typename Type>
-        inline void init_wrapper(uint32_t index, const std::vector<std::pair<typeid_t,size_t>>& offsets, void*chunk, const Type& init_value){
+        template<typename TypeID>
+        inline void init_wrapper(uint32_t index, const std::vector<std::pair<typeid_t,size_t>>& offsets, void*chunk, const TypeID& init_value){
             for(const auto& offset:offsets)
-                if(offset.first == type_id<Type>().index)
-                    new (((Type*)(((uint8_t*)chunk) + offset.second))+index) Type(init_value);
+                if(offset.first == type_id<TypeID>().index)
+                    new (((TypeID*)(((uint8_t*)chunk) + offset.second))+index) TypeID(init_value);
         }
 }*/
 
 
 void EntityComponentManager::recycleEntity(Entity entity){
-    entity_t& value = this->entity_value[entity.index()];
-    value.index = freeEntityIndex;
-    value.archetype = nullArchetypeIndex;
+    entity_t& value = this->entity_value.at(entity.index());
+    value.index = (uint32_t)FreeEntityIndex;
+    value.archetype = NullArchetypeIndex;
     // increasing version prevent from double destroing objects
     value.version++;
-    freeEntityIndex = entity.index();
+    FreeEntityIndex = entity.index();
 }
 Entity EntityComponentManager::recycleEntity(){
     Entity result;
-    if(freeEntityIndex < Entity::maxEntityCount){
-        entity_t& value = this->entity_value[freeEntityIndex];
-        result = Entity{freeEntityIndex,value.version};
+    if(FreeEntityIndex >= 0){
+        entity_t& value = this->entity_value.at(FreeEntityIndex);
+        result = Entity{FreeEntityIndex,value.version};
         // version and archetype mus be set on destroyEntity
-        freeEntityIndex = value.index;
+        FreeEntityIndex = (int32_t)value.index;
     }else{
-        const uint32_t index = entity_value.size();
-        if((index+1) >= Entity::maxEntityCount)
+        const size_t index = entity_value.size();
+        if(index > INT32_MAX)
             throw std::out_of_range("createEntity(): entity count limit reached");
         entity_value.emplace_back();
-        result = Entity{index,0};
+        result = Entity{(int32_t)index,0};
     }
     return result;
 }

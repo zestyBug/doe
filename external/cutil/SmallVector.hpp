@@ -4,87 +4,119 @@
 #include <memory>
 #include <string.h>
 #include <stdlib.h>
-
+#include "basics.hpp"
 template<typename T,unsigned int S>
 class SmallVector{
-    unsigned int _size=0,_capacity=0;
+    unsigned int _count=0,_capacity=0;
     union block
     {
         T small[S];
         T *large;
         block():large{nullptr}{}
-    } data{};
+    };
+    block data{};
 public:
-    SmallVector():_size{0},_capacity{S} {
+    SmallVector():_count{0},_capacity{S} {
         //
     }
-    SmallVector(const SmallVector &obj):_size{obj._size},_capacity{obj._capacity}
-    {
-        if(obj._capacity <= S){
-            memcpy(&this->data,&obj.data,obj._size*sizeof(T));
-        }else{
-            this->data.large = (T*)malloc(obj._capacity*sizeof(T));
-            memcpy(&this->data.large,&obj.data.large,obj._size*sizeof(T));
-        }
+    SmallVector(const SmallVector &obj){
+        _count = 0;
+        _capacity = S;
+        *this = obj;
     }
-    SmallVector(SmallVector &&obj){
-        this->_size = obj._size;
-        this->_capacity =  obj._capacity;
-        memcpy(&this->data,&obj.data,sizeof(this->data));
-        obj._size = 0;
-        obj._capacity = S;
-    };
-    SmallVector(unsigned int count,const T& val = T()):_size{count} {
-        if(count > 0){
-            if(count <= S){
-                for (size_t i = 0; i < count; i++)
-                    new (this->data.small + i) T(val);
+    SmallVector& operator = (const SmallVector &obj){
+        if(this != &obj){
+            T *ptr1,*ptr2;
+            if(obj._capacity <= S){
+                this->~SmallVector();
+                ptr1 = data.small;
+                ptr2 = obj.data.small;
+                _count = obj._coun;
+                _capacity = S;
             }else{
-                this->_capacity = 1;
-                for (; (this->_capacity<0b10000000000000000000) && (this->_capacity < count);)
-                    this->_capacity<<=1;
-                assert(count <= this->_capacity);
-                this->data.large = malloc(this->_capacity * sizeof(T));
-                for (size_t i = 0; i < count; i++)
-                    new (this->data.large + i) T(val);
+                if(_capacity < obj.capacity){
+                    this->~SmallVector();
+                    _count = obj._coun;
+                    _capacity = obj._count;
+                    data.large = allocator<T>().allocate(obj._count);
+                }else{
+                    _count = obj._coun;
+                    allocator<T>().destroy(data.large,_count);
+                }
+                ptr1 = data.large;
+                ptr2 = obj.data.large;
             }
+            for (size_t i = 0; i < obj._count; i++)
+                new (ptr1 + i) T(ptr2 + 1);
         }
+        return *this;
+    };
+    SmallVector(SmallVector &&obj){
+        _count = 0;
+        _capacity = S;
+        *this = std::move(obj);
+    };
+    SmallVector& operator = (SmallVector &&obj){
+        if(this != &obj){
+            this->~SmallVector();
+            T *ptr1,*ptr2;
+            _count = obj._count;
+            if(obj._capacity <= S){
+                _capacity = S;
+                memcpy(data.small,obj.data.small,sizeof(T)*obj._count);
+            }else{
+                _capacity = obj._capacity;
+                data.large = obj.data.large;
+            }
+            obj._count = 0;
+            obj._capacity = S;
+        }
+        return *this;
+    };
+    SmallVector(unsigned int count,const T& val = T()):_count{count} {
+        T *ptr;
+        if(count <= S){
+            ptr = this->data.small;
+            _capacity = S;
+        }else{
+            this->_capacity = count;
+            ptr = this->data.large = allocator<T>().allocate(count);
+        }
+        for (size_t i = 0; i < count; i++)
+            new (ptr + i) T(val);
+        
     }
     ~SmallVector(){
         if(this->_capacity <= S){
-            for (size_t i = 0; i < _size; i++)
-                this->data.small[i].~T();
+            allocator<T>().destroy(data.small,_count);
         }else{
-            for (size_t i = 0; i < _size; i++)
-                this->data.large[i].~T();
-            free(this->data.large);
+            allocator<T>().destroy(data.large,_count);
+            allocator<T>().deallocate(data.large);
         }
     }
+
+    void expand(){
+        T *ptr1 = _capacity<=S ? data.small : data.large;
+        _capacity = std::max( _capacity*2 , S+2);
+        T *ptr2 = allocator<T>().allocate(_capacity);
+        memcpy(ptr2,ptr1,_count*sizeof(T));
+        data.large = ptr2;
+    }
+
+
     void push_back(const T& val){
-        if(this->_size == S){
-            this->_capacity = 1;
-            while(!(S < this->_capacity) && (this->_capacity < 0b10000000000000000))
-                this->_capacity<<=1;
-            T *ptr = malloc(this->_capacity);
-            memcpy(ptr,this->data.small,S);
-            this->data.large = ptr;
-        }else if(this->_size < S){
-            new (this->data.small + this->_size) T(val);
-        }else{
-            if(this->_size < this->_capacity){
-                new (this->data.large + this->_size) T(val);
-            }else{
-                this->_capacity <<= 1;
-                assert(this->_capacity < 0b10000000000000000 && this->_size < this->_capacity);
-                T *ptr = malloc(this->_capacity);
-                memcpy(ptr,this->data.large,this->_size * sizeof(T));
-                free(this->data.large);
-                this->data.large = ptr;
-            }
+        if(_count >= _capacity){
+            expand();
         }
-        this->_size++;
+        
+        if(this->_capacity <= S){
+            new (data.small + _count) T(val);
+        }else{
+            new (data.large + _count) T(val);
+        }
+        ++_count;
     }
-    void remove(unsigned int index){
+    /* void remove(unsigned int index){
         assert(index < this->_size);
         T* ptr;
         if(this->_capacity <= S)
@@ -96,18 +128,19 @@ public:
         if(index < this->_size){
             memcpy(ptr+index, ptr+this->_size, sizeof(T));
         }
-    }
+    } */
     T& operator [](unsigned int index){
-        assert(index < this->_size);
+        if(index >= this->_count)
+            throw std::out_of_range("operator []():");
         if(this->_capacity <= S){
             return this->data.small[index];
         }else{
             return this->data.large[index];
         }
     }
-    inline bool empty() const { return this->_size == 0; }
-    inline unsigned int size() const { return this->_size; }
-    inline unsigned int capacity() const { return this->_capacity; }
+    inline bool empty() const { return _count == 0; }
+    inline unsigned int size() const { return _count; }
+    inline unsigned int capacity() const { return _capacity; }
 
     inline T* begin()             {return this->_capacity <= S ? this->data.small : this->data.large;}
     inline const T* begin() const {return this->_capacity <= S ? this->data.small : this->data.large;}
