@@ -11,6 +11,8 @@
 #include <stdlib.h>
 // heavily dependant
 #include <stdint.h>
+// memset and memcpy are part of this language :)
+#include <string.h>
 // heavily dependant
 #include <stdexcept>
 // new () T() should be global
@@ -36,9 +38,9 @@ inline uint32_t alignTo64(uint32_t typeSize, uint32_t count){
 inline uint32_t alignTo8(uint32_t typeSize, uint32_t count){
     return (typeSize*count+0x7)&0xFFFFFFF8;
 }
-
+#ifdef DEBUG
 extern ssize_t allocator_counter;
-
+#endif
 template<typename _Tp=uint8_t>
 class allocator
 {
@@ -52,26 +54,31 @@ class allocator
 
     _GLIBCXX_NODISCARD
     _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) {
-        if(__n>0xFFFFFFF)
-            throw std::bad_alloc();
         _Tp* ret = nullptr;
         if(likely(__n > 0)){
+            if(__n>0xFFFFFFF)  throw std::bad_alloc();
             __n = alignTo64(sizeof(_Tp),(uint32_t)__n);
             ret = (_Tp*) malloc(__n);
             if(ret == nullptr) throw std::bad_alloc();
+        #ifdef DEBUG
             allocator_counter++;
+        #endif
         }
+    #ifdef DEBUG
         printf("allocator::allocate(): %u byte in %p\n",(uint32_t)__n,ret);
+    #endif
         return ret;
     }
 
     // nulity safe
     void deallocate(void* __p, uint32_t __n=0) {
         (void)__n;
-        if(__p != nullptr){
-            printf("allocator::deallocate(): %p\n",__p);
+        if(likely(__p != nullptr)){
             free(__p);
+        #ifdef DEBUG
+            printf("allocator::deallocate(): %p\n",__p);
             allocator_counter--;
+        #endif
         }
 
     }

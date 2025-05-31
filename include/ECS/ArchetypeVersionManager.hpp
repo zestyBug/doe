@@ -9,7 +9,7 @@ namespace ECS
 {
 
     /** @brief there is a component version for each compopnent. 
-     * any write access, whitout check for real value change, causes to update version.
+     * any write access, whitout check for real value change, causes to update version to lastest version.
      * for performance reason, this value is not per entity/component but per chunk/component.
      * @note using version check may brings efficiency to your system by avoiding unnecesary computation.
      */
@@ -65,13 +65,16 @@ namespace ECS
 
         span<version_t> getChangeVersionArrayForType(uint32_t component_index);
         version_t& getChangeVersion(uint32_t component_index, uint32_t chunkIndex);
-        void SetAllChangeVersion(uint32_t chunkIndex, version_t version);
+        // set version of all components in a chunk
+        void setAllChangeVersion(uint32_t chunkIndex, version_t version);
 
         void popBack();
 
-        /// @brief add at end of list
-        /// @param count set it, if chunk contains entities
-        void add(version_t version);
+        /// @brief add new chunk at end of list
+        /// @param version the version to be set
+        void add(version_t version = 0);
+    protected:
+        // dont call it on your own!
         void grow(uint32_t new_capacity);
     };
 

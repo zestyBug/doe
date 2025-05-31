@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <array>
-#include "StaticArray.hpp"
+#include "static_array.hpp"
 template<typename _Type>
 class span
 {
@@ -19,6 +19,7 @@ public:
 	using const_reference        = const element_type&;
 	// an iterator must have operator++ (prefix), operator!=, operator=, operator*
 	using iterator               = pointer;
+	using const_iterator         = const_pointer;
 	using reverse_iterator       = pointer;
 
 	constexpr span(const span&) noexcept = default;
@@ -29,7 +30,7 @@ public:
 	template<size_t S>
 	constexpr span(const std::array<_Type,S>& v):_M_ptr((_Type*)v.data()),_M_count(S){}
 	template<size_t S>
-	constexpr span(const StaticArray<_Type,S>& v):_M_ptr((_Type*)v.data()),_M_count((uint32_t)v.size()){}
+	constexpr span(const static_array<_Type,S>& v):_M_ptr((_Type*)v.data()),_M_count((uint32_t)v.size()){}
 
 	constexpr span& operator=(const span&) noexcept = default;
 	~span() noexcept = default;
@@ -71,25 +72,34 @@ public:
 		return *(this->_M_ptr + (size() - 1));
 	}
 
-	constexpr
-	reference operator[](const size_type __idx)
-	const noexcept
+	constexpr reference operator[](const size_type __idx) noexcept
 	{
 		__glibcxx_assert(__idx < size());
 		return *(this->_M_ptr + __idx);
 	}
 
-	constexpr
-	reference at(const size_type __idx)
-	const noexcept
+	constexpr const_reference operator[](const size_type __idx) const noexcept
 	{
 		__glibcxx_assert(__idx < size());
 		return *(this->_M_ptr + __idx);
 	}
 
-	constexpr inline
-	pointer data()
-	const noexcept
+	constexpr reference at(const size_type __idx)
+	{
+		__glibcxx_assert(__idx < size());
+		return *(this->_M_ptr + __idx);
+	}
+	
+	constexpr const_reference at(const size_type __idx) const
+	{
+		__glibcxx_assert(__idx < size());
+		return *(this->_M_ptr + __idx);
+	}
+
+	constexpr inline pointer data() noexcept
+	{ return this->_M_ptr; }
+
+	constexpr inline const_pointer data() const noexcept
 	{ return this->_M_ptr; }
 
 	inline span<element_type>& operator++(){
@@ -100,7 +110,24 @@ public:
 		return *this;
 	}
 
-	inline span<element_type> operator+(uint32_t step) const {
+	inline void operator +=(uint32_t step) {
+		if(_M_count > step){
+			_M_count -= step;
+			_M_ptr   += step;
+		}else{
+			_M_count = 0;
+			_M_ptr   = nullptr;
+		}
+	}
+
+	inline span<element_type> operator+(uint32_t step) {
+		if(_M_count > step)
+			return span<element_type>{_M_ptr+step,_M_count-step};
+		else
+			return span<element_type>{nullptr,0};
+	}
+
+	inline const span<element_type> operator+(uint32_t step) const {
 		if(_M_count > step)
 			return span<element_type>{_M_ptr+step,_M_count-step};
 		else
@@ -118,10 +145,12 @@ public:
 
 	// iterator support
 
-	constexpr iterator begin() const noexcept { return iterator(this->_M_ptr); }
-	constexpr iterator end()   const noexcept { return iterator(this->_M_ptr + this->size()); }
-	constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator(this->end()); }
-	constexpr reverse_iterator rend()   const noexcept { return reverse_iterator(this->begin()); }
+	constexpr const_iterator begin() const noexcept { return iterator(this->_M_ptr); }
+	constexpr const_iterator end()   const noexcept { return iterator(this->_M_ptr + this->size()); }
+	constexpr iterator begin() noexcept { return iterator(this->_M_ptr); }
+	constexpr iterator end()   noexcept { return iterator(this->_M_ptr + this->size()); }
+	constexpr reverse_iterator rbegin() noexcept { return reverse_iterator(this->end()); }
+	constexpr reverse_iterator rend()   noexcept { return reverse_iterator(this->begin()); }
 private:
 	pointer _M_ptr;
 	size_type _M_count;

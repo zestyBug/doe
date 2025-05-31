@@ -43,8 +43,8 @@
 		<Linker>
 			<Add option="-m64" />
 		</Linker>
-		<Unit filename="external/cutil/SmallVector.hpp" />
-		<Unit filename="external/cutil/StaticArray.hpp" />
+		<Unit filename="external/cutil/small_vector.hpp" />
+		<Unit filename="external/cutil/static_array.hpp" />
 		<Unit filename="external/cutil/bitset.hpp" />
 		<Unit filename="external/cutil/HashHelper.hpp" />
 		<Unit filename="external/cutil/prototype.hpp" />

@@ -15,7 +15,7 @@ namespace ECS
 {
     // the class that holds all entities
     class EntityComponentManager final {
-        friend class EntityComponentSystem;
+        friend class ThreadPool;
         // array of entities value,
         // contains index of it archetype and it index in that archetype
         std::vector<entity_t,allocator<entity_t>> entity_value{};
@@ -29,6 +29,7 @@ namespace ECS
 
 
         /// @brief find or create a archetype with given types,
+        /// @note type flag sensitive
         /// @param types list of types, throws invalid_argument exception on empty list
         Archetype* getOrCreateArchetype(span<TypeID> types);
 
@@ -36,21 +37,25 @@ namespace ECS
         void destroyEmptyArchetype(const uint32_t archetypeIndex);
 
         /// @brief add component to an entity or in other word, move entity to another archetype, exception handled
+        /// @note type flag sensitive
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
         Archetype* getArchetypeWithAddedComponents(Archetype *archetype,span<TypeID> componentTypeSet);
 
         /// @brief add component to an entity or in other word, move entity to another archetype, exception handled
+        /// @note type flag sensitive
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
         Archetype* getArchetypeWithRemovedComponents(Archetype *archetype,span<TypeID> typeSetToRemove);
 
         /// @ref getArchetypeWithAddedComponents
+        /// @note type flag sensitive
         Archetype* getArchetypeWithAddedComponent(Archetype* archetype,TypeID addedComponentType,uint32_t *indexInTypeArray = nullptr);
 
         /// @ref getArchetypeWithAddedComponents
+        /// @note type flag sensitive
         Archetype* getArchetypeWithRemovedComponent(Archetype* archetype,TypeID addedComponentType,uint32_t *indexInOldTypeArray = nullptr);
 
     /*
@@ -108,6 +113,7 @@ namespace ECS
         Entity createEntity();
 
         /// @brief create entity and stores entity value and initilize entity
+        /// @note type flag sensitive
         /// @param types types you are loking for
         Entity createEntity(span<TypeID> types);
 
@@ -119,21 +125,25 @@ namespace ECS
         void destroyEntity(Entity entity);
 
         /// @brief add list of components, components are initialized with default constructor
+        /// @note type flag sensitive
         /// @param entity entity, can belong to no archetype
         /// @param componentTypeSet set of components to be added
         void addComponents(Entity entity, span<TypeID> componentTypeSet);
 
         /// @brief add list of components, components are initialized with default constructor
+        /// @note not type flag sensitive
         /// @param entity entity, can belong to no archetype
         /// @param componentTypeSet set of components to be added
         void removeComponents(Entity entity, span<TypeID> componentTypeSet);
 
         /// @brief simple linear check,
-        /// @param types type flags are NOT ignored!
+        /// @note type flag sensitive
+        /// @param types type ordered
         bool hasComponents(Entity e,span<TypeID> types) const;
 
         /// @brief simple linear check
-        /// @param type type flag is NOT ignored!
+        /// @note type flag sensitive
+        /// @param type type ordered
         bool hasComponent(Entity e,TypeID type) const;
 
         // optimized: using archetype bitmap
@@ -144,7 +154,12 @@ namespace ECS
         }
 
     protected:
-
+        /**
+         * @brief single threaded iteration helper
+         * @note type flag sensitive
+         * @param func a funtion pointer reciving the components pointers and count of entities in the componenets
+         * @param types the components asked for iteration, can be empty list also can include 'Entity' as component
+         */
         void iterate_helper(void(*func)(span<void*>,uint32_t),span<TypeID> types = span<TypeID>()) {
             size_t offset_buffer[types.size()];
             void* arg_buffer[types.size()];

@@ -1,7 +1,7 @@
 //#include "Engine/ECS/ThreadPool.hpp"
 #include "ECS/EntityComponentManager.hpp"
 #include "cutil/range.hpp"
-#include "cutil/SmallVector.hpp"
+#include "cutil/small_vector.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
@@ -14,7 +14,7 @@ int prototype::counter = 0;
 
 struct Hierarchy {
     ECS::Entity parent{};
-    SmallVector<ECS::Entity,8> child{};
+    small_vector<ECS::Entity,8> child{};
 };
 struct LocalTransform {
     glm::vec3 position = glm::vec3(0.0, 0.0, 0.0);
@@ -25,7 +25,6 @@ typedef glm::mat<4, 4, float, glm::precision::defaultp> GlobalTransform;
 
 int main(){
     reg = new ECS::EntityComponentManager();
-    ECS::getTypeInfo<ECS::Entity>();
 
     {
         ECS::ArchetypeVersionManager chunks;

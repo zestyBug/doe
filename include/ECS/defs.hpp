@@ -3,14 +3,21 @@
 
 #include <vector>
 #include <algorithm>    // std::sort
-#include "cutil/StaticArray.hpp"
-#include "cutil/bitset.hpp"
+#include "cutil/static_array.hpp"
+#include "cutil/span.hpp"
 #include "cutil/basics.hpp"
 
 namespace ECS
 {
     // variable type that can hold component(type) id as integer
     using version_t = uint32_t;
+
+    /// @brief returns true if component contains newer version than system
+    /// @param lastVersion last vesion of system that been run
+    /// @param version component version in a given chunk
+    /// @return true diffrence is greater than zero
+    bool didChange(version_t lastVersion, version_t version);
+    void updateVersion(version_t& lastVersion);
 
     // this engine uses uint32 and int32 for all cases,
     // unless it is specified.
@@ -20,7 +27,14 @@ namespace ECS
     constexpr uint32_t NullArchetypeIndex = 0xfffffff;
 
 
-    struct TypeID {
+    struct TypeID final {
+        /** @brief When to use flags?
+         * actually you must ask when not to use flags
+         * flags make same type components diffrent for technical reasons
+         * for example when you want to diffrentiate anable and disabled components
+         * only time you may not need to use it is for performance reasons
+         * that proven to be wrong!
+         */ 
         enum TypeFlags : uint16_t {
             prefab = 0x1,
             disabled = 0x2
@@ -55,10 +69,10 @@ namespace ECS
             return this->value == v.value && this->flag == v.flag;
         }
         // can be 1,2,3,...
-        static constexpr uint16_t maxTypeCount = 0x2000;
+        static constexpr uint16_t MaxTypeCount = 0x2000;
     };
 
-    struct Entity{
+    struct Entity final {
         constexpr Entity() :_value{null}{}
         constexpr Entity(const int32_t v,version_t version=0):_value{v},_version{version}{}
         constexpr Entity(const Entity&) = default;
@@ -85,7 +99,7 @@ namespace ECS
         version_t _version=0;
     };
 
-    struct entity_t {
+    struct entity_t final {
         // index in Archetype::components
         uint32_t index;
         // NOTE: use the archetype index to validate an entity value
@@ -104,7 +118,7 @@ namespace ECS
     };
 
 
-    struct comp_info {
+    struct comp_info final {
         TypeID value;
         uint32_t size = 0;
         // destructor function
@@ -122,7 +136,7 @@ namespace ECS
     // unless values are stored somewhere and spreaded
     // WARN: dont access this directly
     // WARN: TypeID index must be 0
-    extern StaticArray<comp_info,COMPOMEN_COUNT> rtti;
+    extern static_array<comp_info,COMPOMEN_COUNT> rtti;
 
     typedef void (*rttiFP)(void*);
 
@@ -169,27 +183,27 @@ namespace ECS
         return a.value < b.value;
     }
     template<typename ... T>
-    StaticArray<TypeID,sizeof...(T)> _INIT_COMPONENTS_TYPES_() {
-        StaticArray<TypeID,sizeof...(T)> ret;
+    static_array<TypeID,sizeof...(T)> _INIT_COMPONENTS_TYPES_() {
+        static_array<TypeID,sizeof...(T)> ret;
         (ret.emplace_back(getTypeInfo<T>().value), ...);
         std::sort(ret.begin(),ret.end(),customCompare);
         return ret;
     }
     template<typename ... T>
-    StaticArray<TypeID,sizeof...(T)> _INIT_COMPONENTS_TYPES_RAW_() {
-        StaticArray<TypeID,sizeof...(T)> ret;
+    static_array<TypeID,sizeof...(T)> _INIT_COMPONENTS_TYPES_RAW_() {
+        static_array<TypeID,sizeof...(T)> ret;
         (ret.emplace_back(getTypeInfo<T>().value), ...);
         return ret;
     }
     template<typename ... T>
-    const span<TypeID> componentTypes() {
-        static StaticArray<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_<T...>();
-        return ret;
+    span<TypeID> componentTypes() {
+        static static_array<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_<T...>();
+        return {ret.data(),ret.size()};
     }
     template<typename ... T>
-    const span<TypeID> componentTypesRaw() {
-        static StaticArray<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_RAW_<T...>();
-        return ret;
+    span<TypeID> componentTypesRaw() {
+        static static_array<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_RAW_<T...>();
+        return {ret.data(),ret.size()};
     }
 
 }

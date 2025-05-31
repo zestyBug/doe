@@ -9,7 +9,7 @@ class map
 protected:
     static const uint32_t _AValidHashCode = 0x00000001;
     static const uint32_t _SkipCode = 0xFFFFFFFF;
-    /// @brief generates hash code for a archetype
+    /// @brief generates hash code for a pointer
     /// @param types note that type flags are also included, like disable-ness, prefab-being
     /// @return (may-modified) hash value
 
@@ -29,9 +29,13 @@ public:
 
         map() = default;
         map(const map&) = delete;
-        map(map&& v){
-            new (this) map();
-            *this = std::move(v);
+        map(map&& v)
+            :hashes{std::move(v.hashes)},pointers{std::move(v.pointers)}
+        {
+            this->emptyNodes = v.emptyNodes;
+            this->skipNodes = v.skipNodes;
+            v.emptyNodes=0;
+            v.skipNodes=0;
         }
         map& operator=(const map&) = delete;
         map& operator=(map&& v){
@@ -118,7 +122,7 @@ public:
         }
         void add(_Tp* ptr) {
             if(ptr == nullptr)
-                throw std::invalid_argument("add(): null archtype");
+                throw std::invalid_argument("add(): null pointer");
             uint32_t desiredHash = ptr->getHash();
             uint32_t offset = (int)(desiredHash & hashMask());
             uint32_t attempts = 0;
@@ -158,12 +162,12 @@ public:
         void remove(_Tp* ptr){
             int32_t offset = indexOf(ptr);
             if(offset != -1)
-                throw std::runtime_error("remove(): archtype not found");
+                throw std::runtime_error("remove(): pointer not found");
             hashes[offset] = _SkipCode;
             ++skipNodes;
             possiblyShrink();
         }
-        /// @brief find archtype using hash list
+        /// @brief find a pointer with a key using hash list
         /// @return value or nullptr
         _Tp* tryGet(_Key key) const {
             uint32_t desiredHash = getHashCode(key);
@@ -176,9 +180,9 @@ public:
                     return nullptr;
                 if (hash == desiredHash)
                 {
-                    _Tp *archetype = pointers[offset];
-                    if (*archetype == key)
-                        return archetype;
+                    _Tp *ptr = pointers[offset];
+                    if (*ptr == key)
+                        return ptr;
                 }
                 offset = (offset + 1) & hashMask();
                 ++attempts;

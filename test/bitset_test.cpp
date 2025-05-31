@@ -1,4 +1,4 @@
-#include "external/cutil/bitset.hpp"
+#include "cutil/bitset.hpp"
 #include <stdio.h>
 
 int main(int argc, char const *argv[])

@@ -1,4 +1,4 @@
-#include "external/cutil/QueueQueue.hpp"
+#include "cutil/QueueQueue.hpp"
 #include <thread>
 #include <mutex>
 #include <stdio.h>

@@ -5,7 +5,7 @@ static int test_num=1;
 #define DEF_TEST_SUBJECT() { printf("%i: ",test_num++);
 #define END_TEST_SUBJECT(RES) printf((RES)?"Passed\n":"Failed\n");}
 
-StaticArray<ECS::comp_info,32> ECS::rtti;
+static_array<ECS::comp_info,32> ECS::rtti;
 
 int main(int argc, char const *argv[])
 {

@@ -20,3 +20,4 @@ However, similarities in general functionality may arise due to the common princ
 - Garbage collection and recource managment
 - clean code and fix comment/doc doxygen tags: @brief,@tparam, @param, @return, @exception, @deprecated, @note, @attention, and @pre
 - rewrite any similarities + more optimization
+- write tests

@@ -73,11 +73,6 @@ Archetype* Archetype::createArchetype(span<TypeID> types) {
     for (uint32_t typeIndex = 0; typeIndex < typesCount; typeIndex++)
     {
         uint32_t sizeOf = arch->sizeOfs[typeIndex];
-
-        // align usedBytes upwards (eating into alignExtraSpace) so that
-        // this component actually starts at its required alignment.
-        // Assumption is that the start of the entire data segment is at the
-        // maximum possible alignment.
         arch->offsets[typeIndex] = usedBytes;
         usedBytes += alignTo64(sizeOf, arch->chunkCapacity);
     }
@@ -94,7 +89,7 @@ uint32_t Archetype::createEntity() {
         this->chunksData.emplace_back().memory = allocator().allocate(Chunk::memorySize);
         if(this->chunksData.size() > Archetype::MaxChunkIndex)
             throw std::runtime_error("createEntity(): reached max chunk count");
-        chunksVersion.add(0);
+        chunksVersion.add();
     }else
         ++lastChunkEntityCount;
 
@@ -149,6 +144,30 @@ int32_t Archetype::getIndex(TypeID t){
     }
     return -1;
 }
+bool Archetype::getIndecies(span<TypeID> rtypes,uint16_t* out){
+    span<TypeID> archetypeTypes = this->types;
+
+    uint16_t archetypeTypesIndex = 0;
+    uint16_t typesIndex = 0;
+
+    while(typesIndex < rtypes.size() && archetypeTypesIndex < archetypeTypes.size())
+    {
+        TypeID archetypeType = archetypeTypes[archetypeTypesIndex],
+               type          = rtypes[typesIndex];
+        // TODO: compaire number of remainding types
+        if(archetypeType.exactSame(type)){
+            out[typesIndex++] = archetypeTypesIndex;
+            // may contain duplicated items in the "types" parameter! archetypeTypesIndex++;
+        }else  if(archetypeType.value > type.value){
+            return false;
+        }else{
+            archetypeTypesIndex++;
+        }
+    }
+    if(typesIndex == rtypes.size())
+        return true;
+    return false;
+}
 
 
 
@@ -179,6 +198,22 @@ bool Archetype::hasComponent(TypeID type) {
                 return false;
             return true;
         }
+    }
+    return false;
+}
+bool Archetype::hasComponentsSlow(span<TypeID> rtypes){
+    span<TypeID> archetypeTypes = this->types;
+    if(archetypeTypes.size() < rtypes.size()) return false;
+
+    uint16_t archetypeTypesIndex = 0;
+    uint16_t typesIndex = 0;
+    
+    for(;typesIndex < rtypes.size();typesIndex++){
+        for(;archetypeTypesIndex < archetypeTypes.size();archetypeTypesIndex++)
+            if(archetypeTypes[archetypeTypesIndex].value == rtypes[typesIndex].value)
+                goto endLoop;
+        return false;
+        endLoop:;
     }
     return false;
 }

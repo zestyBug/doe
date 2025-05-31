@@ -10,10 +10,10 @@ class HashHelper final
 private:
     // http://www.isthe.com/chongo/src/fnv/hash_64a.c
 
-    static constexpr uint64_t FNV1A64OffsetBasis = 0xB00B2FEED969BEDBULL;
+    static constexpr uint64_t FNV1A64OffsetBasis = 0xCBF29CE484222325ULL;
     static constexpr uint64_t FNV1A64Prime =       0x100000001b3ULL;
-    static constexpr uint32_t FNV1A32OffsetBasis = 0x55555555;
-    static constexpr uint32_t FNV1A32Prime =       0xC1CBA8;
+    static constexpr uint32_t FNV1A32OffsetBasis = 0x811C9DC5;
+    static constexpr uint32_t FNV1A32Prime =       0x1000193;
 
 public:
 
@@ -122,6 +122,14 @@ public:
 
 };
 
+
+/**
+ * @brief User defined literal for hashed strings.
+ * @param str The literal without its suffix.
+ * @return A properly initialized hashed string.
+ */
+[[nodiscard]] uint32_t operator""_hash32(const char *str, std::size_t count) noexcept;
+[[nodiscard]] uint32_t operator""_hash32(const wchar_t *str, std::size_t count) noexcept;
 
 
 

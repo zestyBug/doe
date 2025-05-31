@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include "basics.hpp"
 template<typename T,unsigned int S>
-class SmallVector{
+class small_vector{
     unsigned int _count=0,_capacity=0;
     union block
     {
@@ -16,32 +16,32 @@ class SmallVector{
     };
     block data{};
 public:
-    SmallVector():_count{0},_capacity{S} {
+    small_vector():_count{0},_capacity{S} {
         //
     }
-    SmallVector(const SmallVector &obj){
+    small_vector(const small_vector &obj){
         _count = 0;
         _capacity = S;
         *this = obj;
     }
-    SmallVector& operator = (const SmallVector &obj){
+    small_vector& operator = (const small_vector &obj){
         if(this != &obj){
             T *ptr1,*ptr2;
             if(obj._capacity <= S){
-                this->~SmallVector();
+                this->~small_vector();
                 ptr1 = data.small;
                 ptr2 = obj.data.small;
-                _count = obj._coun;
+                _count = obj._count;
                 _capacity = S;
             }else{
-                if(_capacity < obj.capacity){
-                    this->~SmallVector();
-                    _count = obj._coun;
+                if(_capacity < obj._count){
+                    this->~small_vector();
+                    _count = obj._count;
                     _capacity = obj._count;
                     data.large = allocator<T>().allocate(obj._count);
                 }else{
-                    _count = obj._coun;
                     allocator<T>().destroy(data.large,_count);
+                    _count = obj._count;
                 }
                 ptr1 = data.large;
                 ptr2 = obj.data.large;
@@ -51,14 +51,14 @@ public:
         }
         return *this;
     };
-    SmallVector(SmallVector &&obj){
+    small_vector(small_vector &&obj){
         _count = 0;
         _capacity = S;
         *this = std::move(obj);
     };
-    SmallVector& operator = (SmallVector &&obj){
+    small_vector& operator = (small_vector &&obj){
         if(this != &obj){
-            this->~SmallVector();
+            this->~small_vector();
             T *ptr1,*ptr2;
             _count = obj._count;
             if(obj._capacity <= S){
@@ -73,7 +73,7 @@ public:
         }
         return *this;
     };
-    SmallVector(unsigned int count,const T& val = T()):_count{count} {
+    small_vector(unsigned int count,const T& val = T()):_count{count} {
         T *ptr;
         if(count <= S){
             ptr = this->data.small;
@@ -86,7 +86,7 @@ public:
             new (ptr + i) T(val);
         
     }
-    ~SmallVector(){
+    ~small_vector(){
         if(this->_capacity <= S){
             allocator<T>().destroy(data.small,_count);
         }else{

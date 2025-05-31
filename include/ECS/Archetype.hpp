@@ -8,10 +8,11 @@
 #include "defs.hpp"
 #include "ArchetypeVersionManager.hpp"
 #include "cutil/basics.hpp"
+#include "cutil/HashHelper.hpp"
 
 namespace ECS
 {
-    struct Chunk {
+    struct Chunk final {
         void *memory = nullptr;
         Chunk() = default;
         Chunk(const Chunk& ) = delete;
@@ -41,7 +42,7 @@ namespace ECS
     {
     protected:
 
-        friend class ArchetypeHashMap;
+        friend class ThreadPool;
         friend class EntityComponentManager;
         // maximum number of entities that can be fit into a single chunk
         uint32_t chunkCapacity = 0;
@@ -151,8 +152,17 @@ namespace ECS
             return mem + offsets.at(componentIndex);
         }
 
-        // TODO: binary search?
+        /// TODO: binary search?
+        /// @note not flag sensitive
+        /// @return -1 if not found
         int32_t getIndex(TypeID t);
+    
+        /// @brief locate every type index within archtype
+        /// @note not flag sensitive
+        /// @param t sorted array of types
+        /// @param out output buffer pointer
+        /// @return true on success on locating every type
+        bool getIndecies(span<TypeID> t, uint16_t* out);
 
         uint32_t getHash() const {
             uint32_t result = HashHelper::FNV1A32(this->types+1);
@@ -160,6 +170,10 @@ namespace ECS
                 result = 1;
             return result;
         }
+        /// @brief check if this archetype matches exact the same with param _types
+        /// @note flag sensitive
+        /// @param _types sorted array of types
+        /// @return true uf matches
         inline bool operator ==(span<TypeID> _types) const {
             return (this->types+1) == _types;
         }
@@ -193,13 +207,19 @@ namespace ECS
             return capacity;
         }
 
-        /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
-        /// @param entity value of srcIndex to be updated
+
+
+        /// @note flag sensitive
         bool hasComponent(TypeID type);
 
-        /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
-        /// @param entity value of srcIndex to be updated
+        /// @note flag sensitive
+        /// @param types sorted list of types,
         bool hasComponents(span<TypeID> types);
+
+        /// @brief same as hasComponents without few optimizations for unordered type lists
+        /// @note flag sensitive
+        /// @param entity unsorted list of types you are looking for.
+        bool hasComponentsSlow(span<TypeID> types);
 
 
         /// @brief in-archetype delete operation, handles deconstruction + memcpy by itself
