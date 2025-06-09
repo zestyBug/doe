@@ -9,8 +9,6 @@
 namespace ECS
 {
 
-struct ThreadPool;
-
 struct SystemState {
     DependencyManager jobs{};
     version_t globalSystemVersion;
@@ -26,34 +24,13 @@ struct System {
 
 struct SystemManager
 {
-    advanced_array::registry<unique_ptr<System>> systems;
+    advanced_array::registry<std::unique_ptr<System>> systems;
     
     // todo: something causes compiler to hang for long time, when i move this functions to src file!
 
-    void startAll(SystemState& state){
-        auto view = systems.view();
-        for (auto value:view)
-            if(System *s = view.get(value).get();s != nullptr){
-                s->onStop(state);
-                s->systemVersion = state.globalSystemVersion;
-            }
-    }
-    void stopAll(SystemState& state){
-        auto view = systems.view();
-        for (auto value:view)
-            if(System *s = view.get(value).get();s != nullptr){
-                s->onStop(state);
-                s->systemVersion = state.globalSystemVersion;
-            }
-    }
-    void updateAll(SystemState& state){
-        auto view = systems.view();
-        for (auto value:view)
-            if(System *s = view.get(value).get();s != nullptr){
-                s->onUpdate(state);
-                s->systemVersion = state.globalSystemVersion;
-            }
-    }
+    void startAll(SystemState& state);
+    void stopAll(SystemState& state);
+    void updateAll(SystemState& state);
 };
 
 

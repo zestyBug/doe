@@ -3,12 +3,12 @@ all: main
 
 LCPP=g++ -std=c++17
 LFLAG=-g0 -O3 -m64 -fexceptions  -march=native
-LFLAG_DEBUG=-g3 -Og -m64 -fexceptions
+LFLAG_DEBUG=-g3 -O0 -m64 -fexceptions -DDEBUG
 # -fsanitize=address
-# -fsanitize=address -static-libasan
 CCPP=g++
-CFLAG_debug=-m64
 CFLAG=-m64 -s -march=native
+CFLAG_DEBUG=-m64
+# -fsanitize=address -static-libasan
 
 LFLAG_WARN=-Wall -Wconversion -Wextra -Wfatal-errors -Wshadow
 
@@ -102,23 +102,32 @@ $(OBJ_DEBUG)/test/thread.o: $(testDir)/thread.cpp $(headerInclude) $(headerCutil
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 
+$(OBJ_DEBUG)/test/threadpool.o: $(testDir)/threadpool.cpp include/ECS/ThreadPool.hpp
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
+
 
 
 $(BIN_DEBUG)/ecs: $(OBJ_DEBUG)/test/ecs.o $(DOBJS)
 	mkdir -p $(@D)
-	$(CCPP) -o $@ $^ $(CFLAG_debug)
+	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
 $(BIN_DEBUG)/job: $(OBJ_DEBUG)/test/job.o $(DOBJS)
 	mkdir -p $(@D)
-	$(CCPP) -o $@ $^ $(CFLAG_debug)
+	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
 $(BIN_DEBUG)/thread: $(OBJ_DEBUG)/test/thread.o $(DOBJS)
 	mkdir -p $(@D)
-	$(CCPP) -o $@ $^ $(CFLAG_debug)
+	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
+
+$(BIN_DEBUG)/threadpool: $(OBJ_DEBUG)/test/threadpool.o $(OBJ_DEBUG)/src/ThreadPool.o
+	mkdir -p $(@D)
+	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
 test1: $(BIN_DEBUG)/ecs
 test2: $(BIN_DEBUG)/job
 test3: $(BIN_DEBUG)/thread
+test4: $(BIN_DEBUG)/threadpool
 
 clean:
 	@echo "Cleaning up..."

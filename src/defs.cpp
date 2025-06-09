@@ -19,13 +19,13 @@ comp_info _new_id(uint32_t size, rttiFP destructor, rttiFP constructor)
     rtti.push_back(info);
     return info;
 }
-bool didChange(version_t lastVersion, version_t version)
+bool didChange(version_t version, version_t lastVersion)
 {
     // if is allocated recently
     if (version == 0)
         return true;
     // overflow detection for longer run
-    return (lastVersion - version) < (1u << 31);
+    return (version - lastVersion) < (1u << 31);
 }
 void updateVersion(version_t& lastVersion){
     lastVersion++;

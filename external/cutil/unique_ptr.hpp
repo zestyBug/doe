@@ -5,8 +5,8 @@
 
 
 
-// supports pointer marking for first bit, it disables destruction
-template <typename Type, typename Allocator = allocator<Type>>
+/// @brief supports pointer marking for first bit, it disables destruction and access
+template <typename Type, typename Allocator = std::allocator<Type>>
 class unique_ptr
 {
     Type *_M_t = nullptr;
@@ -18,7 +18,7 @@ class unique_ptr
     public:
     // Constructors.
 
-    /// Default constructor, creates a unique_ptr that owns nothing.
+    /// @brief Default constructor, creates a unique_ptr that owns nothing.
     constexpr unique_ptr() noexcept : _M_t(nullptr){ }
 
     /** Takes ownership of a pointer.
@@ -29,16 +29,16 @@ class unique_ptr
      */
     explicit unique_ptr(Type* __p) noexcept : _M_t(__p){ }
 
-    /// Creates a unique_ptr that owns nothing.
+    /// @brief Creates a unique_ptr that owns nothing.
     constexpr unique_ptr(nullptr_t) noexcept : _M_t(nullptr) { }
 
-    /// Move constructor.
+    /// @brief Move constructor.
     unique_ptr(unique_ptr&&v){
         reset(v._M_t);
         v._M_t = nullptr;
     }
 
-    /// Destructor, invokes the deleter if the stored pointer is not null.
+    /// @brief Destructor, invokes the deleter if the stored pointer is not null.
     ~unique_ptr() noexcept
     {
         if(_M_t != nullptr && ((intptr_t)_M_t&1) != 1){
@@ -62,7 +62,7 @@ class unique_ptr
         return *this;
     }
 
-    /// Reset the %unique_ptr to empty, invoking the deleter if necessary.
+    /// @brief Reset the %unique_ptr to empty, invoking the deleter if necessary.
     unique_ptr&
     operator=(nullptr_t) noexcept
     {
@@ -88,7 +88,7 @@ class unique_ptr
 
     // Modifiers.
 
-    /// Release ownership of any stored pointer.
+    /// @brief Release ownership of any stored pointer.
     Type* release() noexcept {
         Type * const val = _M_t;
         _M_t = nullptr;
@@ -110,7 +110,7 @@ class unique_ptr
         _M_t = __p;
     }
 
-    /// Exchange the pointer and deleter with another object.
+    /// @brief Exchange the pointer and deleter with another object.
     void swap(unique_ptr& __u) noexcept
     {
         Type * const buffer = __u._M_t;
@@ -118,7 +118,7 @@ class unique_ptr
         this->_M_t = buffer;
     }
 
-    // Disable copy from lvalue.
+    /// @brief Disable copy from lvalue.
     unique_ptr(const unique_ptr&) = delete;
     unique_ptr& operator=(const unique_ptr&) = delete;
 };

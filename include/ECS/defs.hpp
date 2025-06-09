@@ -13,10 +13,10 @@ namespace ECS
     using version_t = uint32_t;
 
     /// @brief returns true if component contains newer version than system
-    /// @param lastVersion last vesion of system that been run
     /// @param version component version in a given chunk
+    /// @param lastVersion last vesion of system that been run
     /// @return true diffrence is greater than zero
-    bool didChange(version_t lastVersion, version_t version);
+    bool didChange(version_t version, version_t lastVersion);
     void updateVersion(version_t& lastVersion);
 
     // this engine uses uint32 and int32 for all cases,
@@ -162,6 +162,11 @@ namespace ECS
     inline comp_info& getTypeInfo()
     {
         return rtti[__type_id__<std::remove_const_t<std::remove_reference_t<T>>>()];
+    }
+    template<typename T>
+    inline TypeID getTypeID()
+    {
+        return rtti[__type_id__<std::remove_const_t<std::remove_reference_t<T>>>()].value;
     }
     [[nodiscard]] inline comp_info& getTypeInfo(const TypeID id)
     {

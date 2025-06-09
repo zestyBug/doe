@@ -3,13 +3,28 @@ using namespace ECS;
 
 
 
-void DependencyManager::dummyExecute(){
-    for(auto&j:registeredJobs){
-        printf("Job: \"%s\", Dependencies: [",j.name);
-        for(JobHandle d:j.deps){
-            printf("%i,",d);
+
+void SystemManager::startAll(SystemState& state){
+    auto view = systems.view();
+    for (auto value:view)
+        if(System *s = view.get(value).get();s != nullptr){
+            s->onStop(state);
+            s->systemVersion = state.globalSystemVersion;
         }
-        printf("]\n");
-        j.jobFunc(j.context,span<void*>{},0);
-    }
+}
+void SystemManager::stopAll(SystemState& state){
+    auto view = systems.view();
+    for (auto value:view)
+        if(System *s = view.get(value).get();s != nullptr){
+            s->onStop(state);
+            s->systemVersion = state.globalSystemVersion;
+        }
+}
+void SystemManager::updateAll(SystemState& state){
+    auto view = systems.view();
+    for (auto value:view)
+        if(System *s = view.get(value).get();s != nullptr){
+            s->onUpdate(state);
+            s->systemVersion = state.globalSystemVersion;
+        }
 }

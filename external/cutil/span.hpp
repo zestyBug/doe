@@ -74,13 +74,11 @@ public:
 
 	constexpr reference operator[](const size_type __idx) noexcept
 	{
-		__glibcxx_assert(__idx < size());
 		return *(this->_M_ptr + __idx);
 	}
 
 	constexpr const_reference operator[](const size_type __idx) const noexcept
 	{
-		__glibcxx_assert(__idx < size());
 		return *(this->_M_ptr + __idx);
 	}
 

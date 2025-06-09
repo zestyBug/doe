@@ -1,53 +1,52 @@
 #include "ECS/Archetype.hpp"
+#include "cutil/HashHelper.hpp"
 using namespace ECS;
 
 
-Archetype* Archetype::createArchetype(span<TypeID> types) {
-    const uint32_t typesCount = types.size() + 1;
-    if(unlikely(types.size() < 1 || typesCount > MaxTypePerArchetype))
+ArchetypeHolder Archetype::createArchetype(span<TypeID> types) {
+    if(unlikely(types.size() < 1 || types.size() > MaxTypePerArchetype))
         throw std::invalid_argument("createArchetype(): archetype with unexpected component count");
 
     uint32_t additional = 0;
     uint16_t offsets[4];
     offsets[0] =              (uint16_t)alignTo64(sizeof(Archetype),1);
-    offsets[1] = offsets[0] + (uint16_t)alignTo64(sizeof(TypeID),typesCount);
-    offsets[2] = offsets[1] + (uint16_t)alignTo64(sizeof(uint16_t),typesCount);
-    offsets[3] = offsets[2] + (uint16_t)alignTo64(sizeof(uint32_t),typesCount);
-    additional = offsets[3] + (uint16_t)alignTo64(sizeof(uint16_t),typesCount);
+    offsets[1] = offsets[0] + (uint16_t)alignTo64(sizeof(TypeID),types.size());
+    offsets[2] = offsets[1] + (uint16_t)alignTo64(sizeof(uint16_t),types.size());
+    offsets[3] = offsets[2] + (uint16_t)alignTo64(sizeof(uint32_t),types.size());
+    additional = offsets[3] + (uint16_t)alignTo64(sizeof(uint16_t),types.size());
 
-
-    Archetype *arch = (Archetype*) allocator().allocate(sizeof(Archetype) + additional);
+    ArchetypeHolder archHolder{(Archetype*) allocator().allocate(sizeof(Archetype) + additional)};
+    Archetype *arch = archHolder.get();
 
     new (arch) Archetype();
 
-    arch->types = span<TypeID>{(TypeID*)((uint8_t*)(arch) + offsets[0]),typesCount};
-    arch->realIndecies = span<uint16_t>{(uint16_t*)((uint8_t*)(arch) + offsets[1]),typesCount};
-    arch->offsets = span<uint32_t>{(uint32_t*)((uint8_t*)(arch) + offsets[2]),typesCount};
-    arch->sizeOfs = span<uint16_t>{(uint16_t*)((uint8_t*)(arch) + offsets[3]),typesCount};
+    arch->types = span<TypeID>{(TypeID*)((uint8_t*)(arch) + offsets[0]),types.size()};
+    arch->realIndecies = span<uint16_t>{(uint16_t*)((uint8_t*)(arch) + offsets[1]),types.size()};
+    arch->offsets = span<uint32_t>{(uint32_t*)((uint8_t*)(arch) + offsets[2]),types.size()};
+    arch->sizeOfs = span<uint16_t>{(uint16_t*)((uint8_t*)(arch) + offsets[3]),types.size()};
 
-    // TODO: this value must be always 0
-    arch->types[0] = getTypeInfo<Entity>().value;
-    if(unlikely(arch->types[0].value != 0))
+#ifdef DEBUG
+    if(unlikely(types[0].value != 0))
         throw std::runtime_error("createArchetype(): getTypeInfo<Entity>().value.realIndex() must be always 0!");
-    arch->realIndecies[0] = 0;
+#endif
 
 
     for (uint32_t i = 0;i < types.size(); i++) {
-        arch->types[i+1]=types[i];
-        arch->realIndecies[i+1] = types[i].realIndex();
+        arch->types[i]=types[i];
+        arch->realIndecies[i] = types[i].realIndex();
     }
 
     arch->chunksData.reserve(16);
-    arch->chunksVersion.initialize(typesCount);
+    arch->chunksVersion.initialize(types.size());
 
 
     {
-        uint16_t i = (uint16_t) typesCount;
+        uint16_t i = (uint16_t) types.size();
         do arch->firstTagIndex = i;
         while (i!=0 && getTypeInfo(arch->types[--i]).size == 0);
         i++;
     }
-    for (uint32_t i = 0; i < typesCount; ++i)
+    for (uint32_t i = 0; i < types.size(); ++i)
     {
         if (i < arch->firstTagIndex){
             const auto& cType = getTypeInfo(arch->types[i]);
@@ -70,18 +69,19 @@ Archetype* Archetype::createArchetype(span<TypeID> types) {
         throw std::length_error("createArchetype(): LARGE COMPONENTS! X(");
 
     uint32_t usedBytes = Chunk::memoryOffset;
-    for (uint32_t typeIndex = 0; typeIndex < typesCount; typeIndex++)
+    for (uint32_t typeIndex = 0; typeIndex < types.size(); typeIndex++)
     {
         uint32_t sizeOf = arch->sizeOfs[typeIndex];
         arch->offsets[typeIndex] = usedBytes;
         usedBytes += alignTo64(sizeOf, arch->chunkCapacity);
     }
 
-    return arch;
+    return std::move(archHolder);
 }
 
-uint32_t Archetype::createEntity() {
+uint32_t Archetype::createEntity(version_t globalVersion) {
     uint32_t res = 0;
+    res = this->count();
     if(unlikely(lastChunkEntityCount == 0 && !this->chunksData.empty()))
         throw std::runtime_error("createEntity(): internal error!");
     if(unlikely(this->chunksData.empty() || lastChunkEntityCount >= this->chunkCapacity)){
@@ -89,11 +89,11 @@ uint32_t Archetype::createEntity() {
         this->chunksData.emplace_back().memory = allocator().allocate(Chunk::memorySize);
         if(this->chunksData.size() > Archetype::MaxChunkIndex)
             throw std::runtime_error("createEntity(): reached max chunk count");
-        chunksVersion.add();
-    }else
+        chunksVersion.add(0);
+    }else{
         ++lastChunkEntityCount;
-
-    res = this->count() - 1;
+        chunksVersion.setAllChangeVersion((uint32_t)chunksData.size()-1,globalVersion);
+    }
 
     if(unlikely(res > MaxEntityIndex))
         throw std::out_of_range("entity count limit reached");
@@ -134,7 +134,7 @@ void* Archetype::getComponent(uint16_t componentIndex,uint32_t entityIndex){
     return chunkMemory + offsets.at(componentIndex) + (sizeOfs.at(componentIndex) * inChunkIndex);
 }
 
-int32_t Archetype::getIndex(TypeID t){
+int32_t Archetype::getIndex(TypeID t) const{
     uint16_t rIndex = t.realIndex();
     for (uint32_t i = 0; i < realIndecies.size(); i++){
         if(realIndecies[i] == rIndex)
@@ -144,7 +144,7 @@ int32_t Archetype::getIndex(TypeID t){
     }
     return -1;
 }
-bool Archetype::getIndecies(span<TypeID> rtypes,uint16_t* out){
+bool Archetype::getIndecies(span<TypeID> rtypes,uint16_t* out) const{
     span<TypeID> archetypeTypes = this->types;
 
     uint16_t archetypeTypesIndex = 0;
@@ -168,6 +168,12 @@ bool Archetype::getIndecies(span<TypeID> rtypes,uint16_t* out){
         return true;
     return false;
 }
+uint32_t Archetype::getHash() const {
+    uint32_t result = HashHelper::FNV1A32(this->types);
+    if (result == 0xFFFFFFFF || result == 0)
+        result = 1;
+    return result;
+}
 
 
 
@@ -178,8 +184,7 @@ bool Archetype::getIndecies(span<TypeID> rtypes,uint16_t* out){
 
 
 
-
-bool Archetype::hasComponent(TypeID type) {
+bool Archetype::hasComponent(TypeID type) const {
     span<TypeID> archetypeTypes = this->types;
     if(archetypeTypes.size() < 1) return false;
 
@@ -201,7 +206,7 @@ bool Archetype::hasComponent(TypeID type) {
     }
     return false;
 }
-bool Archetype::hasComponentsSlow(span<TypeID> rtypes){
+bool Archetype::hasComponentsSlow(span<TypeID> rtypes) const {
     span<TypeID> archetypeTypes = this->types;
     if(archetypeTypes.size() < rtypes.size()) return false;
 
@@ -217,8 +222,7 @@ bool Archetype::hasComponentsSlow(span<TypeID> rtypes){
     }
     return false;
 }
-bool Archetype::hasComponents(span<TypeID> rtypes)
-{
+bool Archetype::hasComponents(span<TypeID> rtypes) const {
     span<TypeID> archetypeTypes = this->types;
     if(archetypeTypes.size() < rtypes.size()) return false;
 
@@ -260,7 +264,7 @@ Entity Archetype::managedRemoveEntity(Archetype *archetype, uint32_t entityIndex
     archetype->lastChunkEntityCount--;
 
     Entity ret = Entity::null;
-    if(unlikely(lastEntityIndex !=  entityIndex))
+    if(likely(lastEntityIndex !=  entityIndex))
         ret = moveComponentValues(archetype,entityIndex,lastEntityIndex);
     else
         archetype->callComponentDestructor(entityIndex);
@@ -303,21 +307,11 @@ Entity Archetype::moveComponentValues(Archetype *archetype, uint32_t dstIndex, u
 
     ret = ((Entity*)(srcChunkMemory+archetype->offsets[0]))[srcInChunkIndex];
 
-    for(uint32_t i=0;i < archetype->nonZeroSizedTypesCount();i++) {
-        uint8_t const * const src =
-                srcChunkMemory +
-                archetype->offsets[i] +
-                (archetype->sizeOfs[i] * srcInChunkIndex);
-        uint8_t * const dst =
-                dstChunkMemory +
-                archetype->offsets[i] +
-                (archetype->sizeOfs[i] * dstInChunkIndex);
-        memcpy(dst,src,archetype->sizeOfs[i]);
-    }
+    archetype->inArchetypeCopy(srcChunkMemory, dstChunkMemory, srcInChunkIndex, dstInChunkIndex);
 
     return ret;
 }
-Entity Archetype::replaceComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex)
+Entity Archetype::copyComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex)
 {
     Entity ret;
     const uint32_t dstChunkIndex = archetype->getChunkIndex(dstIndex);
@@ -332,17 +326,7 @@ Entity Archetype::replaceComponentValues(Archetype *archetype, uint32_t dstIndex
 
     ret = ((Entity*)(srcChunkMemory+archetype->offsets[0]))[srcInChunkIndex];
 
-    for(uint32_t i=0;i < archetype->nonZeroSizedTypesCount();i++) {
-        uint8_t const * const src =
-                srcChunkMemory +
-                archetype->offsets[i] +
-                (archetype->sizeOfs[i] * srcInChunkIndex);
-        uint8_t * const dst =
-                dstChunkMemory +
-                archetype->offsets[i] +
-                (archetype->sizeOfs[i] * dstInChunkIndex);
-        memcpy(dst,src,archetype->sizeOfs[i]);
-    }
+    archetype->inArchetypeCopy(srcChunkMemory, dstChunkMemory, srcInChunkIndex, dstInChunkIndex);
 
     return ret;
 }
@@ -367,7 +351,7 @@ Entity Archetype::moveComponentValues(Archetype *dstArchetype, uint32_t dstIndex
     uint16_t srcI = 0,
     dstI = 0;
     {
-        // for madvanced cache friendly-ness
+        // for advanced cache friendly-ness
 
         uint16_t toBeDeletedCount=0;
         uint16_t toBeInitCount=0;
@@ -381,7 +365,7 @@ Entity Archetype::moveComponentValues(Archetype *dstArchetype, uint32_t dstIndex
         // -> copy(dst[0],src[0]), destroy(src[1]), init(dst[1]), copy(dest[2],src[2]), ...
 
         uint16_t shareCount = std::min(srcCount,dstCount);
-        while (shareCount)
+        while (shareCount--)
         {
             if(srcTypeIndex[srcI] == dstTypeIndex[dstI]){
                 memcpy(
@@ -430,6 +414,24 @@ Entity Archetype::moveComponentValues(Archetype *dstArchetype, uint32_t dstIndex
         }
     }
     return ret;
+}
+void Archetype::inArchetypeCopy(
+    void *const  srcChunk, 
+    void *const  dstChunk, 
+    const uint32_t srcInChunkIndex, 
+    const uint32_t dstInChunkIndex
+){
+    for(uint32_t i=0;i < this->nonZeroSizedTypesCount();i++) {
+        uint8_t const * const src =
+                (uint8_t*)srcChunk +
+                this->offsets[i] +
+                (this->sizeOfs[i] * srcInChunkIndex);
+        uint8_t * const dst =
+                (uint8_t*)dstChunk +
+                this->offsets[i] +
+                (this->sizeOfs[i] * dstInChunkIndex);
+        memcpy(dst,src,this->sizeOfs[i]);
+    }
 }
 void Archetype::callComponentDestructor(uint32_t entityIndex){
 

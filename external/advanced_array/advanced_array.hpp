@@ -624,7 +624,7 @@ protected:
     class sparse_set_iterator final {
         friend class basic_sparse_set<Entity>;
 
-        using packed_type = std::vector<Entity,allocator<Entity>>;
+        using packed_type = std::vector<Entity>;
         using index_type = typename traits_type::difference_type;
 
         sparse_set_iterator(const packed_type &ref, const index_type idx) ENTT_NOEXCEPT
@@ -1052,8 +1052,8 @@ public:
     }
 
 private:
-    std::vector<page_type,allocator<page_type>> sparse;
-    std::vector<entity_type,allocator<entity_type>> packed;
+    std::vector<page_type> sparse;
+    std::vector<entity_type> packed;
 
 };
 
@@ -1372,7 +1372,7 @@ public:
     }
 
 private:
-    std::vector<value_type,allocator<value_type>> instances;
+    std::vector<value_type> instances;
 };
 
 template<typename,typename>
@@ -1894,7 +1894,7 @@ public:
 
 private:
     mutable storage_type pool_pool;
-    std::vector<entity_type,allocator<entity_type>> entities{};
+    std::vector<entity_type> entities{};
     entity_type available{null};
 };
 

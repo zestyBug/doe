@@ -3,6 +3,8 @@
 
 #include "basics.hpp"
 
+// TODO: add custome allocator like:  std::pair<std::allocator<uint32_t>,std::allocator<_Tp*>>
+
 template <typename _Key, typename _Tp>
 class map
 {

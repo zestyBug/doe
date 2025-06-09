@@ -20,7 +20,7 @@ namespace ECS
         // contains index of it archetype and it index in that archetype
         std::vector<entity_t,allocator<entity_t>> entity_value{};
 
-        std::vector<unique_ptr<Archetype>,allocator<unique_ptr<Archetype>>> archetypes{};
+        std::vector<ArchetypeHolder,allocator<ArchetypeHolder>> archetypes{};
         map<span<TypeID>,Archetype> archetypeTypeMap{};
 
 
@@ -120,9 +120,14 @@ namespace ECS
         /// @brief releases components
         void removeComponents(Entity entity);
 
-        /// @brief destroy a entity entirly, safe
-        /// @param e entity, must contain a valid version
-        void destroyEntity(Entity entity);
+        /// @brief add list of components, components are initialized with default constructor
+        /// @note not type flag sensitive
+        /// @param entity entity, can belong to no archetype
+        /// @param componentTypeSet set of components to be added
+        void removeComponents(Entity entity, span<TypeID> componentTypeSet);
+
+        /// @brief releases components
+        void removeComponent(Entity entity, TypeID component);
 
         /// @brief add list of components, components are initialized with default constructor
         /// @note type flag sensitive
@@ -130,11 +135,7 @@ namespace ECS
         /// @param componentTypeSet set of components to be added
         void addComponents(Entity entity, span<TypeID> componentTypeSet);
 
-        /// @brief add list of components, components are initialized with default constructor
-        /// @note not type flag sensitive
-        /// @param entity entity, can belong to no archetype
-        /// @param componentTypeSet set of components to be added
-        void removeComponents(Entity entity, span<TypeID> componentTypeSet);
+        void addComponent(Entity entity, TypeID component);
 
         /// @brief simple linear check,
         /// @note type flag sensitive
@@ -152,6 +153,10 @@ namespace ECS
             TypeID type = getTypeInfo<T>().value;
             return hasComponent(e,type);
         }
+
+        /// @brief destroy a entity entirly, safe
+        /// @param e entity, must contain a valid version
+        void destroyEntity(Entity entity);
 
     protected:
         /**

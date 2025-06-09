@@ -23,16 +23,16 @@ struct jobContext {
     uint32_t counts[4];
     ChunkJob *context;
     ChunkJob::JobFunc jobFunc;
-    char name[16];
     // system that pulled this job, usually must be globalSystemVersion-1
     version_t lastSystemVersion;
+    char name[16];
 };
 
 /// @brief job schedule buffer
 struct DependencyManager {
     // if these numbers goes any higher, use std::map<TypeID,...> and std::set<JobHandle> instead
 
-    std::vector<jobContext> registeredJobs{};
+    std::vector<jobContext,allocator<jobContext>> registeredJobs{};
     std::array<JobHandle,TypeID::MaxTypeCount> lastWriteJob{};
     std::vector<JobHandle,allocator<JobHandle>> lastReadJobs[TypeID::MaxTypeCount];
 

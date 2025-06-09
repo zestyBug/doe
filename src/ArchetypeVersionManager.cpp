@@ -27,9 +27,9 @@ void ArchetypeVersionManager::popBack(){
     this->_count--;
 }
 void ArchetypeVersionManager::add(version_t version){
-    uint32_t index = this->_count++;
-    if(index>=this->_capacity)
+    if(this->_count>=this->_capacity)
         this->grow(this->_capacity<1 ? 4 : this->_capacity*2);
+    uint32_t index = this->_count++;
 
     // New chunk, so all versions are reset.
     for (uint32_t i = 0; i < this->componentCount; i++)
@@ -51,9 +51,9 @@ void ArchetypeVersionManager::grow(uint32_t new_capacity){
 
     if(this->data != nullptr && this->_count > 0){
         for(uint32_t i = 0; i < componentCount; ++i) {
-            memcpy((version_t*)(new_data) + (i * new_capacity),
-                &this->_ChangeVersion(i * this->_capacity),
-                this->_count * sizeof(version_t));
+            memcpy((version_t*)(new_data) + i * new_capacity,
+                   (version_t*)(this->data) + i * this->_capacity,
+                   this->_count * sizeof(version_t));
         }
         allocator().deallocate(this->data);
     }

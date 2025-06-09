@@ -2,28 +2,24 @@
 #include "ECS/EntityComponentManager.hpp"
 #include "cutil/range.hpp"
 #include "cutil/small_vector.hpp"
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
 #include "cutil/prototype.hpp"
 ECS::EntityComponentManager *reg;
-ssize_t allocator_counter = 0;
 int prototype::counter = 0;
+
+void Test();
+
+static int test_num=1;
+#define TEST_SUBJECT_BEGIN() { bool TEST_RESULT=false;
+#define TEST_SUBJECT_END() printf("%i: %s %s:%d\n",test_num++,(!!(TEST_RESULT))?"✔":"✘",__FILE__,__LINE__);}
 
 //ECS::ThreadPool *tp;
 
 struct Hierarchy {
     ECS::Entity parent{};
-    small_vector<ECS::Entity,8> child{};
+    small_vector<ECS::Entity,8,allocator<ECS::Entity>> child{};
 };
-struct LocalTransform {
-    glm::vec3 position = glm::vec3(0.0, 0.0, 0.0);
-    glm::vec3 scale = glm::vec3(1.0, 1.0, 1.0);
-    glm::quat rotation = glm::quat(glm::cos(glm::radians(90.0f/2)), 0.0, glm::sin(glm::radians(90.0f / 2)), 0.0);
-};
-typedef glm::mat<4, 4, float, glm::precision::defaultp> GlobalTransform;
 
-int main(){
+void Test(){
     reg = new ECS::EntityComponentManager();
 
     {
@@ -36,33 +32,63 @@ int main(){
         chunks.popBack();
     }
 
-    auto v0 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    auto v0 = reg->createEntity(ECS::componentTypes<Hierarchy>());
+    for (size_t i = 0; i < 100; i++)
+    {
+        reg->createEntity(ECS::componentTypes<Hierarchy>());
+    }
+    auto v1 = reg->createEntity(ECS::componentTypes<Hierarchy,int>());
+    for (size_t i = 0; i < 100; i++)
+    {
+        reg->createEntity(ECS::componentTypes<Hierarchy,int>());
+    }
+    auto v2 = reg->createEntity(ECS::componentTypes<Hierarchy,char>());
+    for (size_t i = 0; i < 100; i++)
+    {
+        reg->createEntity(ECS::componentTypes<Hierarchy,char>());
+    }
+    auto v4 = reg->createEntity(ECS::componentTypes<Hierarchy,float>());
+    
+    TEST_SUBJECT_BEGIN()
+    reg->removeComponent(v0,ECS::getTypeInfo<Hierarchy>().value);
+    TEST_RESULT = !reg->hasArchetype(v0);
+    TEST_RESULT &= !reg->hasComponent(v0,ECS::getTypeID<Hierarchy>());
+    reg->addComponent(v0,ECS::getTypeInfo<prototype>().value);
+    TEST_RESULT &= reg->hasComponent(v0,ECS::getTypeID<prototype>());
     reg->destroyEntity(v0);
-    for (size_t i = 0; i < 100; i++)
-    {
-        reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
-    }
-    auto v1 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
+    TEST_SUBJECT_END()
+
+    TEST_SUBJECT_BEGIN()
+    reg->removeComponents(v1,ECS::componentTypes<Hierarchy,int>());
+    TEST_RESULT = !reg->hasArchetype(v1);
     reg->destroyEntity(v1);
-    for (size_t i = 0; i < 100; i++)
-    {
-        reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
-    }
-    auto v2 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
-    for (size_t i = 0; i < 100; i++)
-    {
-        reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
-    }
-    auto v4 = reg->createEntity(ECS::componentTypes<Hierarchy,GlobalTransform,int>());
-    
-    
+    TEST_SUBJECT_END()
+
+    TEST_SUBJECT_BEGIN()
+    ECS::Archetype *arch;
+    arch = reg->getArchetype(v4);
+    TEST_RESULT = arch != nullptr;
+    reg->addComponent(v4,ECS::getTypeInfo<Hierarchy>().value);
+    TEST_RESULT &= arch == reg->getArchetype(v4);
+    reg->addComponents(v4,ECS::componentTypes<Hierarchy,float>());
+    TEST_RESULT &= arch == reg->getArchetype(v4);
     reg->destroyEntity(v4);
+    TEST_SUBJECT_END()
+
+    reg->addComponents(v2,ECS::componentTypes<Hierarchy,prototype>());
     reg->destroyEntity(v2);
     
     reg->iterate<int>([](span<void*>,uint32_t count){
-        printf("count: %u\n",count);
+        printf("int count: %u\n",count);
     });
 
     delete reg;
+#ifdef DEBUG
     printf("counter: %li\n",allocator_counter);
+#endif
+}
+int main()
+{
+    Test();
+    return 0;
 }

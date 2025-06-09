@@ -8,7 +8,9 @@
 #include "defs.hpp"
 #include "ArchetypeVersionManager.hpp"
 #include "cutil/basics.hpp"
-#include "cutil/HashHelper.hpp"
+#include "cutil/unique_ptr.hpp"
+
+void Test();
 
 namespace ECS
 {
@@ -32,18 +34,28 @@ namespace ECS
         }
 
         static constexpr uint32_t memoryOffset = 64; // (must be cache line aligned)
-        static constexpr uint32_t memorySize = 16 * 1024;
+        static constexpr uint32_t memorySize = 16 * 1024; /// any number larger than 0xFFFF may cause overflow in offset array!
         static constexpr uint32_t bufferSize = memorySize - memoryOffset;
         // lower the number, the better component version-ing perform
         static constexpr uint32_t maximumEntitiesPerChunk = 512;
     };
+    class Archetype;
+    
+    using ArchetypeHolder = unique_ptr<Archetype,allocator<Archetype>>;
 
+    /**
+     * @brief A structure holding single archetype of components.
+     * in a normal case type[0] must be Entity but this class has
+     * nothing to do with data types it contain. at the end its
+     * just a container.
+     */
     class Archetype final
     {
     protected:
 
         friend class ThreadPool;
         friend class EntityComponentManager;
+        friend void ::Test();
         // maximum number of entities that can be fit into a single chunk
         uint32_t chunkCapacity = 0;
         uint32_t lastChunkEntityCount = 0;
@@ -71,7 +83,7 @@ namespace ECS
         Archetype(/* args */) = default;
     public:
 
-        static Archetype* createArchetype(span<TypeID> types);
+        static ArchetypeHolder createArchetype(span<TypeID> types);
 
         ~Archetype(/* args */) {
             span<uint16_t> archSizes = this->sizeOfs;
@@ -96,11 +108,11 @@ namespace ECS
         }
 
         /// @brief maximum number of entities an archetype can hold any value equal higther that this can be used as invalid value
-        static constexpr uint32_t MaxEntityIndex =  0xfffffff;
-        static constexpr uint32_t NullEntityIndex =0x10000000;
+        static constexpr uint32_t MaxEntityIndex =  INT32_MAX;
+        static constexpr uint32_t NullEntityIndex =0x80000000;
         /// @brief maximum number of chunks an archetype can hold any value equal higther that this can be used as invalid value
-        static constexpr uint32_t MaxChunkIndex =  0xfffffff;
-        static constexpr uint32_t NullChunkIndex =0x10000000;
+        static constexpr uint32_t MaxChunkIndex =  INT32_MAX;
+        static constexpr uint32_t NullChunkIndex =0x80000000;
         /// @brief maximum number of type an archetype can manage, any number higher than this may lead to overflow
         static constexpr uint32_t MaxTypePerArchetype = 0xff;
 
@@ -134,7 +146,7 @@ namespace ECS
 
         /// @brief find or create an index on chunks list.
         /// @return index within the archetype
-        uint32_t createEntity();
+        uint32_t createEntity(version_t globalVersion = 0);
 
         /// @brief remove an entity from archtype and returns entity value of the entity that must replaced it
         uint32_t removeEntity(uint32_t entityIndex);
@@ -155,27 +167,22 @@ namespace ECS
         /// TODO: binary search?
         /// @note not flag sensitive
         /// @return -1 if not found
-        int32_t getIndex(TypeID t);
+        int32_t getIndex(TypeID t) const;
     
         /// @brief locate every type index within archtype
         /// @note not flag sensitive
         /// @param t sorted array of types
         /// @param out output buffer pointer
         /// @return true on success on locating every type
-        bool getIndecies(span<TypeID> t, uint16_t* out);
+        bool getIndecies(span<TypeID> t, uint16_t* out) const;
 
-        uint32_t getHash() const {
-            uint32_t result = HashHelper::FNV1A32(this->types+1);
-            if (result == 0xFFFFFFFF || result == 0)
-                result = 1;
-            return result;
-        }
+        uint32_t getHash() const;
         /// @brief check if this archetype matches exact the same with param _types
         /// @note flag sensitive
         /// @param _types sorted array of types
         /// @return true uf matches
         inline bool operator ==(span<TypeID> _types) const {
-            return (this->types+1) == _types;
+            return (this->types) == _types;
         }
     protected:
         // the entity chunk index
@@ -210,40 +217,48 @@ namespace ECS
 
 
         /// @note flag sensitive
-        bool hasComponent(TypeID type);
+        bool hasComponent(TypeID type) const;
 
         /// @note flag sensitive
         /// @param types sorted list of types,
-        bool hasComponents(span<TypeID> types);
+        bool hasComponents(span<TypeID> types) const;
 
         /// @brief same as hasComponents without few optimizations for unordered type lists
         /// @note flag sensitive
         /// @param entity unsorted list of types you are looking for.
-        bool hasComponentsSlow(span<TypeID> types);
+        bool hasComponentsSlow(span<TypeID> types) const;
 
 
-        /// @brief in-archetype delete operation, handles deconstruction + memcpy by itself
+        /// @brief in-archetype delete operation, 
+        /// @note dsr.~T(); pull src;  memcpy(dst,src);
         /// @param entity srcIndex to be removed
         /// @return value of entity that has replaced it, Entity::null if nothing happened
-        static Entity managedRemoveEntity(Archetype *archetype, uint32_t srcIndex);
+        static Entity managedRemoveEntity(Archetype *archetype, uint32_t dstIndex);
 
-        /// @brief in-archetype move operation, handles deconstruction + memcpy by itself
+        /// @brief in-archetype move operation
+        /// @note dst.~T(); memcpy(dst,src);
         /// @param entity value of srcIndex to be updated
         static Entity moveComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex);
 
-        /// @brief in-archetype move operation, handles only memcpy not destruction
+        /// @brief in-archetype move operation
+        /// @note memcpy(dst,src);
         /// @param entity value of srcIndex to be updated
-        static Entity replaceComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex);
+        static Entity copyComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex);
 
-        /// @brief between-archetype move operation, handles deconstruction + construction + memcpy by itself
+        /// @brief between-archetype move operation
+        /// @note dst.~T(); src.T(); memcpy(dst,src);
         /// @param entity value of srcIndex to be updated
         static Entity moveComponentValues(Archetype *dstArchetype, uint32_t dstIndex,Archetype *srcArchetype, uint32_t srcIndex);
 
+        void inArchetypeCopy(void * const srcChunk, void * const dstChunk ,const uint32_t srcInChunkIndex, const uint32_t dstInChunkIndex);
+
         /// @brief call destructor function of components
+        /// @note dst.~T();
         /// @param index index inside archetype
         void callComponentDestructor(uint32_t entityIndex);
 
         /// @brief call constructor function of components
+        /// @note dst.T();
         /// @param index index inside archetype
         /// @param entity entity value to be storeds
         void callComponentConstructor(uint32_t entityIndex, Entity e = Entity::null);

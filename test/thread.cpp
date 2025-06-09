@@ -36,6 +36,7 @@ int main()
     sm.systems.emplace(s,new DummySyetem());
 
     sm.updateAll(ss);
+    ss.jobStatueBuffer.resize(ss.jobs.registeredJobs.size());
 
     ecm.createEntity(ECS::componentTypes<float,double,int>());
     ecm.createEntity(ECS::componentTypes<float,double,int>());

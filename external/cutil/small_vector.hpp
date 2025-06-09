@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "basics.hpp"
-template<typename T,unsigned int S>
+template<typename T,unsigned int S,typename Allocator = std::allocator<T>>
 class small_vector{
     unsigned int _count=0,_capacity=0;
     union block
@@ -38,9 +38,9 @@ public:
                     this->~small_vector();
                     _count = obj._count;
                     _capacity = obj._count;
-                    data.large = allocator<T>().allocate(obj._count);
+                    data.large = Allocator().allocate(obj._count);
                 }else{
-                    allocator<T>().destroy(data.large,_count);
+                    Allocator().destroy(data.large,_count);
                     _count = obj._count;
                 }
                 ptr1 = data.large;
@@ -80,7 +80,7 @@ public:
             _capacity = S;
         }else{
             this->_capacity = count;
-            ptr = this->data.large = allocator<T>().allocate(count);
+            ptr = this->data.large = Allocator().allocate(count);
         }
         for (size_t i = 0; i < count; i++)
             new (ptr + i) T(val);
@@ -88,17 +88,17 @@ public:
     }
     ~small_vector(){
         if(this->_capacity <= S){
-            allocator<T>().destroy(data.small,_count);
+            Allocator().destroy(data.small,_count);
         }else{
-            allocator<T>().destroy(data.large,_count);
-            allocator<T>().deallocate(data.large);
+            Allocator().destroy(data.large,_count);
+            Allocator().deallocate(data.large);
         }
     }
 
     void expand(){
         T *ptr1 = _capacity<=S ? data.small : data.large;
         _capacity = std::max( _capacity*2 , S+2);
-        T *ptr2 = allocator<T>().allocate(_capacity);
+        T *ptr2 = Allocator().allocate(_capacity);
         memcpy(ptr2,ptr1,_count*sizeof(T));
         data.large = ptr2;
     }

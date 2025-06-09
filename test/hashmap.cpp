@@ -10,7 +10,7 @@ int main(int argc, char const *argv[])
 {
     ECS::ArchetypeHashMap list;
     list.init(4);
-    std::vector<unique_ptr<ECS::Archetype>> archs;
+    std::vector<ArchetypeHolder> archs;
 
     archs.emplace_back(ECS::Archetype::createArchetype(ECS::componentTypes<int>()));
     archs.emplace_back(ECS::Archetype::createArchetype(ECS::componentTypes<float>()));

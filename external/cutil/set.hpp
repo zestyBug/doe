@@ -9,7 +9,7 @@
  * @brief a hash set on vector, containing unique values
  * suitable for small structures (uses lots of copy constructor)
  */
-template <typename Type>
+template <typename Type,typename Allocator = std::allocator<Type>>
 class set
 {
 protected:
@@ -17,8 +17,8 @@ protected:
     // must be 1 otherwise it will fail
     static const uint32_t _SkipCode = 1;
 
-    std::vector<uint32_t,allocator<uint32_t>> hashes{};
-    std::vector<Type,allocator<Type>> values{};
+    std::vector<uint32_t,Allocator> hashes{};
+    std::vector<Type,Allocator> values{};
     // [emptyNodes,skipNodes]
     uint32_t unoccupied[2] = {0,0};
 
@@ -164,8 +164,8 @@ public:
         }
         // the whole popuse is to free space when object is unused but still in memory
         void reset(){
-            hashes = std::vector<uint32_t,allocator<uint32_t>>();
-            values = std::vector<Type,allocator<Type>>();
+            hashes = std::vector<uint32_t,Allocator>();
+            values = std::vector<Type,Allocator>();
             memset(unoccupied,0,sizeof(unoccupied));
         }
 };
@@ -174,14 +174,14 @@ public:
  * @brief a integer set on vector, containing unique values except default value as reserved!
  * suitable for simple data types like int (uses lots of copy constructor)
  */
-template <typename Type>
+template <typename Type,typename Allocator = std::allocator<Type>>
 class vector_set
 {
 protected:
     // std::vector allocates array with default value,
     // so we consider default value as unallocated space
     const Type invalidValue = Type();
-    std::vector<Type,allocator<Type>> values{};
+    std::vector<Type,Allocator> values{};
     uint32_t unoccupied = 0;
 public:
     vector_set(uint32_t count = 0){
@@ -318,8 +318,11 @@ public:
     }
     // the whole popuse is to free space when object is unused but still in memory
     void reset(){
-        values = std::vector<Type,allocator<Type>>();
+        values = std::vector<Type,Allocator>();
         unoccupied=0;
+    }
+    span<const Type> raw() const {
+        return {this->values.data(),(uint32_t)this->values.size()};
     }
     struct iterator{
         const Type invalidValue = Type();

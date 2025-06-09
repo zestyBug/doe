@@ -58,7 +58,7 @@ class allocator
         if(likely(__n > 0)){
             if(__n>0xFFFFFFF)  throw std::bad_alloc();
             __n = alignTo64(sizeof(_Tp),(uint32_t)__n);
-            ret = (_Tp*) malloc(__n);
+            ret = (_Tp*) aligned_alloc(64,__n);
             if(ret == nullptr) throw std::bad_alloc();
         #ifdef DEBUG
             allocator_counter++;
@@ -70,7 +70,7 @@ class allocator
         return ret;
     }
 
-    // nulity safe
+    // null safe
     void deallocate(void* __p, uint32_t __n=0) {
         (void)__n;
         if(likely(__p != nullptr)){
