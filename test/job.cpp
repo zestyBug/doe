@@ -2,10 +2,23 @@
 #include "ECS/SystemManager.hpp"
 #include "ECS/ThreadPool.hpp"
 
+ECS::TypeID id = ECS::getTypeID<ECS::Entity>();
+
 struct DummyJob :  ECS::ChunkJob
 {
     void execute(span<void*>,uint32_t){
         printf("inside dummmy job\n");
+    }
+    const char* name(){
+        return "DummyJob";
+    }
+    ECS::JobFilter getFilter(){
+        ECS::JobFilter jf;
+        jf.types = &id;
+        jf.counts[0]=1;
+        jf.counts[1]=0;
+        jf.counts[2]=0;
+        return jf;
     }
     DummyJob(/* args */){}
     ~DummyJob(){}
@@ -16,26 +29,7 @@ int main() {
     ECS::DependencyManager depManager;
 
     DummyJob job;
-
-    {
-        // Job A: writes to "Position"
-        std::vector<ECS::TypeID> read = {1};
-        std::vector<ECS::TypeID> write = {0};
-        depManager.ScheduleJob(&job,(DummyJob::JobFunc)&DummyJob::execute,"J1", read, write);
-    }
-    {
-        // Job A: writes to "Position"
-        std::vector<ECS::TypeID> read = {0};
-        std::vector<ECS::TypeID> write = {1};
-        depManager.ScheduleJob(&job,(DummyJob::JobFunc)&DummyJob::execute,"J2", read, write);
-    }
-    {
-        // Job A: writes to "Position"
-        std::vector<ECS::TypeID> read = {};
-        std::vector<ECS::TypeID> write = {0};
-        depManager.ScheduleJob(&job,(DummyJob::JobFunc)&DummyJob::execute,"J3", read, write);
-    }
-
+    depManager.ScheduleJob(&job);
     depManager.dummyExecute();
     return 0;
 }

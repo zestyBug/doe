@@ -67,11 +67,11 @@ namespace ECS
 
         // optimal for 16 component per archtype or less
         // Entity are istored as first type
-        span<TypeID> types{};
+        const_span<TypeID> types{};
         // faster access to TypeID::realIndecies() for iteration
-        span<uint16_t> realIndecies{};
-        span<uint32_t> offsets{};
-        span<uint16_t> sizeOfs{};
+        const_span<uint16_t> realIndecies{};
+        const_span<uint32_t> offsets{};
+        const_span<uint16_t> sizeOfs{};
         // any index above/equal this is a tag and it size is equal to 0
         // firstTagIndex == 1 all tag, firstTagIndex == types.size() no tag
         uint16_t firstTagIndex = 0;
@@ -81,13 +81,13 @@ namespace ECS
         Archetype(/* args */) = default;
     public:
 
-        static ArchetypeHolder createArchetype(span<TypeID> types);
+        static ArchetypeHolder createArchetype(const_span<TypeID> types);
 
         ~Archetype(/* args */) {
-            span<uint16_t> archSizes = this->sizeOfs;
-            span<Chunk> archChunks = this->chunksData;
-            span<uint32_t> archOffsets = this->offsets;
-            span<TypeID> archTypes = this->types;
+            const_span<uint16_t> archSizes = this->sizeOfs;
+            const_span<Chunk> archChunks = this->chunksData;
+            const_span<uint32_t> archOffsets = this->offsets;
+            const_span<TypeID> archTypes = this->types;
             for (uint32_t typeIndex = 0; typeIndex < this->nonZeroSizedTypesCount(); typeIndex++)
             {
                 auto destructor =  getTypeInfo(archTypes[typeIndex]).destructor;
@@ -172,14 +172,14 @@ namespace ECS
         /// @param t sorted array of types
         /// @param out output buffer pointer
         /// @return true on success on locating every type
-        bool getIndecies(span<TypeID> t, uint16_t* out) const;
+        bool getIndecies(const_span<TypeID> t, uint16_t* out) const;
 
         uint32_t getHash() const;
         /// @brief check if this archetype matches exact the same with param _types
         /// @note flag sensitive
         /// @param _types sorted array of types
         /// @return true uf matches
-        inline bool operator ==(span<TypeID> _types) const {
+        inline bool operator ==(const_span<TypeID> _types) const {
             return (this->types) == _types;
         }
     protected:
@@ -193,16 +193,16 @@ namespace ECS
         }
         /// @brief calculate real aligned size of SOA
         /// @param sizeofs array of size of each component
-        static uint32_t calculateSpaceRequirement(uint32_t entity_count,const span<uint16_t> sizeofs){
+        static uint32_t calculateSpaceRequirement(uint32_t entity_count,const_span<uint16_t> sizeofs){
             uint32_t size = 0;
-            for (uint16_t v:sizeofs)
+            for (const uint16_t v:sizeofs)
                 size += (uint32_t) alignTo64(v, entity_count);
             return size;
         }
         /// @brief finds suitable capacity
-        static uint32_t calculateChunkCapacity(uint32_t chunk_size,const span<uint16_t> sizeofs){
+        static uint32_t calculateChunkCapacity(uint32_t chunk_size,const_span<uint16_t> sizeofs){
             uint32_t total_size = 0;
-            for (uint16_t v:sizeofs)
+            for (const uint16_t v:sizeofs)
                 total_size += v;
             if(total_size < 1)
                 throw std::length_error("calculateChunkCapacity(): chunk total_size is zero");
@@ -219,12 +219,12 @@ namespace ECS
 
         /// @note flag sensitive
         /// @param types sorted list of types,
-        bool hasComponents(span<TypeID> types) const;
+        bool hasComponents(const_span<TypeID> types) const;
 
         /// @brief same as hasComponents without few optimizations for unordered type lists
         /// @note flag sensitive
         /// @param entity unsorted list of types you are looking for.
-        bool hasComponentsSlow(span<TypeID> types) const;
+        bool hasComponentsSlow(const_span<TypeID> types) const;
 
     protected:
         /// @brief in-archetype delete operation, 

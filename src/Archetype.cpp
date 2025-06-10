@@ -3,7 +3,7 @@
 using namespace ECS;
 
 
-ArchetypeHolder Archetype::createArchetype(span<TypeID> types) {
+ArchetypeHolder Archetype::createArchetype(const_span<TypeID> types) {
     if(unlikely(types.size() < 1 || types.size() > MaxTypePerArchetype))
         throw std::invalid_argument("createArchetype(): archetype with unexpected component count");
 
@@ -20,10 +20,20 @@ ArchetypeHolder Archetype::createArchetype(span<TypeID> types) {
 
     new (arch) Archetype();
 
-    arch->types = span<TypeID>{(TypeID*)((uint8_t*)(arch) + offsets[0]),types.size()};
-    arch->realIndecies = span<uint16_t>{(uint16_t*)((uint8_t*)(arch) + offsets[1]),types.size()};
-    arch->offsets = span<uint32_t>{(uint32_t*)((uint8_t*)(arch) + offsets[2]),types.size()};
-    arch->sizeOfs = span<uint16_t>{(uint16_t*)((uint8_t*)(arch) + offsets[3]),types.size()};
+    TypeID *arch_types;
+    uint16_t *arch_realIndecies;
+    uint32_t *arch_offsets;
+    uint16_t *arch_sizeOfs;
+
+    arch_types        = (TypeID*)((uint8_t*)(arch) + offsets[0]);
+    arch_realIndecies = (uint16_t*)((uint8_t*)(arch) + offsets[1]);
+    arch_offsets      = (uint32_t*)((uint8_t*)(arch) + offsets[2]);
+    arch_sizeOfs      = (uint16_t*)((uint8_t*)(arch) + offsets[3]);
+    
+    arch->types        = const_span<TypeID>  {arch_types,types.size()};
+    arch->realIndecies = const_span<uint16_t>{arch_realIndecies,types.size()};
+    arch->offsets      = const_span<uint32_t>{arch_offsets,types.size()};
+    arch->sizeOfs      = const_span<uint16_t>{arch_sizeOfs,types.size()};
 
 #ifdef DEBUG
     if(unlikely(types[0].value != 0))
@@ -32,8 +42,8 @@ ArchetypeHolder Archetype::createArchetype(span<TypeID> types) {
 
 
     for (uint32_t i = 0;i < types.size(); i++) {
-        arch->types[i]=types[i];
-        arch->realIndecies[i] = types[i].realIndex();
+        arch_types[i] = types[i];
+        arch_realIndecies[i] = types[i].realIndex();
     }
 
     arch->chunksData.reserve(16);
@@ -50,9 +60,9 @@ ArchetypeHolder Archetype::createArchetype(span<TypeID> types) {
     {
         if (i < arch->firstTagIndex){
             const auto& cType = getTypeInfo(arch->types[i]);
-            arch->sizeOfs[i] = (uint16_t) cType.size;
+            arch_sizeOfs[i] = (uint16_t) cType.size;
         }else
-            arch->sizeOfs[i] = 0;
+            arch_sizeOfs[i] = 0;
     }
     for (TypeID type: arch->types)
     {
@@ -72,7 +82,7 @@ ArchetypeHolder Archetype::createArchetype(span<TypeID> types) {
     for (uint32_t typeIndex = 0; typeIndex < types.size(); typeIndex++)
     {
         uint32_t sizeOf = arch->sizeOfs[typeIndex];
-        arch->offsets[typeIndex] = usedBytes;
+        arch_offsets[typeIndex] = usedBytes;
         usedBytes += alignTo64(sizeOf, arch->chunkCapacity);
     }
 
@@ -82,14 +92,16 @@ ArchetypeHolder Archetype::createArchetype(span<TypeID> types) {
 uint32_t Archetype::createEntity(version_t globalVersion) {
     uint32_t res = 0;
     res = this->count();
+#ifdef DEBUG
     if(unlikely(lastChunkEntityCount == 0 && !this->chunksData.empty()))
         throw std::runtime_error("createEntity(): internal error!");
+#endif
     if(unlikely(this->chunksData.empty() || lastChunkEntityCount >= this->chunkCapacity)){
         lastChunkEntityCount=1;
         this->chunksData.emplace_back().memory = allocator().allocate(Chunk::memorySize);
         if(this->chunksData.size() > Archetype::MaxChunkIndex)
             throw std::runtime_error("createEntity(): reached max chunk count");
-        chunksVersion.add(0);
+        chunksVersion.add(globalVersion);
     }else{
         ++lastChunkEntityCount;
         chunksVersion.setAllChangeVersion((uint32_t)chunksData.size()-1,globalVersion);
@@ -103,8 +115,10 @@ uint32_t Archetype::createEntity(version_t globalVersion) {
 uint32_t Archetype::removeEntity(uint32_t entityIndex){
     if(unlikely(this->chunksData.size() < 1))
         throw std::runtime_error("removeEntity(): empty archetype");
+#ifdef DEBUG
     if(unlikely(this->lastChunkEntityCount < 1))
         throw std::runtime_error("removeEntity(): unexpected internal error");
+#endif
 
     uint32_t lastEntityIndex = count() - 1;
 
@@ -144,8 +158,8 @@ int32_t Archetype::getIndex(TypeID t) const{
     }
     return -1;
 }
-bool Archetype::getIndecies(span<TypeID> rtypes,uint16_t* out) const{
-    span<TypeID> archetypeTypes = this->types;
+bool Archetype::getIndecies(const_span<TypeID> rtypes,uint16_t* out) const{
+    const_span<TypeID> archetypeTypes = this->types;
 
     uint16_t archetypeTypesIndex = 0;
     uint16_t typesIndex = 0;
@@ -185,7 +199,7 @@ uint32_t Archetype::getHash() const {
 
 
 bool Archetype::hasComponent(TypeID type) const {
-    span<TypeID> archetypeTypes = this->types;
+    const_span<TypeID> archetypeTypes = this->types;
     if(archetypeTypes.size() < 1) return false;
 
     uint16_t archetypeTypesIndex = 0;
@@ -206,8 +220,8 @@ bool Archetype::hasComponent(TypeID type) const {
     }
     return false;
 }
-bool Archetype::hasComponentsSlow(span<TypeID> rtypes) const {
-    span<TypeID> archetypeTypes = this->types;
+bool Archetype::hasComponentsSlow(const_span<TypeID> rtypes) const {
+    const_span<TypeID> archetypeTypes = this->types;
     if(archetypeTypes.size() < rtypes.size()) return false;
 
     uint16_t archetypeTypesIndex = 0;
@@ -222,8 +236,8 @@ bool Archetype::hasComponentsSlow(span<TypeID> rtypes) const {
     }
     return false;
 }
-bool Archetype::hasComponents(span<TypeID> rtypes) const {
-    span<TypeID> archetypeTypes = this->types;
+bool Archetype::hasComponents(const_span<TypeID> rtypes) const {
+    const_span<TypeID> archetypeTypes = this->types;
     if(archetypeTypes.size() < rtypes.size()) return false;
 
     uint16_t archetypeTypesIndex = 0;
@@ -253,8 +267,10 @@ bool Archetype::hasComponents(span<TypeID> rtypes) const {
 Entity Archetype::managedRemoveEntity(Archetype *archetype, uint32_t entityIndex){
     if(unlikely(archetype->chunksData.size() < 1))
         throw std::runtime_error("removeEntity(): empty archetype");
+#ifdef DEBUG
     if(unlikely(archetype->lastChunkEntityCount < 1))
         throw std::runtime_error("removeEntity(): unexpected internal error");
+#endif
 
     uint32_t lastEntityIndex = archetype->count() - 1;
 

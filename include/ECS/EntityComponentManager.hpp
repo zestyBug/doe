@@ -26,11 +26,13 @@ namespace ECS
 
         std::vector<ArchetypeHolder,allocator<ArchetypeHolder>> archetypes{};
         /// @brief hash does not include "Entity" component
-        map<span<TypeID>,Archetype> archetypeTypeMap{};
+        map<const_span<TypeID>,Archetype> archetypeTypeMap{};
 
 
         int32_t FreeEntityIndex = Entity::null;
         uint32_t FreeArchetypeIndex = NullArchetypeIndex;
+        // global version buffer, used for any entity create/modify command
+        version_t globalVersion = 1;
 
 
         /// @brief find or create a archetype with given types,
@@ -38,7 +40,7 @@ namespace ECS
         /// @attention types argument must include Entity component at index 0!
         /// @param types list of types, throws invalid_argument exception on empty list
         /// @return nullptr if types.size is less than 2
-        Archetype* getOrCreateArchetype(span<TypeID> types);
+        Archetype* getOrCreateArchetype(const_span<TypeID> types);
 
         // destroys Archetype if empty otherwise nothing
         void destroyEmptyArchetype(const uint32_t archetypeIndex);
@@ -48,14 +50,14 @@ namespace ECS
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithAddedComponents(Archetype *archetype,span<TypeID> componentTypeSet);
+        Archetype* getArchetypeWithAddedComponents(Archetype *archetype,const_span<TypeID> componentTypeSet);
 
         /// @brief add component to an entity or in other word, move entity to another archetype, exception handled
         /// @note not type flag sensitive
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithRemovedComponents(Archetype *archetype,span<TypeID> typeSetToRemove);
+        Archetype* getArchetypeWithRemovedComponents(Archetype *archetype,const_span<TypeID> typeSetToRemove);
 
         /// @ref getArchetypeWithAddedComponents
         /// @note type flag sensitive
@@ -68,13 +70,13 @@ namespace ECS
 
         /// @brief add Entity component to the array and calls getOrCreateArchetype
         /// @attention input validity is not checked! 
-        void Helper_allocateInArchetype(span<TypeID> componentTypeSet,entity_t *srcValue, Entity e);
+        void Helper_allocateInArchetype(const_span<TypeID> componentTypeSet,entity_t *srcValue, Entity e);
         /// @brief simple wrapper for boiler plate code
         void Helper_allocateInArchetype(Archetype *newArchetype,entity_t *srcValue, Entity e);
         /// @brief simple wrapper for boiler plate code
         /// @attention input validity is not checked!
         void Helper_removeFromArchetype(Archetype *srcArchetype,entity_t *srcValue);
-        /// @brief manages move to new archetype, including 
+        /// @brief manages move to new archetype
         /// @attention input validity is not checked!
         /// @return index in new archetype
         void Helper_moveEntityToNewArchetype(Archetype *newArchetype,Archetype *srcArchetype,entity_t *srcValue);
@@ -98,7 +100,7 @@ namespace ECS
 
         template<typename ... Types>
         void iterate(void(*func)(span<void*>,uint32_t)) {
-            span<TypeID> types = componentTypesRaw<Types...>();
+            const_span<TypeID> types = componentTypesRaw<Types...>();
             iterate_helper(func,types);
         }
         void iterate(void(*func)(span<void*>,uint32_t)) {
@@ -123,7 +125,7 @@ namespace ECS
         /// @brief create entity and stores entity value and initilize entity
         /// @note type flag sensitive
         /// @param types types you are loking for
-        Entity createEntity(span<TypeID> types);
+        Entity createEntity(const_span<TypeID> types);
 
         /// @brief releases components
         void removeComponents(Entity entity);
@@ -132,7 +134,7 @@ namespace ECS
         /// @note not type flag sensitive
         /// @param entity entity, can belong to no archetype
         /// @param componentTypeSet set of components to be added
-        void removeComponents(Entity entity, span<TypeID> componentTypeSet);
+        void removeComponents(Entity entity, const_span<TypeID> componentTypeSet);
 
         /// @brief releases components
         void removeComponent(Entity entity, TypeID component);
@@ -141,7 +143,7 @@ namespace ECS
         /// @note type flag sensitive
         /// @param entity entity, can belong to no archetype
         /// @param componentTypeSet set of components to be added
-        void addComponents(Entity entity, span<TypeID> componentTypeSet);
+        void addComponents(Entity entity, const_span<TypeID> componentTypeSet);
 
         void addComponent(Entity entity, TypeID component);
 
@@ -149,7 +151,7 @@ namespace ECS
         /// @note type flag sensitive
         /// @param types type ordered
         /// @return true if has types[0] AND types[1] AND ...
-        bool hasComponents(Entity e,span<TypeID> types) const;
+        bool hasComponents(Entity e,const_span<TypeID> types) const;
 
         /// @brief simple linear check
         /// @note type flag sensitive
@@ -176,7 +178,7 @@ namespace ECS
          * @param func a funtion pointer reciving the components pointers and count of entities in the componenets
          * @param types the components asked for iteration, can be empty list also can include 'Entity' as component
          */
-        void iterate_helper(void(*func)(span<void*>,uint32_t),span<TypeID> types = span<TypeID>()) {
+        void iterate_helper(void(*func)(span<void*>,uint32_t),const_span<TypeID> types = const_span<TypeID>()) {
             size_t offset_buffer[types.size()];
             void* arg_buffer[types.size()];
 
@@ -186,8 +188,8 @@ namespace ECS
                     if(arch->hasComponents(types))
                     {
                         {
-                            span<uint32_t> archOffsets{arch->offsets};
-                            span<TypeID> archTypes{arch->types};
+                            const_span<uint32_t> archOffsets{arch->offsets};
+                            const_span<TypeID> archTypes{arch->types};
                             // fill offset_buffer
                             for(uint32_t typePosition=0;typePosition<types.size();typePosition++)
                             {
@@ -201,7 +203,7 @@ namespace ECS
                             }
                         }
                         {
-                            span<Chunk> archChunks{arch->chunksData};
+                            const_span<Chunk> archChunks{arch->chunksData};
                             const uint32_t lastChunkEntityCount = arch->lastChunkEntityCount;
                             const uint32_t chunkCapacity = arch->chunkCapacity;
                             const uint32_t lastChunkIndex = archChunks.size() - 1;

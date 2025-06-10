@@ -2,34 +2,32 @@
 #include <atomic>
 #include <chrono>
 #include "ECS/ThreadPool.hpp"
-
-
-static int test_num=1;
-#define TEST_SUBJECT_BEGIN() { bool TEST_RESULT=false;
-#define TEST_SUBJECT_END() printf("%i: %s %s:%d\n",test_num++,(!!(TEST_RESULT))?"✔":"✘",__FILE__,__LINE__);}
+#include "cutil/mini_test.hpp"
 
 struct MyContext {
     std::atomic<int> counter = 0;
     int max = 100;
 };
 
-int jobFunction(void* context) {
+size_t jobFunction(void* context, size_t) {
     MyContext* ctx = static_cast<MyContext*>(context);
     int val = ctx->counter.fetch_add(1);
-    if (val >= ctx->max) return 1; // done
+    if (val >= ctx->max) return ECS::ThreadPool::STOP_SIGNAL; // done
     //printf("Working: %d\n",val);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     return 0;
 }
 
-int main() {
+TEST(Test) {
     ECS::ThreadPool pool(4);
     MyContext ctx;
     pool.submit(jobFunction, &ctx);
 
     pool.waitInloop();
-    TEST_SUBJECT_BEGIN()
-    TEST_RESULT = ctx.counter >= ctx.max;
-    TEST_SUBJECT_END()
+    EXPECT_GE(ctx.counter,ctx.max);
+}
+
+int main() {
+    mtest::run_all();
     return 0;
 }

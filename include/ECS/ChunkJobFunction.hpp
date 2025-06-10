@@ -18,9 +18,9 @@ namespace ECS
         /// @param context 
         static void destroyContext(void* context);
         /// @brief filter archtypes
-        static void proccess(ChunkJobContext*,ArchetypeHolder*,uint32_t,version_t);
+        static void proccess(ChunkJobContext*,ArchetypeHolder*,version_t,version_t,uint32_t);
         /// @brief filter and proccess chunks 
-        static void callExecution(ChunkJobContext*,Archetype*,version_t);
+        static void callExecution(ChunkJobContext*,Archetype*,version_t,version_t);
     };
 } // namespace ECS
 

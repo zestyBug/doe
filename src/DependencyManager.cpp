@@ -12,7 +12,7 @@ void DependencyManager::dummyExecute(){
 
 ChunkJobHandle DependencyManager::ScheduleJob(
     ChunkJob *context,
-    span<ChunkJobHandle> jobDependency,
+    const_span<ChunkJobHandle> jobDependency,
     version_t lastSystemVersion
 ){
     auto& job = registeredJobs.emplace_back();

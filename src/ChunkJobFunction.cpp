@@ -5,6 +5,7 @@
 #include <atomic>
 #include <thread>
 #include "ECS/ThreadPool.hpp"
+#include "cutil/range.hpp"
 
 struct thread_info {
     ECS::ChunkJobContext  *job=nullptr;
@@ -53,17 +54,23 @@ size_t ECS::ChunkJobFunction::function(void* _context, size_t i) noexcept{
     thread_info &context = *(thread_info*)_context;
 
     const uint32_t totalSize = context.jobCount;
-    uint32_t readInedex  = context.jobQueueRead.fetch_add(1, std::memory_order_relaxed);
+    uint32_t readInedex;
+    if(i!=ThreadPool::STOP_SIGNAL)
+        readInedex = (uint32_t)i;
+    else
+        readInedex = context.jobQueueRead.fetch_add(1, std::memory_order_relaxed);
+
     if(readInedex < totalSize)
     {
         while(readInedex >= context.jobQueueWrite.load(std::memory_order_relaxed))
-            std::this_thread::yield();
+            return readInedex;
         ChunkJobContext* job = context.job + context.jobIndexQueue[readInedex].load(std::memory_order_relaxed);
         proccess(
             job,
             context.archetypes,
-            context.archetypeCount,
-            job->lastVersion
+            job->lastVersion,
+            context.globalSystemVersion,
+            context.archetypeCount
         );
         for(uint32_t ji:job->precedesIndex){
             const uint32_t count = context.jobDependencyCounterBuffer[ji].fetch_add(1,std::memory_order_relaxed);
@@ -73,7 +80,7 @@ size_t ECS::ChunkJobFunction::function(void* _context, size_t i) noexcept{
                 context.jobIndexQueue[wi].store(ji);
             }
         }
-        return i+1;
+        return context.jobQueueRead.fetch_add(1, std::memory_order_relaxed);
     }else
         return ThreadPool::STOP_SIGNAL;
 }
@@ -85,8 +92,9 @@ void ECS::ChunkJobFunction::destroyContext(void* context){
 void ECS::ChunkJobFunction::proccess(
     ECS::ChunkJobContext* job,
     ECS::ArchetypeHolder* archetypes, 
-    uint32_t archetypeCount, 
-    ECS::version_t v
+    ECS::version_t sv,
+    ECS::version_t gv,
+    uint32_t archetypeCount
 ){
     for (uint32_t archetypeIndex = 0; archetypeIndex < archetypeCount; archetypeIndex++)
     {
@@ -103,13 +111,18 @@ void ECS::ChunkJobFunction::proccess(
                     offset+= filter.counts[i];
                 }
             }
-            callExecution(job,arch,v);
+            callExecution(job,arch,sv,gv);
             skip:;
         }
     }
 }
 
-void ECS::ChunkJobFunction::callExecution(ECS::ChunkJobContext* job,ECS::Archetype* archetype,ECS::version_t version){
+void ECS::ChunkJobFunction::callExecution(
+    ECS::ChunkJobContext* job,
+    ECS::Archetype* archetype,
+    ECS::version_t sv,
+    ECS::version_t gv
+){
     JobFilter filter = job->context->getFilter();
     const uint32_t argCount = filter.counts[0]+filter.counts[1];
     const uint32_t totalCount = argCount + filter.counts[2];
@@ -122,24 +135,22 @@ void ECS::ChunkJobFunction::callExecution(ECS::ChunkJobContext* job,ECS::Archety
     size_t argsOffsets[argCount];
     uint16_t indecies[totalCount];
 
-    if(filter.counts[0])
-        if(!archetype->getIndecies({(TypeID*)(filter.types),filter.counts[0]},indecies))
-            throw std::runtime_error("callExecution(): invalid archetype");
-    if(filter.counts[1])
-        if(!archetype->getIndecies({(TypeID*)(filter.types + filter.counts[0]),filter.counts[1]},indecies))
-            throw std::runtime_error("callExecution(): invalid archetype");
-    if(filter.counts[2])
-        if(!archetype->getIndecies({(TypeID*)(filter.types + argCount),filter.counts[2]},indecies))
-            throw std::runtime_error("callExecution(): invalid archetype");
+    uint32_t offset = 0;
+    for(uint32_t ibuffer:range(3))
+        if(filter.counts[ibuffer]) {
+            if(!archetype->getIndecies({filter.types+offset,filter.counts[ibuffer]},indecies+offset))
+                throw std::runtime_error("callExecution(): invalid archetype");
+            offset += filter.counts[ibuffer];
+        }
     
     for (i = 0; i < argCount; i++)
-        argsOffsets[i] = archetype->offsets[indecies[i]];
+        argsOffsets[i] = archetype->offsets.at(indecies[i]);
 
     for(uint32_t chunkIndex=0;chunkIndex<chunkCount;chunkIndex++){
         // check for type version one by one
         for (i = 0; i < filter.counts[2]; i++) {
             v = archetype->chunksVersion.getChangeVersion(indecies[argCount+i],chunkIndex);
-            if(!didChange(version,v))
+            if(!didChange(v,sv))
                 goto endChunk;
         }
         buffer = (uint8_t*)(archetype->chunksData[chunkIndex].memory);
@@ -156,7 +167,7 @@ void ECS::ChunkJobFunction::callExecution(ECS::ChunkJobContext* job,ECS::Archety
         }
 
         for (i = 0; i < filter.counts[1]; i++)
-            archetype->chunksVersion.getChangeVersion(indecies[filter.counts[0]+i],chunkIndex) = version;
+            archetype->chunksVersion.getChangeVersion(indecies[filter.counts[0]+i],chunkIndex) = gv;
         endChunk:;
     }
 }

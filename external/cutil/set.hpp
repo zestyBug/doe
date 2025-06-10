@@ -321,13 +321,13 @@ public:
         values = std::vector<Type,Allocator>();
         unoccupied=0;
     }
-    span<const Type> raw() const {
+    const_span<Type> raw() const {
         return {this->values.data(),(uint32_t)this->values.size()};
     }
     struct iterator{
         const Type invalidValue = Type();
-        span<Type> ptr;
-        iterator(span<Type> addr):ptr{addr}{
+        const_span<Type> ptr;
+        iterator(const_span<Type> addr):ptr{addr}{
             this->findNextValue();
         }
         inline void findNextValue(){

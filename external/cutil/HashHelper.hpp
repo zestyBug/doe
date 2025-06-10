@@ -75,7 +75,7 @@ public:
     /// @param data Text(data) to hash.
     /// @param l lenght of text
     /// @return Hash of input string.
-    static uint32_t FNV1A32(void *data,size_t l)
+    static uint32_t FNV1A32(const void *data,size_t l)
     {
         uint32_t result = FNV1A32OffsetBasis;
         for (size_t i = 0; i < l; i++)
@@ -114,7 +114,7 @@ public:
     }
 
     template<typename T>
-    static uint32_t FNV1A32(span<T> data)
+    static uint32_t FNV1A32(const_span<T> data)
     {
         return FNV1A32(data.data(),data.size_bytes());
     }

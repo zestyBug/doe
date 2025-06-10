@@ -201,13 +201,13 @@ namespace ECS
         return ret;
     }
     template<typename ... T>
-    span<TypeID> componentTypes() {
-        static static_array<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_<T...>();
+    const_span<TypeID> componentTypes() {
+        static const static_array<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_<T...>();
         return {ret.data(),ret.size()};
     }
     template<typename ... T>
-    span<TypeID> componentTypesRaw() {
-        static static_array<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_RAW_<T...>();
+    const_span<TypeID> componentTypesRaw() {
+        static const static_array<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_RAW_<T...>();
         return {ret.data(),ret.size()};
     }
 

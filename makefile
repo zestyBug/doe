@@ -113,6 +113,10 @@ $(OBJ_DEBUG)/test/threadpool.o: $(testDir)/threadpool.cpp include/ECS/ThreadPool
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 
+$(OBJ_DEBUG)/test/version.o: $(testDir)/version.cpp $(headerInclude) $(headerCutil)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
+
 
 
 $(BIN_DEBUG)/ecs: $(OBJ_DEBUG)/test/ecs.o $(DOBJS)
@@ -131,10 +135,15 @@ $(BIN_DEBUG)/threadpool: $(OBJ_DEBUG)/test/threadpool.o $(OBJ_DEBUG)/src/ThreadP
 	mkdir -p $(@D)
 	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
+$(BIN_DEBUG)/version: $(OBJ_DEBUG)/test/version.o $(DOBJS)
+	mkdir -p $(@D)
+	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
+
 test1: $(BIN_DEBUG)/ecs
 test2: $(BIN_DEBUG)/job
 test3: $(BIN_DEBUG)/thread
 test4: $(BIN_DEBUG)/threadpool
+test5: $(BIN_DEBUG)/version
 
 clean:
 	@echo "Cleaning up..."

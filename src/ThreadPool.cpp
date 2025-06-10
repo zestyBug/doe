@@ -54,7 +54,7 @@ void ThreadPool::submit(JobFunctionSignature *func_ptr, void *context){
 void ThreadPool::func(thread_param *context){
     JobFunctionSignature *functionCopy;
     void *contextCopy;
-    size_t buffer;
+    size_t buffer=STOP_SIGNAL;
     while(context->alive){
         {
             std::unique_lock<std::mutex> lock(context->gmutex);

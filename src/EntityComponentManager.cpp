@@ -4,7 +4,7 @@ using namespace ECS;
 
 
 
-Archetype* EntityComponentManager::getOrCreateArchetype(span<TypeID> types){
+Archetype* EntityComponentManager::getOrCreateArchetype(const_span<TypeID> types){
 #ifdef DEBUG
     if(types.size() < 2)
         throw std::invalid_argument("getOrCreateArchetype(): Archetype must contain atleast 2 component");
@@ -54,8 +54,8 @@ void EntityComponentManager::destroyEmptyArchetype(const uint32_t archetypeIndex
         FreeArchetypeIndex = archetypeIndex;
     }
 }
-Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *archetype,span<TypeID> componentTypeSet){
-    span<TypeID> srcTypes = archetype->types;
+Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *archetype,const_span<TypeID> componentTypeSet){
+    const_span<TypeID> srcTypes = archetype->types;
     uint32_t dstTypesCount = srcTypes.size() + componentTypeSet.size();
 
     TypeID dstTypes[dstTypesCount];
@@ -105,7 +105,7 @@ Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *ar
 }
 Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* archetype, TypeID componentType,uint32_t *indexInTypeArray)
 {
-    span<TypeID> srcTypes = archetype->types;
+    const_span<TypeID> srcTypes = archetype->types;
     uint32_t dstTypesCount = (uint32_t)srcTypes.size() + 1;
 
     TypeID newTypes[dstTypesCount];
@@ -134,7 +134,7 @@ Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* arc
 
     return getOrCreateArchetype({newTypes,dstTypesCount});
 }
-Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *archetype,span<TypeID> typeSetToRemove){
+Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *archetype,const_span<TypeID> typeSetToRemove){
     const uint32_t typesCount = archetype->types.size();
     TypeID newTypes[typesCount];
 
@@ -161,7 +161,7 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *
     if (numRemovedTypes == 0)
         return archetype;
     /// TODO: will behave unexpected if 'Entity' is removed!
-    span<TypeID> args{newTypes, typesCount - numRemovedTypes};
+    const_span<TypeID> args{newTypes, typesCount - numRemovedTypes};
     // if anything other than Entity is ramaind
     if(args.size() > 1)
         return getOrCreateArchetype(args);
@@ -185,7 +185,7 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponent (Archetype* 
             newTypes[t - removedTypes] = archetype->types[t];
 
     /// TODO: will behave unexpected if 'Entity' is removed!
-    span<TypeID> args{newTypes, typesCount - removedTypes};
+    const_span<TypeID> args{newTypes, typesCount - removedTypes};
     if(args.size() > 1)
         return getOrCreateArchetype(args);
     else
@@ -233,7 +233,7 @@ void EntityComponentManager::addComponent(Entity entity, TypeID component){
         Helper_allocateInArchetype({&component,1}, &srcValue, entity);
     }
 }
-void EntityComponentManager::addComponents(Entity entity, span<TypeID> componentTypeSet)
+void EntityComponentManager::addComponents(Entity entity, const_span<TypeID> componentTypeSet)
 {
     entity_t& srcValue = validate(entity);
 
@@ -265,7 +265,7 @@ void EntityComponentManager::removeComponent(Entity entity, TypeID component){
         }
     }
 }
-void EntityComponentManager::removeComponents(Entity entity, span<TypeID> componentTypeSet){
+void EntityComponentManager::removeComponents(Entity entity, const_span<TypeID> componentTypeSet){
     entity_t& srcValue = validate(entity);
 
     Archetype *srcArchetype,*newArchetype;
@@ -283,7 +283,7 @@ void EntityComponentManager::removeComponents(Entity entity, span<TypeID> compon
         }
     }
 }
-Entity EntityComponentManager::createEntity(span<TypeID> types) {
+Entity EntityComponentManager::createEntity(const_span<TypeID> types) {
     const Entity result = recycleEntity();
     if(!types.empty())
     {
@@ -311,7 +311,7 @@ void EntityComponentManager::removeComponents(Entity entity)
     }
 }
 
-bool EntityComponentManager::hasComponents(Entity entity,span<TypeID> types) const {
+bool EntityComponentManager::hasComponents(Entity entity,const_span<TypeID> types) const {
     const entity_t& value = validate(entity);
 
     if(types.size() < 1)
@@ -345,17 +345,17 @@ bool EntityComponentManager::hasArchetype(Entity e) const {
 
 
 void EntityComponentManager::Helper_allocateInArchetype(Archetype *newArchetype,entity_t *srcValue, Entity e){
-    const uint32_t newIndex = newArchetype->createEntity();
+    const uint32_t newIndex = newArchetype->createEntity(globalVersion);
     newArchetype->callComponentConstructor(newIndex,e);
     srcValue->index = newIndex;
     srcValue->archetype = newArchetype->archetypeIndex;
 }
-void EntityComponentManager::Helper_allocateInArchetype(span<TypeID> componentTypeSet,entity_t *srcValue, Entity e){
+void EntityComponentManager::Helper_allocateInArchetype(const_span<TypeID> componentTypeSet,entity_t *srcValue, Entity e){
     TypeID componentTypeSetBuffer[1 + componentTypeSet.size()];
     componentTypeSetBuffer[0] = getTypeInfo<Entity>().value;
     memcpy(componentTypeSetBuffer+1,componentTypeSet.data(),componentTypeSet.size_bytes());
     Archetype *newArchetype = this->getOrCreateArchetype({componentTypeSetBuffer,1 + componentTypeSet.size()});
-    const uint32_t newIndex = newArchetype->createEntity();
+    const uint32_t newIndex = newArchetype->createEntity(globalVersion);
     newArchetype->callComponentConstructor(newIndex,e);
     srcValue->index = newIndex;
     srcValue->archetype = newArchetype->archetypeIndex;
@@ -372,7 +372,7 @@ void EntityComponentManager::Helper_moveEntityToNewArchetype(Archetype *newArche
     if (srcArchetype == newArchetype)
         return;
     const uint32_t srcIndex = srcValue->index;
-    const uint32_t newIndex = newArchetype->createEntity();
+    const uint32_t newIndex = newArchetype->createEntity(globalVersion);
 
     Archetype::moveComponentValues(newArchetype,newIndex,srcArchetype,srcIndex);
 

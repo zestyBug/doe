@@ -11,7 +11,7 @@ namespace ECS
 
 struct JobFilter {
     const TypeID *types;
-    // reawd, write, changeFilter
+    // read, write, changeFilter
     uint32_t counts[3];
 };
 
@@ -62,7 +62,7 @@ struct DependencyManager {
     // Schedules a job with dependencies
     ChunkJobHandle ScheduleJob(
         ChunkJob *context,
-        span<ChunkJobHandle> jobDependency = {},
+        const_span<ChunkJobHandle> jobDependency = {},
         version_t lastSystemVersion = 0
     );
 };

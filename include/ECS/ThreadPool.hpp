@@ -17,7 +17,7 @@ namespace ECS
         typedef size_t(JobFunctionSignature)(void*,size_t);
         struct alignas(64) thread_param {
             /// @brief function argumenst are context + previous returns value.
-            /// initialy 0, STOP_SIGNAL to stop calling anymore.
+            /// initial index is STOP_SIGNAL and returns STOP_SIGNAL to stop calling anymore.
             JobFunctionSignature *func = nullptr;
             void *context = nullptr;
             // number of waiting threads
