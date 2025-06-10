@@ -13,8 +13,12 @@ namespace ECS
     // thread pool for job system,
     // manages threads and arrays of jobs
     struct ThreadPool final {
+        static constexpr size_t STOP_SIGNAL = UINT64_MAX;
+        typedef size_t(JobFunctionSignature)(void*,size_t);
         struct alignas(64) thread_param {
-            int (*func)(void*) = nullptr;
+            /// @brief function argumenst are context + previous returns value.
+            /// initialy 0, STOP_SIGNAL to stop calling anymore.
+            JobFunctionSignature *func = nullptr;
             void *context = nullptr;
             // number of waiting threads
             uint32_t alive = true;
@@ -36,10 +40,11 @@ namespace ECS
         void restart();
         void graceStop();
         void waitInloop();
+        bool done();
         /// @brief 
         /// @param context 
         /// @param func function returns zero if need to be executed again
-        void submit(int (*func_ptr)(void*), void *context);
+        void submit(JobFunctionSignature *func_ptr, void *context);
         ~ThreadPool();
     };
 } // namespace ecs

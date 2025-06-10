@@ -48,7 +48,9 @@ headerInclude=$(includeDir)/ECS/Archetype.hpp \
 	$(includeDir)/ECS/defs.hpp \
 	$(includeDir)/ECS/EntityCommandBuffer.hpp \
 	$(includeDir)/ECS/EntityComponentManager.hpp \
+	$(includeDir)/ECS/SystemManager.hpp \
 	$(includeDir)/ECS/ThreadPool.hpp \
+	$(includeDir)/ECS/ChunkJobFunction.hpp \
 	$(includeDir)/ECS/DependencyManager.hpp
 
 DOBJS=$(OBJ_DEBUG)/src/Archetype.o \
@@ -57,6 +59,7 @@ DOBJS=$(OBJ_DEBUG)/src/Archetype.o \
 		$(OBJ_DEBUG)/src/EntityComponentManager.o \
 		$(OBJ_DEBUG)/src/SystemManager.o \
 		$(OBJ_DEBUG)/src/ThreadPool.o \
+		$(OBJ_DEBUG)/src/ChunkJobFunction.o \
 		$(OBJ_DEBUG)/src/DependencyManager.o
 
 $(OBJ_DEBUG)/src/SystemManager.o: $(srcDir)/SystemManager.cpp $(headerInclude) $(headerCutil)
@@ -80,6 +83,10 @@ $(OBJ_DEBUG)/src/EntityComponentManager.o: $(srcDir)/EntityComponentManager.cpp 
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 
 $(OBJ_DEBUG)/src/ThreadPool.o: $(srcDir)/ThreadPool.cpp $(headerInclude) $(headerCutil)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
+
+$(OBJ_DEBUG)/src/ChunkJobFunction.o: $(srcDir)/ChunkJobFunction.cpp $(headerInclude) $(headerCutil)
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 

@@ -11,16 +11,21 @@
 #include "cutil/unique_ptr.hpp"
 #include "cutil/map.hpp"
 
+void Test();
+
 namespace ECS
 {
     // the class that holds all entities
     class EntityComponentManager final {
-        friend class ThreadPool;
+        friend class ChunkJobFunction;
+        friend void ::Test();
+    protected:
         // array of entities value,
         // contains index of it archetype and it index in that archetype
         std::vector<entity_t,allocator<entity_t>> entity_value{};
 
         std::vector<ArchetypeHolder,allocator<ArchetypeHolder>> archetypes{};
+        /// @brief hash does not include "Entity" component
         map<span<TypeID>,Archetype> archetypeTypeMap{};
 
 
@@ -30,7 +35,9 @@ namespace ECS
 
         /// @brief find or create a archetype with given types,
         /// @note type flag sensitive
+        /// @attention types argument must include Entity component at index 0!
         /// @param types list of types, throws invalid_argument exception on empty list
+        /// @return nullptr if types.size is less than 2
         Archetype* getOrCreateArchetype(span<TypeID> types);
 
         // destroys Archetype if empty otherwise nothing
@@ -44,7 +51,7 @@ namespace ECS
         Archetype* getArchetypeWithAddedComponents(Archetype *archetype,span<TypeID> componentTypeSet);
 
         /// @brief add component to an entity or in other word, move entity to another archetype, exception handled
-        /// @note type flag sensitive
+        /// @note not type flag sensitive
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
@@ -55,8 +62,26 @@ namespace ECS
         Archetype* getArchetypeWithAddedComponent(Archetype* archetype,TypeID addedComponentType,uint32_t *indexInTypeArray = nullptr);
 
         /// @ref getArchetypeWithAddedComponents
-        /// @note type flag sensitive
-        Archetype* getArchetypeWithRemovedComponent(Archetype* archetype,TypeID addedComponentType,uint32_t *indexInOldTypeArray = nullptr);
+        /// @note not type flag sensitive
+        /// @attention an exception will be thrown by getOrCreateArchetype if Entity is passed as argument for removedComponentType
+        Archetype* getArchetypeWithRemovedComponent(Archetype* archetype,TypeID removedComponentType,uint32_t *indexInOldTypeArray = nullptr);
+
+        /// @brief add Entity component to the array and calls getOrCreateArchetype
+        /// @attention input validity is not checked! 
+        void Helper_allocateInArchetype(span<TypeID> componentTypeSet,entity_t *srcValue, Entity e);
+        /// @brief simple wrapper for boiler plate code
+        void Helper_allocateInArchetype(Archetype *newArchetype,entity_t *srcValue, Entity e);
+        /// @brief simple wrapper for boiler plate code
+        /// @attention input validity is not checked!
+        void Helper_removeFromArchetype(Archetype *srcArchetype,entity_t *srcValue);
+        /// @brief manages move to new archetype, including 
+        /// @attention input validity is not checked!
+        /// @return index in new archetype
+        void Helper_moveEntityToNewArchetype(Archetype *newArchetype,Archetype *srcArchetype,entity_t *srcValue);
+
+        /// @brief Hekper function for debugging
+        /// @return may returns null if has no archetype
+        Archetype* getArchetype(Entity e);
 
     /*
      * Only Public function verfy inputs validity.
@@ -91,23 +116,6 @@ namespace ECS
             return true;
         }
 
-        const entity_t& validate(Entity entity) const {
-            if(!entity.valid())
-                throw std::invalid_argument("validate(): invalid entity");
-            const entity_t& value = this->entity_value.at(entity.index());
-            // version check to avoid double destroy
-            if(value.version != entity.version())
-                throw std::invalid_argument("validate(): entity doesnt exist anymore");
-            return value;
-        }
-        entity_t& validate(Entity entity) {
-            entity_t& value = this->entity_value.at(entity.index());
-            // version check to avoid double destroy
-            if(value.version != entity.version())
-                throw std::invalid_argument("validate(): entity doesnt exist anymore");
-            return value;
-        }
-
         /// @brief creates an empty entity (allocate on entity_value array)
         /// @return archetype is set to null (safe)
         Entity createEntity();
@@ -140,6 +148,7 @@ namespace ECS
         /// @brief simple linear check,
         /// @note type flag sensitive
         /// @param types type ordered
+        /// @return true if has types[0] AND types[1] AND ...
         bool hasComponents(Entity e,span<TypeID> types) const;
 
         /// @brief simple linear check
@@ -153,6 +162,8 @@ namespace ECS
             TypeID type = getTypeInfo<T>().value;
             return hasComponent(e,type);
         }
+
+        bool hasArchetype(Entity e) const;
 
         /// @brief destroy a entity entirly, safe
         /// @param e entity, must contain a valid version
@@ -208,10 +219,29 @@ namespace ECS
             }
         }
 
-        // chain entity to free entities
+
+
+        const entity_t& validate(Entity entity) const {
+            if(!entity.valid())
+                throw std::invalid_argument("validate(): invalid entity");
+            const entity_t& value = this->entity_value.at(entity.index());
+            // version check to avoid double destroy
+            if(value.version != entity.version())
+                throw std::invalid_argument("validate(): entity doesnt exist anymore");
+            return value;
+        }
+        entity_t& validate(Entity entity) {
+            entity_t& value = this->entity_value.at(entity.index());
+            // version check to avoid double destroy
+            if(value.version != entity.version())
+                throw std::invalid_argument("validate(): entity doesnt exist anymore");
+            return value;
+        }
+
+        /// @brief chain entity to free entities
         void recycleEntity(Entity entity);
 
-        // recycle or create new
+        /// @brief recycle or create new
         Entity recycleEntity();
     };
 

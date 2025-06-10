@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 #include <vector>
-#include <array>
-#include <utility>
 #include "defs.hpp"
 #include "ArchetypeVersionManager.hpp"
 #include "cutil/basics.hpp"
@@ -53,7 +51,7 @@ namespace ECS
     {
     protected:
 
-        friend class ThreadPool;
+        friend class ChunkJobFunction;
         friend class EntityComponentManager;
         friend void ::Test();
         // maximum number of entities that can be fit into a single chunk
@@ -215,7 +213,7 @@ namespace ECS
         }
 
 
-
+    public:
         /// @note flag sensitive
         bool hasComponent(TypeID type) const;
 
@@ -228,7 +226,7 @@ namespace ECS
         /// @param entity unsorted list of types you are looking for.
         bool hasComponentsSlow(span<TypeID> types) const;
 
-
+    protected:
         /// @brief in-archetype delete operation, 
         /// @note dsr.~T(); pull src;  memcpy(dst,src);
         /// @param entity srcIndex to be removed

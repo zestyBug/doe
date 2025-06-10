@@ -44,7 +44,7 @@ struct range final
     Iterator begin() const{
         return Iterator{this->from,this->step};
     }
-    Iterator end() const{
+    const Iterator end() const{
         return Iterator{this->to,this->step};
     }
 };

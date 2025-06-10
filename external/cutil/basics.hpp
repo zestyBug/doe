@@ -64,7 +64,7 @@ class allocator
             allocator_counter++;
         #endif
         }
-    #ifdef DEBUG
+    #ifdef VERBOSE
         printf("allocator::allocate(): %u byte in %p\n",(uint32_t)__n,ret);
     #endif
         return ret;
@@ -75,8 +75,10 @@ class allocator
         (void)__n;
         if(likely(__p != nullptr)){
             free(__p);
-        #ifdef DEBUG
+        #ifdef VERBOSE
             printf("allocator::deallocate(): %p\n",__p);
+        #endif
+        #ifdef DEBUG
             allocator_counter--;
         #endif
         }

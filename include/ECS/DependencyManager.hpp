@@ -4,57 +4,65 @@
 #include "cutil/basics.hpp"
 #include "ECS/defs.hpp"
 #include <vector>
-#include "cutil/set.hpp"
 #include "cutil/unique_ptr.hpp"
 
-namespace ECS{
-    
+namespace ECS
+{
+
+struct JobFilter {
+    const TypeID *types;
+    // reawd, write, changeFilter
+    uint32_t counts[3];
+};
+
 struct ChunkJob {
-    typedef void(*JobFunc)(void*,span<void*>,uint32_t);
+    /// @brief this function is/must be called by job threads
+    /// @param pointers pointers to requested types(read+write)
+    /// @param count count of enities
+    virtual void execute(span<void*> pointers,uint32_t count) = 0;
+    virtual const char* name() = 0;
+    virtual JobFilter getFilter() = 0;
 };
 
 /// @brief Simulated JobHandle (like Unity ECS JobHandle), 
 /// anything below 1 is ninvalid value
-using JobHandle = int;
-struct jobContext {
-    vector_set<JobHandle> deps{16};
-    std::vector<TypeID> types;
-    // [0]: read, [1]: write, [2]: filter
-    uint32_t counts[4];
-    ChunkJob *context;
-    ChunkJob::JobFunc jobFunc;
+using ChunkJobHandle = int;
+struct ChunkJobContext {
+    std::vector<uint32_t> precedesIndex{};
+    ChunkJob *context = nullptr;
+    uint32_t dependencyCount = 0;
     // system that pulled this job, usually must be globalSystemVersion-1
-    version_t lastSystemVersion;
-    char name[16];
+    version_t lastVersion = 0;
+    //char padding[24];
+
+    ChunkJobContext() = default;
+    ChunkJobContext(const ChunkJobContext&) = delete;
+    ChunkJobContext(ChunkJobContext&&) = default;
+    ~ChunkJobContext() = default;
 };
+static_assert(sizeof(ChunkJobContext)==40);
 
 /// @brief job schedule buffer
 struct DependencyManager {
     // if these numbers goes any higher, use std::map<TypeID,...> and std::set<JobHandle> instead
-
-    std::vector<jobContext,allocator<jobContext>> registeredJobs{};
-    std::array<JobHandle,TypeID::MaxTypeCount> lastWriteJob{};
-    std::vector<JobHandle,allocator<JobHandle>> lastReadJobs[TypeID::MaxTypeCount];
+    std::vector<ChunkJobContext,allocator<ChunkJobContext>> registeredJobs{};
+    std::array<ChunkJobHandle,TypeID::MaxTypeCount> lastWriteJob{};
+    std::vector<ChunkJobHandle,allocator<ChunkJobHandle>> lastReadJobs[TypeID::MaxTypeCount];
 
     DependencyManager(){
         //
     };
     ~DependencyManager() = default;
 
-    static constexpr size_t MaxJobCount = 0xFFFFF;
+    static constexpr int32_t MaxJobCount = 0xFFFFF;
 
 
     void dummyExecute();
 
     // Schedules a job with dependencies
-    JobHandle ScheduleJob(
+    ChunkJobHandle ScheduleJob(
         ChunkJob *context,
-        ChunkJob::JobFunc jobFunc,
-        const std::string& name = "",
-        span<TypeID> readTypes = {},
-        span<TypeID> writeTypes = {},
-        span<TypeID> changeFilter = {},
-        span<JobHandle> jobDependency = {},
+        span<ChunkJobHandle> jobDependency = {},
         version_t lastSystemVersion = 0
     );
 };
