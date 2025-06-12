@@ -1,7 +1,7 @@
 #include <iostream>
 #include <atomic>
 #include <chrono>
-#include "ECS/ThreadPool.hpp"
+#include "ThreadPool.hpp"
 #include "cutil/mini_test.hpp"
 
 struct MyContext {

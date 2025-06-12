@@ -1,4 +1,4 @@
-#include "ECS/ThreadPool.hpp"
+#include "ThreadPool.hpp"
 #include "ECS/EntityComponentManager.hpp"
 #include "ECS/Archetype.hpp"
 

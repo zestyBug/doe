@@ -54,7 +54,7 @@ void EntityComponentManager::destroyEmptyArchetype(const uint32_t archetypeIndex
         FreeArchetypeIndex = archetypeIndex;
     }
 }
-Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *archetype,const_span<TypeID> componentTypeSet){
+Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *archetype,const_span<TypeID> componentTypeSet) noexcept {
     const_span<TypeID> srcTypes = archetype->types;
     uint32_t dstTypesCount = srcTypes.size() + componentTypeSet.size();
 
@@ -103,8 +103,7 @@ Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *ar
 
     return this->getOrCreateArchetype({dstTypes,dstTypesCount});
 }
-Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* archetype, TypeID componentType,uint32_t *indexInTypeArray)
-{
+Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* archetype, TypeID componentType,uint32_t *indexInTypeArray) noexcept {
     const_span<TypeID> srcTypes = archetype->types;
     uint32_t dstTypesCount = (uint32_t)srcTypes.size() + 1;
 
@@ -134,7 +133,7 @@ Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* arc
 
     return getOrCreateArchetype({newTypes,dstTypesCount});
 }
-Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *archetype,const_span<TypeID> typeSetToRemove){
+Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *archetype,const_span<TypeID> typeSetToRemove) noexcept {
     const uint32_t typesCount = archetype->types.size();
     TypeID newTypes[typesCount];
 
@@ -168,8 +167,7 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *
     else
         return nullptr;
 }
-Archetype* EntityComponentManager::getArchetypeWithRemovedComponent (Archetype* archetype,TypeID removedComponentType,uint32_t *indexInOldTypeArray)
-{
+Archetype* EntityComponentManager::getArchetypeWithRemovedComponent(Archetype* archetype,TypeID removedComponentType,uint32_t *indexInOldTypeArray) noexcept {
     const uint32_t typesCount = archetype->types.size();
     TypeID newTypes[typesCount];
 
@@ -191,8 +189,8 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponent (Archetype* 
     else
         return nullptr;
 }
-Archetype* EntityComponentManager::getArchetype(Entity e) {
-    const entity_t& srcValue = validate(e);
+Archetype* EntityComponentManager::getArchetype(Entity entity) {
+    const entity_t& srcValue = validate(entity);
     return srcValue.archetype < this->archetypes.size() ? 
         this->archetypes[srcValue.archetype].get() :
         nullptr;
@@ -216,6 +214,12 @@ Archetype* EntityComponentManager::getArchetype(Entity e) {
 
 
 
+const Archetype* EntityComponentManager::getArchetype(Entity entity) const {
+    const entity_t& srcValue = validate(entity);
+    return srcValue.archetype < this->archetypes.size() ? 
+        this->archetypes[srcValue.archetype].get() :
+        nullptr;
+}
 Entity EntityComponentManager::createEntity(){
     return recycleEntity();
 }
@@ -228,6 +232,8 @@ void EntityComponentManager::addComponent(Entity entity, TypeID component){
         //entity_value must contain valid value, any exception is our fault and flaw
         srcArchetype = this->archetypes.at(srcValue.archetype).get();
         newArchetype = this->getArchetypeWithAddedComponent(srcArchetype, component);
+        if(srcArchetype == newArchetype)
+            return;
         Helper_moveEntityToNewArchetype(newArchetype,srcArchetype, &srcValue);
     }else{
         Helper_allocateInArchetype({&component,1}, &srcValue, entity);
@@ -243,6 +249,8 @@ void EntityComponentManager::addComponents(Entity entity, const_span<TypeID> com
         //entity_value must contain valid value, any exception is our fault and flaw
         srcArchetype = this->archetypes.at(srcValue.archetype).get();
         newArchetype = this->getArchetypeWithAddedComponents(srcArchetype, componentTypeSet);
+        if(srcArchetype == newArchetype)
+            return;
         Helper_moveEntityToNewArchetype(newArchetype,srcArchetype, &srcValue);
     }else
         Helper_allocateInArchetype(componentTypeSet, &srcValue, entity);
@@ -311,6 +319,30 @@ void EntityComponentManager::removeComponents(Entity entity)
     }
 }
 
+void* EntityComponentManager::getComponent(Entity entity,TypeID type){
+    const entity_t& value = validate(entity);
+    if(value.validArchtype()){
+        Archetype *arch = this->archetypes.at(value.archetype).get();
+        if(!arch)
+            throw std::runtime_error("destroyEntity(): entity points to invalid archetype");
+        const int tindex = arch->getIndex(type);
+        if((tindex & 0xFFFF) == tindex)
+            return arch->getComponent(tindex,value.index,globalVersion);
+    }
+    return nullptr;
+}
+const void* EntityComponentManager::getComponent(Entity entity,TypeID type) const {
+    const entity_t& value = validate(entity);
+    if(value.validArchtype()){
+        Archetype *arch = this->archetypes.at(value.archetype).get();
+        if(!arch)
+            throw std::runtime_error("destroyEntity(): entity points to invalid archetype");
+        const int tindex = arch->getIndex(type);
+        if((tindex & 0xFFFF) == tindex)
+            return arch->getComponent(tindex,value.index);
+    }
+    return nullptr;
+}
 bool EntityComponentManager::hasComponents(Entity entity,const_span<TypeID> types) const {
     const entity_t& value = validate(entity);
 
@@ -328,8 +360,8 @@ bool EntityComponentManager::hasComponent(Entity entity,TypeID type) const {
     const Archetype *arch = this->archetypes.at(value.archetype).get();
     return arch->hasComponent(type);
 }
-bool EntityComponentManager::hasArchetype(Entity e) const {
-    const entity_t& value = validate(e);
+bool EntityComponentManager::hasArchetype(Entity entity) const {
+    const entity_t& value = validate(entity);
     return value.archetype < this->archetypes.size();
 }
 
@@ -344,37 +376,39 @@ bool EntityComponentManager::hasArchetype(Entity e) const {
 
 
 
-void EntityComponentManager::Helper_allocateInArchetype(Archetype *newArchetype,entity_t *srcValue, Entity e){
+void EntityComponentManager::Helper_allocateInArchetype(Archetype *newArchetype,entity_t *srcValue, Entity entity) noexcept {
     const uint32_t newIndex = newArchetype->createEntity(globalVersion);
-    newArchetype->callComponentConstructor(newIndex,e);
+    newArchetype->callComponentConstructor(newIndex,entity);
     srcValue->index = newIndex;
     srcValue->archetype = newArchetype->archetypeIndex;
 }
-void EntityComponentManager::Helper_allocateInArchetype(const_span<TypeID> componentTypeSet,entity_t *srcValue, Entity e){
+void EntityComponentManager::Helper_allocateInArchetype(const_span<TypeID> componentTypeSet,entity_t *srcValue, Entity entity) noexcept {
     TypeID componentTypeSetBuffer[1 + componentTypeSet.size()];
     componentTypeSetBuffer[0] = getTypeInfo<Entity>().value;
     memcpy(componentTypeSetBuffer+1,componentTypeSet.data(),componentTypeSet.size_bytes());
     Archetype *newArchetype = this->getOrCreateArchetype({componentTypeSetBuffer,1 + componentTypeSet.size()});
     const uint32_t newIndex = newArchetype->createEntity(globalVersion);
-    newArchetype->callComponentConstructor(newIndex,e);
+    newArchetype->callComponentConstructor(newIndex,entity);
     srcValue->index = newIndex;
     srcValue->archetype = newArchetype->archetypeIndex;
 } 
-void EntityComponentManager::Helper_removeFromArchetype(Archetype *srcArchetype,entity_t *srcValue){
+void EntityComponentManager::Helper_removeFromArchetype(Archetype *srcArchetype,entity_t *srcValue) noexcept {
     Entity replacedEntity = Archetype::managedRemoveEntity(srcArchetype,srcValue->index);
     // if it index was filled with other entity
     if(replacedEntity.valid())
             this->entity_value.at(replacedEntity.index()).index = srcValue->index;
     srcValue->archetype = NullArchetypeIndex;
 }
-void EntityComponentManager::Helper_moveEntityToNewArchetype(Archetype *newArchetype,Archetype *srcArchetype, entity_t *srcValue){
+void EntityComponentManager::Helper_moveEntityToNewArchetype(Archetype *__restrict__ newArchetype,Archetype *__restrict__ srcArchetype, entity_t *srcValue) noexcept {
     // see addComponent(s)
+#ifdef DEBUG
     if (srcArchetype == newArchetype)
-        return;
+        throw std::invalid_argument("Helper_moveEntityToNewArchetype(): unexpected same archetype");
+#endif
     const uint32_t srcIndex = srcValue->index;
     const uint32_t newIndex = newArchetype->createEntity(globalVersion);
 
-    Archetype::moveComponentValues(newArchetype,newIndex,srcArchetype,srcIndex);
+    Archetype::moveComponentValues(newArchetype,srcArchetype,newIndex,srcIndex);
 
     const uint32_t replacedIndex = srcArchetype->removeEntity(srcIndex);
     // if it index was filled with other entity

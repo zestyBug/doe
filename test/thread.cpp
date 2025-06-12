@@ -1,6 +1,6 @@
 #include <iostream>
 #include "ECS/DependencyManager.hpp"
-#include "ECS/ThreadPool.hpp"
+#include "ThreadPool.hpp"
 #include "ECS/EntityComponentManager.hpp"
 #include "ECS/ChunkJobFunction.hpp"
 #include <unistd.h>

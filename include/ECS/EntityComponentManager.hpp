@@ -50,40 +50,37 @@ namespace ECS
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithAddedComponents(Archetype *archetype,const_span<TypeID> componentTypeSet);
+        Archetype* getArchetypeWithAddedComponents(Archetype *archetype,const_span<TypeID> componentTypeSet) noexcept;
 
         /// @brief add component to an entity or in other word, move entity to another archetype, exception handled
         /// @note not type flag sensitive
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithRemovedComponents(Archetype *archetype,const_span<TypeID> typeSetToRemove);
+        Archetype* getArchetypeWithRemovedComponents(Archetype *archetype,const_span<TypeID> typeSetToRemove) noexcept;
 
         /// @ref getArchetypeWithAddedComponents
         /// @note type flag sensitive
-        Archetype* getArchetypeWithAddedComponent(Archetype* archetype,TypeID addedComponentType,uint32_t *indexInTypeArray = nullptr);
+        Archetype* getArchetypeWithAddedComponent(Archetype* archetype,TypeID addedComponentType,uint32_t *indexInTypeArray = nullptr) noexcept;
 
         /// @ref getArchetypeWithAddedComponents
         /// @note not type flag sensitive
         /// @attention an exception will be thrown by getOrCreateArchetype if Entity is passed as argument for removedComponentType
-        Archetype* getArchetypeWithRemovedComponent(Archetype* archetype,TypeID removedComponentType,uint32_t *indexInOldTypeArray = nullptr);
+        Archetype* getArchetypeWithRemovedComponent(Archetype* archetype,TypeID removedComponentType,uint32_t *indexInOldTypeArray = nullptr) noexcept;
 
         /// @brief add Entity component to the array and calls getOrCreateArchetype
         /// @attention input validity is not checked! 
-        void Helper_allocateInArchetype(const_span<TypeID> componentTypeSet,entity_t *srcValue, Entity e);
+        void Helper_allocateInArchetype(const_span<TypeID> componentTypeSet,entity_t *srcValue, Entity entity) noexcept;
         /// @brief simple wrapper for boiler plate code
-        void Helper_allocateInArchetype(Archetype *newArchetype,entity_t *srcValue, Entity e);
+        void Helper_allocateInArchetype(Archetype *newArchetype,entity_t *srcValue, Entity entity) noexcept;
         /// @brief simple wrapper for boiler plate code
         /// @attention input validity is not checked!
-        void Helper_removeFromArchetype(Archetype *srcArchetype,entity_t *srcValue);
+        void Helper_removeFromArchetype(Archetype *srcArchetype,entity_t *srcValue) noexcept;
         /// @brief manages move to new archetype
         /// @attention input validity is not checked!
         /// @return index in new archetype
-        void Helper_moveEntityToNewArchetype(Archetype *newArchetype,Archetype *srcArchetype,entity_t *srcValue);
+        void Helper_moveEntityToNewArchetype(Archetype *__restrict__ newArchetype,Archetype *__restrict__srcArchetype,entity_t *srcValue) noexcept;
 
-        /// @brief Hekper function for debugging
-        /// @return may returns null if has no archetype
-        Archetype* getArchetype(Entity e);
 
     /*
      * Only Public function verfy inputs validity.
@@ -109,11 +106,23 @@ namespace ECS
             iterate_helper(func,types);
         }
 
-        bool valid(Entity e) const {
+        /// @brief Helper function for debugging
+        /// @return may returns null if has no archetype
+        const Archetype* getArchetype(Entity entity) const;
+
+    protected:
+        /// @brief Helper function for debugging
+        /// @return may returns null if has no archetype
+        Archetype* getArchetype(Entity entity);
+
+    public:
+        /// @brief checking entity validation before sending arguments avoid exceptions
+        /// @return true if entity index exists and version is currect
+        bool valid(Entity entity) const noexcept {
             if(
-                !e.valid() || 
-                (uint32_t)e.index() >= this->entity_value.size() ||
-                this->entity_value.at(e.index()).version != e.version()
+                !entity.valid() || 
+                (uint32_t)entity.index() >= this->entity_value.size() ||
+                this->entity_value.at(entity.index()).version != entity.version()
             ) return false;
             return true;
         }
@@ -151,21 +160,42 @@ namespace ECS
         /// @note type flag sensitive
         /// @param types type ordered
         /// @return true if has types[0] AND types[1] AND ...
-        bool hasComponents(Entity e,const_span<TypeID> types) const;
+        bool hasComponents(Entity entity,const_span<TypeID> types) const;
 
         /// @brief simple linear check
         /// @note type flag sensitive
         /// @param type type ordered
-        bool hasComponent(Entity e,TypeID type) const;
+        bool hasComponent(Entity entity,TypeID type) const;
 
         // optimized: using archetype bitmap
         template<typename T>
-        bool hasComponent(Entity e) const {
+        bool hasComponent(Entity entity) const {
             TypeID type = getTypeInfo<T>().value;
-            return hasComponent(e,type);
+            return hasComponent(entity,type);
         }
 
-        bool hasArchetype(Entity e) const;
+        /// @brief get R/W access to component
+        /// @param entity valid entity
+        /// @param type requested component type
+        /// @return nullptr if entity doesnt contain this component
+        void* getComponent(Entity entity,TypeID type);
+        /// @brief get RO access to single component
+        /// @param entity valid entity
+        /// @param type requested component type
+        /// @return nullptr if entity doesnt contain this component
+        const void* getComponent(Entity entity,TypeID type) const;
+        
+        template<typename T>
+        T& getComponent(Entity entity){
+            void *ptr;
+            TypeID type = getTypeInfo<T>().value;
+            ptr = getComponent(entity,type);
+            if(!ptr)
+                throw std::runtime_error("getComponent(): component not found");
+            return *(T*)ptr;
+        }
+
+        bool hasArchetype(Entity entity) const;
 
         /// @brief destroy a entity entirly, safe
         /// @param e entity, must contain a valid version

@@ -1,5 +1,9 @@
-#ifndef ENTT_HPP
-#define ENTT_HPP 1
+/**
+ * @brief A heavily shrinked version of ENTT library.
+ * for single component type.
+ */
+#ifndef ADVANCED_ARRAY_HPP
+#define ADVANCED_ARRAY_HPP 1
 
 #include <cstddef>
 #include <cstdint>
@@ -10,12 +14,6 @@
 #include <functional>
 #include <stdexcept>
 
-
-#ifdef ENTT_PAGE_SIZE
-static_assert(ENTT_PAGE_SIZE && ((ENTT_PAGE_SIZE & (ENTT_PAGE_SIZE - 1)) == 0), "ENTT_PAGE_SIZE must be a power of two");
-#else
-#   define ENTT_PAGE_SIZE 4096
-#endif
 
 #ifndef ENTT_NOEXCEPT
 #   define ENTT_NOEXCEPT noexcept
@@ -33,7 +31,6 @@ using id_type = std::uint32_t;
  * Primary template isn't defined on purpose. All the specializations give a
  * compile-time error unless the template parameter is an accepted entity type.
  */
-template<typename>
 struct entt_traits;
 
 /**
@@ -41,8 +38,7 @@ struct entt_traits;
  *
  * A 32 bits entity identifier
  */
-template<>
-struct entt_traits<std::uint32_t> {
+struct entt_traits {
     /*! @brief Underlying entity type. */
     using entity_type = std::uint32_t;
     /*! @brief Underlying version type. */
@@ -59,31 +55,6 @@ struct entt_traits<std::uint32_t> {
 };
 
 /**
- * @brief Entity traits for a 64 bits entity identifier.
- *
- * A 64 bits entity identifier guarantees:
- *
- * * 32 bits for the entity number (an indecently large number).
- * * 32 bit for the version (an indecently large number).
- */
-template<>
-struct entt_traits<std::uint64_t> {
-    /*! @brief Underlying entity type. */
-    using entity_type = std::uint64_t;
-    /*! @brief Underlying version type. */
-    using version_type = std::uint32_t;
-    /*! @brief Difference type. */
-    using difference_type = std::int64_t;
-
-    /*! @brief Mask to use to get the entity number out of an identifier. */
-    static constexpr entity_type entity_mask = 0xFFFFFFFF;
-    /*! @brief Mask to use to get the version out of an identifier. */
-    static constexpr entity_type version_mask = 0xFFFFFFFF;
-    /*! @brief Extent of the entity number within an identifier. */
-    static constexpr std::size_t entity_shift = 32u;
-};
-
-/**
  * @brief Converts an entity type to its underlying type.
  * @tparam Entity The value type.
  * @param entity The value to convert.
@@ -92,7 +63,7 @@ struct entt_traits<std::uint64_t> {
 template<typename Entity>
 [[nodiscard]] constexpr
 auto to_integral(const Entity entity) noexcept {
-    return static_cast<typename entt_traits<Entity>::entity_type>(entity);
+    return static_cast<typename entt_traits::entity_type>(entity);
 }
 
 /*! @brief Null object for all entity identifiers.  */
@@ -100,7 +71,7 @@ struct null_t
 {
     /** @brief Converts the null object to identifiers of any type.*/
     template<typename Entity>
-    [[nodiscard]] constexpr operator Entity() const noexcept { return Entity{entt_traits<Entity>::entity_mask}; }
+    [[nodiscard]] constexpr operator Entity() const noexcept { return Entity{entt_traits::entity_mask}; }
 
     [[nodiscard]] constexpr bool operator==(const null_t &) const noexcept {return true;}
     [[nodiscard]] constexpr bool operator!=(const null_t &) const noexcept {return false;}
@@ -608,9 +579,9 @@ private:
 template<typename Entity>
 class basic_sparse_set {
 
-    static constexpr auto page_size = ENTT_PAGE_SIZE;
+    static constexpr auto page_size = 4096;
 
-    using traits_type = entt_traits<Entity>;
+    using traits_type = entt_traits;
     using page_type = std::unique_ptr<Entity[]>;
 
 public:
@@ -1093,7 +1064,7 @@ class basic_storage: public basic_sparse_set<Entity> {
     static_assert(std::is_move_constructible_v<Type> && std::is_move_assignable_v<Type>, "The managed type must be at least move constructible and assignable");
 
     using underlying_type = basic_sparse_set<Entity>;
-    using traits_type = entt_traits<Entity>;
+    using traits_type = entt_traits;
 
     template<typename Value>
     class storage_iterator final {};
@@ -1625,7 +1596,7 @@ class basic_registry
     static_assert(!std::is_const_v<Component>, "Invalid const type");
 
 
-    using traits_type = entt_traits<Entity>;
+    using traits_type = entt_traits;
     using storage_type = storage_traits_type<Entity, Component>;
 
 public:
@@ -1917,4 +1888,4 @@ using entity = id_type;
 
 }
 
-#endif
+#endif // ADVANCED_ARRAY_HPP

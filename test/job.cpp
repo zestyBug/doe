@@ -1,6 +1,6 @@
 #include <iostream>
 #include "ECS/SystemManager.hpp"
-#include "ECS/ThreadPool.hpp"
+#include "ThreadPool.hpp"
 
 ECS::TypeID id = ECS::getTypeID<ECS::Entity>();
 

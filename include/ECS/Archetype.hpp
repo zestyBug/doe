@@ -83,7 +83,7 @@ namespace ECS
 
         static ArchetypeHolder createArchetype(const_span<TypeID> types);
 
-        ~Archetype(/* args */) {
+        ~Archetype(/* args */) noexcept {
             const_span<uint16_t> archSizes = this->sizeOfs;
             const_span<Chunk> archChunks = this->chunksData;
             const_span<uint32_t> archOffsets = this->offsets;
@@ -123,14 +123,14 @@ namespace ECS
 
         // estimated capacity
         // check before accessing an unallocated archtype
-        uint32_t capacity() const {
+        uint32_t capacity() const noexcept {
             return chunkCapacity * chunksVersion.capacity();
         }
-        bool empty() const {
+        bool empty() const noexcept {
             return this->chunksVersion.empty();
         }
         // this fucntion is a little more expensive than empty
-        uint32_t count() const {
+        uint32_t count() const noexcept {
             const uint32_t v = (uint32_t) this->chunksData.size();
             if(v < 1)
                 return 0;
@@ -138,7 +138,7 @@ namespace ECS
                 return (v-1) * chunkCapacity + lastChunkEntityCount;
         }
 
-        inline uint16_t nonZeroSizedTypesCount() const {
+        inline uint16_t nonZeroSizedTypesCount() const noexcept {
             return firstTagIndex;
         }
 
@@ -152,10 +152,12 @@ namespace ECS
         // requesting component that does not exist results undefined behaviour
 
         /// @brief returns memory address of a given component and entity
-        /// @param componentIndex component inside the archetype index
-        /// @param entityIndex entity inside the archetype index
+        /// @param componentIndex component index inside the archetype
+        /// @param entityIndex entity index inside the archetype
+        /// @param newVersion update version because of R/W access
         /// @return returns pointer or exception
-        void* getComponent(uint16_t componentIndex,uint32_t entityIndex);
+        void* getComponent(uint16_t componentIndex,uint32_t entityIndex, version_t newVersion=0);
+        const void* getComponent(uint16_t componentIndex,uint32_t entityIndex) const;
 
         void* getChunkComponent(uint16_t componentIndex,size_t chunkIndex){
             uint8_t * const mem = (uint8_t*) this->chunksData.at(chunkIndex).memory;
@@ -165,21 +167,21 @@ namespace ECS
         /// TODO: binary search?
         /// @note not flag sensitive
         /// @return -1 if not found
-        int32_t getIndex(TypeID t) const;
+        int32_t getIndex(TypeID t) const noexcept;
     
         /// @brief locate every type index within archtype
         /// @note not flag sensitive
         /// @param t sorted array of types
         /// @param out output buffer pointer
         /// @return true on success on locating every type
-        bool getIndecies(const_span<TypeID> t, uint16_t* out) const;
+        bool getIndecies(const_span<TypeID> t, uint16_t* out) const noexcept;
 
-        uint32_t getHash() const;
+        uint32_t getHash() const noexcept;
         /// @brief check if this archetype matches exact the same with param _types
         /// @note flag sensitive
         /// @param _types sorted array of types
         /// @return true uf matches
-        inline bool operator ==(const_span<TypeID> _types) const {
+        inline bool operator ==(const_span<TypeID> _types) const noexcept {
             return (this->types) == _types;
         }
     protected:
@@ -246,9 +248,10 @@ namespace ECS
         /// @brief between-archetype move operation
         /// @note dst.~T(); src.T(); memcpy(dst,src);
         /// @param entity value of srcIndex to be updated
-        static Entity moveComponentValues(Archetype *dstArchetype, uint32_t dstIndex,Archetype *srcArchetype, uint32_t srcIndex);
+        static Entity moveComponentValues(Archetype *__restrict__ dstArchetype,Archetype *__restrict__ srcArchetype, uint32_t dstIndex, uint32_t srcIndex);
 
-        void inArchetypeCopy(void * const srcChunk, void * const dstChunk ,const uint32_t srcInChunkIndex, const uint32_t dstInChunkIndex);
+        void inArchetypeCopy(void *__restrict__ srcChunk, void *__restrict__ dstChunk ,const uint32_t srcInChunkIndex, const uint32_t dstInChunkIndex);
+        void inArchetypeCopy(void *chunk, const uint32_t srcInChunkIndex, const uint32_t dstInChunkIndex);
 
         /// @brief call destructor function of components
         /// @note dst.~T();
@@ -259,7 +262,7 @@ namespace ECS
         /// @note dst.T();
         /// @param index index inside archetype
         /// @param entity entity value to be storeds
-        void callComponentConstructor(uint32_t entityIndex, Entity e = Entity::null);
+        void callComponentConstructor(uint32_t entityIndex, Entity entity = Entity::null);
     };
 } // namespace ECS
 

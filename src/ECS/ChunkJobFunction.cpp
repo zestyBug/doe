@@ -4,7 +4,7 @@
 #include "ECS/Archetype.hpp"
 #include <atomic>
 #include <thread>
-#include "ECS/ThreadPool.hpp"
+#include "ThreadPool.hpp"
 #include "cutil/range.hpp"
 
 struct thread_info {
@@ -21,7 +21,7 @@ struct thread_info {
 };
 static_assert(sizeof(thread_info)==64);
 
-void* ECS::ChunkJobFunction::createContext(span<ECS::ChunkJobContext> jobs,span<ECS::ArchetypeHolder> archs, ECS::version_t globalVersion)
+void* ECS::ChunkJobFunction::createContext(span<ECS::ChunkJobContext> jobs,span<ECS::ArchetypeHolder> archs, ECS::version_t globalVersion) noexcept
 {
     size_t size = alignTo64(sizeof(std::atomic<uint32_t>),jobs.size());
     thread_info* context = (thread_info *) allocator().allocate(sizeof(thread_info) + size * 2);
@@ -85,7 +85,7 @@ size_t ECS::ChunkJobFunction::function(void* _context, size_t i) noexcept{
         return ThreadPool::STOP_SIGNAL;
 }
 
-void ECS::ChunkJobFunction::destroyContext(void* context){
+void ECS::ChunkJobFunction::destroyContext(void* context) noexcept {
     allocator().deallocate(context);
 }
 
@@ -95,7 +95,7 @@ void ECS::ChunkJobFunction::proccess(
     ECS::version_t sv,
     ECS::version_t gv,
     uint32_t archetypeCount
-){
+) noexcept {
     for (uint32_t archetypeIndex = 0; archetypeIndex < archetypeCount; archetypeIndex++)
     {
         Archetype *arch = archetypes[archetypeIndex].get();
@@ -122,7 +122,7 @@ void ECS::ChunkJobFunction::callExecution(
     ECS::Archetype* archetype,
     ECS::version_t sv,
     ECS::version_t gv
-){
+) noexcept {
     JobFilter filter = job->context->getFilter();
     const uint32_t argCount = filter.counts[0]+filter.counts[1];
     const uint32_t totalCount = argCount + filter.counts[2];

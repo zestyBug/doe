@@ -1,16 +1,12 @@
-//#include "Engine/ECS/ThreadPool.hpp"
+//#include "ThreadPool.hpp"
 #include "ECS/EntityComponentManager.hpp"
 #include "cutil/range.hpp"
 #include "cutil/small_vector.hpp"
 #include "cutil/prototype.hpp"
+#include "cutil/mini_test.hpp"
+
 ECS::EntityComponentManager *reg;
 int prototype::counter = 0;
-
-void Test();
-
-static int test_num=1;
-#define TEST_SUBJECT_BEGIN() { bool TEST_RESULT=false;
-#define TEST_SUBJECT_END() printf("%i: %s %s:%d\n",test_num++,(!!(TEST_RESULT))?"✔":"✘",__FILE__,__LINE__);}
 
 //ECS::ThreadPool *tp;
 
@@ -19,76 +15,111 @@ struct Hierarchy {
     small_vector<ECS::Entity,8,allocator<ECS::Entity>> child{};
 };
 
-void Test(){
-    reg = new ECS::EntityComponentManager();
 
-    {
-        ECS::ArchetypeVersionManager chunks;
-        chunks.initialize(4);
-        for (size_t i = 0; i < 100; i++)
-        {
-            chunks.add(0);
-        }
-        chunks.popBack();
-    }
 
+// ArchetypeVersionManager memory allocation test
+TEST(Test1) {
+    ECS::ArchetypeVersionManager chunks;
+    chunks.initialize(4);
+    for (size_t i = 0; i < 100; i++)
+        chunks.add(0);
+    chunks.popBack();
+}
+// remove all + add behaviour (single)
+TEST(Test10) {
     auto v0 = reg->createEntity(ECS::componentTypes<Hierarchy>());
+    reg->removeComponent(v0,ECS::getTypeInfo<Hierarchy>().value);
+    EXPECT_EQ(reg->hasArchetype(v0),false);
+    EXPECT_EQ(reg->hasComponent(v0,ECS::getTypeID<Hierarchy>()),false);
+    reg->addComponent(v0,ECS::getTypeInfo<prototype>().value);
+    EXPECT_NE(reg->hasComponent(v0,ECS::getTypeID<prototype>()),false);
+    reg->destroyEntity(v0);
+}
+// remove all + add behaviour (multi)
+TEST(Test11) {
+    auto v0 = reg->createEntity(ECS::componentTypes<Hierarchy,int>());
+    reg->removeComponents(v0,ECS::componentTypes<Hierarchy,int>());
+    EXPECT_EQ(reg->hasArchetype(v0),false);
+    EXPECT_EQ(reg->hasComponent(v0,ECS::getTypeID<Hierarchy>()),false);
+    reg->addComponent(v0,ECS::getTypeInfo<prototype>().value);
+    EXPECT_NE(reg->hasComponent(v0,ECS::getTypeID<prototype>()),false);
+    reg->destroyEntity(v0);
+}
+// hasArchetype + valid functions test
+TEST(Test12) {
+    auto v0 = reg->createEntity(ECS::componentTypes<Hierarchy,int>());
+    reg->removeComponents(v0,ECS::componentTypes<Hierarchy,int>());
+
+    EXPECT_EQ(reg->hasArchetype(v0),false);
+    EXPECT_NE(reg->valid(v0),false);
+    
+
+    reg->addComponent(v0,ECS::getTypeInfo<prototype>().value);
+    
+    EXPECT_NE(reg->hasArchetype(v0),false);
+    EXPECT_NE(reg->valid(v0),false);
+
+    reg->destroyEntity(v0);
+}
+// simple getComponent + hasArchetype test
+TEST(Test30) {
+    auto v1 = reg->createEntity(ECS::componentTypes<Hierarchy,int>());
+    EXPECT_NE(reg->getComponent(v1,ECS::getTypeID<int>()),nullptr);
+    EXPECT_NE(reg->getComponent(v1,ECS::getTypeID<Hierarchy>()),nullptr);
+    EXPECT_EQ(reg->getComponent(v1,ECS::getTypeID<prototype>()),nullptr);
+    reg->removeComponents(v1,ECS::componentTypes<Hierarchy,int>());
+    EXPECT_EQ(reg->hasArchetype(v1),false);
+    reg->destroyEntity(v1);
+}
+// add existing component behaviour
+TEST(Test20) {
+    const ECS::EntityComponentManager* creg = reg;
+    auto v4 = reg->createEntity(ECS::componentTypes<Hierarchy,float>());
+    const ECS::Archetype *arch = creg->getArchetype(v4);
+    EXPECT_NE(arch,nullptr);
+    reg->addComponent(v4,ECS::getTypeInfo<Hierarchy>().value);
+    EXPECT_EQ(arch,creg->getArchetype(v4));
+    reg->addComponents(v4,ECS::componentTypes<Hierarchy,float>());
+    EXPECT_EQ(arch,creg->getArchetype(v4));
+    reg->destroyEntity(v4);
+}
+// add prototype test
+TEST(Test40) {
+    auto v2 = reg->createEntity(ECS::componentTypes<Hierarchy,char>());
+    reg->addComponents(v2,ECS::componentTypes<Hierarchy,prototype>());
+    reg->destroyEntity(v2);
+}
+// iteration
+TEST(Test50) {
+    reg->iterate<int>([](span<void*>,uint32_t count){
+        printf("int count: %u\n",count);
+    });
+}
+
+
+int main()
+{
+    
+    reg = new ECS::EntityComponentManager();
+    
+    
     for (size_t i = 0; i < 100; i++)
     {
         reg->createEntity(ECS::componentTypes<Hierarchy>());
     }
-    auto v1 = reg->createEntity(ECS::componentTypes<Hierarchy,int>());
     for (size_t i = 0; i < 100; i++)
     {
         reg->createEntity(ECS::componentTypes<Hierarchy,int>());
     }
-    auto v2 = reg->createEntity(ECS::componentTypes<Hierarchy,char>());
     for (size_t i = 0; i < 100; i++)
     {
         reg->createEntity(ECS::componentTypes<Hierarchy,char>());
     }
-    auto v4 = reg->createEntity(ECS::componentTypes<Hierarchy,float>());
     
-    TEST_SUBJECT_BEGIN()
-    reg->removeComponent(v0,ECS::getTypeInfo<Hierarchy>().value);
-    TEST_RESULT = !reg->hasArchetype(v0);
-    TEST_RESULT &= !reg->hasComponent(v0,ECS::getTypeID<Hierarchy>());
-    reg->addComponent(v0,ECS::getTypeInfo<prototype>().value);
-    TEST_RESULT &= reg->hasComponent(v0,ECS::getTypeID<prototype>());
-    reg->destroyEntity(v0);
-    TEST_SUBJECT_END()
-
-    TEST_SUBJECT_BEGIN()
-    reg->removeComponents(v1,ECS::componentTypes<Hierarchy,int>());
-    TEST_RESULT = !reg->hasArchetype(v1);
-    reg->destroyEntity(v1);
-    TEST_SUBJECT_END()
-
-    TEST_SUBJECT_BEGIN()
-    ECS::Archetype *arch;
-    arch = reg->getArchetype(v4);
-    TEST_RESULT = arch != nullptr;
-    reg->addComponent(v4,ECS::getTypeInfo<Hierarchy>().value);
-    TEST_RESULT &= arch == reg->getArchetype(v4);
-    reg->addComponents(v4,ECS::componentTypes<Hierarchy,float>());
-    TEST_RESULT &= arch == reg->getArchetype(v4);
-    reg->destroyEntity(v4);
-    TEST_SUBJECT_END()
-
-    reg->addComponents(v2,ECS::componentTypes<Hierarchy,prototype>());
-    reg->destroyEntity(v2);
-    
-    reg->iterate<int>([](span<void*>,uint32_t count){
-        printf("int count: %u\n",count);
-    });
-
+    mtest::run_all();
     delete reg;
 #ifdef DEBUG
     printf("counter: %li\n",allocator_counter);
 #endif
-}
-int main()
-{
-    Test();
     return 0;
 }

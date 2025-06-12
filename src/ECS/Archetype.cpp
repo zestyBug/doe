@@ -139,16 +139,25 @@ uint32_t Archetype::removeEntity(uint32_t entityIndex){
     return lastEntityIndex;
 }
 
-void* Archetype::getComponent(uint16_t componentIndex,uint32_t entityIndex){
-    uint32_t inChunkIndex = getInChunkIndex(entityIndex);
-    uint32_t chunkIndex = getChunkIndex(entityIndex);
+void* Archetype::getComponent(uint16_t componentIndex,uint32_t entityIndex, version_t newVersion){
+    const uint32_t inChunkIndex = getInChunkIndex(entityIndex);
+    const uint32_t chunkIndex = getChunkIndex(entityIndex);
+    chunksVersion.getChangeVersion(componentIndex,chunkIndex) = newVersion;
     uint8_t *chunkMemory = (uint8_t *)chunksData.at(chunkIndex).memory;
     if(unlikely((chunkIndex+1) >= chunksData.size() && inChunkIndex >= lastChunkEntityCount))
             throw std::out_of_range("getComponent(): invalid entityIndex");
     return chunkMemory + offsets.at(componentIndex) + (sizeOfs.at(componentIndex) * inChunkIndex);
 }
+const void* Archetype::getComponent(uint16_t componentIndex,uint32_t entityIndex) const {
+    const uint32_t inChunkIndex = getInChunkIndex(entityIndex);
+    const uint32_t chunkIndex = getChunkIndex(entityIndex);
+    const uint8_t *chunkMemory = (const uint8_t *)chunksData.at(chunkIndex).memory;
+    if(unlikely((chunkIndex+1) >= chunksData.size() && inChunkIndex >= lastChunkEntityCount))
+            throw std::out_of_range("getComponent(): invalid entityIndex");
+    return chunkMemory + offsets.at(componentIndex) + (sizeOfs.at(componentIndex) * inChunkIndex);
+}
 
-int32_t Archetype::getIndex(TypeID t) const{
+int32_t Archetype::getIndex(TypeID t) const noexcept {
     uint16_t rIndex = t.realIndex();
     for (uint32_t i = 0; i < realIndecies.size(); i++){
         if(realIndecies[i] == rIndex)
@@ -158,7 +167,7 @@ int32_t Archetype::getIndex(TypeID t) const{
     }
     return -1;
 }
-bool Archetype::getIndecies(const_span<TypeID> rtypes,uint16_t* out) const{
+bool Archetype::getIndecies(const_span<TypeID> rtypes,uint16_t* out) const noexcept {
     const_span<TypeID> archetypeTypes = this->types;
 
     uint16_t archetypeTypesIndex = 0;
@@ -182,7 +191,7 @@ bool Archetype::getIndecies(const_span<TypeID> rtypes,uint16_t* out) const{
         return true;
     return false;
 }
-uint32_t Archetype::getHash() const {
+uint32_t Archetype::getHash() const noexcept {
     uint32_t result = HashHelper::FNV1A32(this->types);
     if (result == 0xFFFFFFFF || result == 0)
         result = 1;
@@ -296,8 +305,11 @@ Entity Archetype::managedRemoveEntity(Archetype *archetype, uint32_t entityIndex
     }
     return ret;
 }
-Entity Archetype::moveComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex)
-{
+Entity Archetype::moveComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex) {
+#ifdef DEBUG
+    if(dstIndex == srcIndex)
+        throw std::invalid_argument("moveComponentValues(): unexpected same entity");
+#endif
     Entity ret;
     const uint32_t dstChunkIndex = archetype->getChunkIndex(dstIndex);
     const uint32_t dstInChunkIndex = archetype->getInChunkIndex(dstIndex);
@@ -323,12 +335,13 @@ Entity Archetype::moveComponentValues(Archetype *archetype, uint32_t dstIndex, u
 
     ret = ((Entity*)(srcChunkMemory+archetype->offsets[0]))[srcInChunkIndex];
 
-    archetype->inArchetypeCopy(srcChunkMemory, dstChunkMemory, srcInChunkIndex, dstInChunkIndex);
-
+    if(srcChunkMemory == dstChunkMemory)
+        archetype->inArchetypeCopy(srcChunkMemory, srcInChunkIndex, dstInChunkIndex);
+    else
+        archetype->inArchetypeCopy(srcChunkMemory, dstChunkMemory, srcInChunkIndex, dstInChunkIndex);
     return ret;
 }
-Entity Archetype::copyComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex)
-{
+Entity Archetype::copyComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex) {
     Entity ret;
     const uint32_t dstChunkIndex = archetype->getChunkIndex(dstIndex);
     const uint32_t dstInChunkIndex = archetype->getInChunkIndex(dstIndex);
@@ -342,11 +355,18 @@ Entity Archetype::copyComponentValues(Archetype *archetype, uint32_t dstIndex, u
 
     ret = ((Entity*)(srcChunkMemory+archetype->offsets[0]))[srcInChunkIndex];
 
-    archetype->inArchetypeCopy(srcChunkMemory, dstChunkMemory, srcInChunkIndex, dstInChunkIndex);
+    if(srcChunkMemory == dstChunkMemory)
+        archetype->inArchetypeCopy(srcChunkMemory, srcInChunkIndex, dstInChunkIndex);
+    else
+        archetype->inArchetypeCopy(srcChunkMemory, dstChunkMemory, srcInChunkIndex, dstInChunkIndex);
 
     return ret;
 }
-Entity Archetype::moveComponentValues(Archetype *dstArchetype, uint32_t dstIndex,Archetype *srcArchetype, uint32_t srcIndex){
+Entity Archetype::moveComponentValues(Archetype *__restrict__ dstArchetype, Archetype *__restrict__ srcArchetype, uint32_t dstIndex, uint32_t srcIndex){
+#ifdef DEBUG
+    if(dstArchetype == srcArchetype)
+        throw std::invalid_argument("moveComponentValues(): unexpected same archetype");
+#endif
     Entity ret;
     uint16_t const * const srcTypeIndex = srcArchetype->realIndecies.data();
     uint32_t const * const srcTypeOffset = srcArchetype->offsets.data();
@@ -432,11 +452,15 @@ Entity Archetype::moveComponentValues(Archetype *dstArchetype, uint32_t dstIndex
     return ret;
 }
 void Archetype::inArchetypeCopy(
-    void *const  srcChunk, 
-    void *const  dstChunk, 
+    void *__restrict__ srcChunk, 
+    void *__restrict__ dstChunk, 
     const uint32_t srcInChunkIndex, 
     const uint32_t dstInChunkIndex
 ){
+#ifdef DEBUG
+    if(srcChunk == dstChunk)
+        throw std::invalid_argument("inArchetypeCopy(): unexpected same chunk");
+#endif
     for(uint32_t i=0;i < this->nonZeroSizedTypesCount();i++) {
         uint8_t const * const src =
                 (uint8_t*)srcChunk +
@@ -449,7 +473,28 @@ void Archetype::inArchetypeCopy(
         memcpy(dst,src,this->sizeOfs[i]);
     }
 }
-void Archetype::callComponentDestructor(uint32_t entityIndex){
+void Archetype::inArchetypeCopy(
+    void *chunk, 
+    const uint32_t srcInChunkIndex, 
+    const uint32_t dstInChunkIndex
+){
+#ifdef DEBUG
+    if(srcInChunkIndex == dstInChunkIndex)
+        throw std::invalid_argument("inArchetypeCopy(): unexpected same entity");
+#endif
+    for(uint32_t i=0;i < this->nonZeroSizedTypesCount();i++) {
+        uint8_t const * const src =
+                (uint8_t*)chunk +
+                this->offsets[i] +
+                (this->sizeOfs[i] * srcInChunkIndex);
+        uint8_t * const dst =
+                (uint8_t*)chunk +
+                this->offsets[i] +
+                (this->sizeOfs[i] * dstInChunkIndex);
+        memcpy(dst,src,this->sizeOfs[i]);
+    }
+}
+void Archetype::callComponentDestructor(uint32_t entityIndex) {
 
     uint16_t const * const typeIndex = this->realIndecies.data();
     uint32_t const * const typeOffset = this->offsets.data();
@@ -464,8 +509,7 @@ void Archetype::callComponentDestructor(uint32_t entityIndex){
             info.destructor(chunk + typeOffset[cIndex] + typeSize[cIndex] * srcInChunkIndex);
     }
 }
-void Archetype::callComponentConstructor(uint32_t entityIndex, Entity e)
-{
+void Archetype::callComponentConstructor(uint32_t entityIndex, Entity entity) {
     uint16_t const * const typeIndex = this->realIndecies.data();
     uint32_t const * const typeOffset = this->offsets.data();
     uint16_t const * const typeSize = this->sizeOfs.data();
@@ -473,7 +517,7 @@ void Archetype::callComponentConstructor(uint32_t entityIndex, Entity e)
     const uint32_t srcInChunkIndex = this->getInChunkIndex(entityIndex);
     uint16_t count = this->nonZeroSizedTypesCount();
 
-    ((Entity*)(chunk+typeOffset[0]))[srcInChunkIndex] = e;
+    ((Entity*)(chunk+typeOffset[0]))[srcInChunkIndex] = entity;
 
     for(uint16_t cIndex = 1;cIndex < count;++cIndex) {
         auto& info = getTypeInfo(typeIndex[cIndex]);
