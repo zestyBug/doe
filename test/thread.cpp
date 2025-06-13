@@ -4,13 +4,12 @@
 #include "ECS/EntityComponentManager.hpp"
 #include "ECS/ChunkJobFunction.hpp"
 #include <unistd.h>
+#include "cutil/mini_test.hpp"
 
-static int test_num=1;
-#define TEST_SUBJECT_BEGIN() { bool TEST_RESULT=false;
-#define TEST_SUBJECT_END() printf("%i: %s %s:%d\n",test_num++,(!!(TEST_RESULT))?"✔":"✘",__FILE__,__LINE__);}
 
 ECS::JobFilter f1, f2, f3;
 std::atomic<uint32_t> counters[3];
+ECS::EntityComponentManager *ecm_ptr;
 
 struct DummyJob1 :  ECS::ChunkJob
 {
@@ -57,7 +56,35 @@ struct DummyJob3 :  ECS::ChunkJob
     }
 };
 
-void Test()
+
+DummyJob1 j1;
+DummyJob2 j2;
+DummyJob3 j3;
+
+class Test
+{
+public:
+    static void Test1();
+};
+
+
+CLASS_TEST(Test,Test1) {
+    ECS::DependencyManager dm{};
+    dm.ScheduleJob(&j1);
+    dm.ScheduleJob(&j2);
+    dm.ScheduleJob(&j3);
+    void* ctx = ECS::ChunkJobFunction::createContext(dm.registeredJobs,ecm_ptr->archetypes,0);
+    {
+        ECS::ThreadPool tp{8};
+        tp.submit(ECS::ChunkJobFunction::function,ctx);
+        tp.waitInloop();
+    }
+    EXPECT_EQ(counters[0].load(),6u);
+    EXPECT_EQ(counters[1].load(),4u);
+    EXPECT_EQ(counters[2].load(),2u);
+    ECS::ChunkJobFunction::destroyContext(ctx);
+}
+int main()
 {
     ECS::TypeID types1[2],types2[2],types3[2];
 
@@ -126,41 +153,8 @@ void Test()
     ecm.createEntity(ECS::componentTypes<float,int,double>());
     ecm.createEntity(ECS::componentTypes<float,int,double>());
     ecm.createEntity(ECS::componentTypes<float,int,double>());
-
-
-
-    ECS::DependencyManager dm{};
-    DummyJob1 j1;
-    DummyJob2 j2;
-    DummyJob3 j3;
-
-    dm.ScheduleJob(&j1);
-    dm.ScheduleJob(&j2);
-    dm.ScheduleJob(&j3);
-
-    void* ctx = ECS::ChunkJobFunction::createContext(dm.registeredJobs,ecm.archetypes,0);
-    {
-        ECS::ThreadPool tp{8};
-        tp.submit(ECS::ChunkJobFunction::function,ctx);
-        tp.waitInloop();
-    }
-    TEST_SUBJECT_BEGIN()
-    TEST_RESULT = counters[0].load() == 6;
-    TEST_SUBJECT_END()
-
-    TEST_SUBJECT_BEGIN()
-    TEST_RESULT = counters[1].load() == 4;
-    TEST_SUBJECT_END()
-
-    TEST_SUBJECT_BEGIN()
-    TEST_RESULT = counters[2].load() == 2;
-    TEST_SUBJECT_END()
-
-    ECS::ChunkJobFunction::destroyContext(ctx);
-
-}
-int main(int argc, char const *argv[])
-{
-    Test();
+    ecm_ptr = &ecm;
+    
+    mtest::run_all();
     return 0;
 }

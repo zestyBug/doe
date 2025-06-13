@@ -4,35 +4,32 @@
 #include "cutil/basics.hpp"
 #include "ECS/defs.hpp"
 #include "ECS/DependencyManager.hpp"
+#include "ECS/EntityComponentManager.hpp"
 #include "entt/advanced_array.hpp"
 
 namespace ECS
 {
 
-struct SystemState {
-    DependencyManager jobs{};
-    version_t globalSystemVersion;
-};
+struct SystemState;
 
 struct System {
-    version_t systemVersion = 0;
-    virtual ~System() {};
-    virtual void onStart(SystemState&){};
-    virtual void onUpdate(SystemState&){};
-    virtual void onStop(SystemState&){};
+    const char* name="System";
+    void (*onUpdate)(System*,SystemState&)=nullptr;
+    virtual ~System() {}
 };
 
-struct SystemManager
+struct SystemManager final
 {
-    advanced_array::registry<std::unique_ptr<System>> systems;
-    
-    // todo: something causes compiler to hang for long time, when i move this functions to src file!
-
-    void startAll(SystemState& state);
-    void stopAll(SystemState& state);
-    void updateAll(SystemState& state);
+    advanced_array::registry<unique_ptr<System,allocator<System>>> systems;
 };
 
+
+struct SystemState final {
+    void *context=nullptr;
+    SystemManager manager{};
+    DependencyManager jobs{};
+    EntityComponentManager entities{};
+};
 
 
 } // namespace ECS

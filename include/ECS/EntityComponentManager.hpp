@@ -11,14 +11,14 @@
 #include "cutil/unique_ptr.hpp"
 #include "cutil/map.hpp"
 
-void Test();
+class Test;
 
 namespace ECS
 {
     // the class that holds all entities
     class EntityComponentManager final {
         friend class ChunkJobFunction;
-        friend void ::Test();
+        friend class ::Test;
     protected:
         // array of entities value,
         // contains index of it archetype and it index in that archetype
@@ -82,6 +82,7 @@ namespace ECS
         void Helper_moveEntityToNewArchetype(Archetype *__restrict__ newArchetype,Archetype *__restrict__srcArchetype,entity_t *srcValue) noexcept;
 
 
+        void updateVersion() { ECS::updateVersion(this->globalVersion); }
     /*
      * Only Public function verfy inputs validity.
      */
@@ -95,14 +96,16 @@ namespace ECS
         ~EntityComponentManager(){
         }
 
+        version_t getVersion() const { return this->globalVersion; }
+
         template<typename ... Types>
-        void iterate(void(*func)(span<void*>,uint32_t)) {
+        void iterate(void(*func)(const_span<void*>,uint32_t)) {
             const_span<TypeID> types = componentTypesRaw<Types...>();
             iterate_helper(func,types);
         }
-        void iterate(void(*func)(span<void*>,uint32_t)) {
+        void iterate(void(*func)(const_span<void*>,uint32_t)) {
             std::array<TypeID,1> types;
-            types[0] = getTypeInfo<Entity>().value;
+            types[0] = 0;// getTypeID<Entity>()
             iterate_helper(func,types);
         }
 
@@ -208,7 +211,7 @@ namespace ECS
          * @param func a funtion pointer reciving the components pointers and count of entities in the componenets
          * @param types the components asked for iteration, can be empty list also can include 'Entity' as component
          */
-        void iterate_helper(void(*func)(span<void*>,uint32_t),const_span<TypeID> types = const_span<TypeID>()) {
+        void iterate_helper(void(*func)(const_span<void*>,uint32_t),const_span<TypeID> types = const_span<TypeID>()) {
             size_t offset_buffer[types.size()];
             void* arg_buffer[types.size()];
 

@@ -74,6 +74,11 @@ namespace mtest {
 } // namespace mtest
 
 // Macro to define test
+#define CLASS_TEST(class,name) \
+    static mtest::Register reg_##class##name(#class "::" #name, class::name); \
+    void class::name()
+
+// Macro to define test
 #define TEST(name) \
     void name(); \
     static mtest::Register reg_##name(#name, name); \

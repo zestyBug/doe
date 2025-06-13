@@ -56,7 +56,13 @@ struct DependencyManager {
 
     static constexpr int32_t MaxJobCount = 0xFFFFF;
 
-
+    void clear(){
+        this->registeredJobs.clear();
+        memset(lastWriteJob.data(),0,lastWriteJob.size()*sizeof(ChunkJobHandle));
+        for(auto&rj :lastReadJobs){
+            rj.clear();
+        }
+    }
     void dummyExecute();
 
     // Schedules a job with dependencies

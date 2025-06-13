@@ -142,13 +142,17 @@ namespace ECS
 
     [[nodiscard]] comp_info _new_id(uint32_t size, rttiFP destructor, rttiFP constructor);
 
+    /**
+     * Following functions are not part of run-time core.
+     */
+
+
     // actuall core of compile-time-type-information
     // returns real index of that type
     template<typename T>
     [[nodiscard]] uint16_t __type_id__()
     {
-        if(sizeof(T) > 0x7FFF)
-            throw std::length_error("__type_id__(): too large entity");
+        static_assert(sizeof(T) <= 0x7000);
         static const comp_info value = _new_id(
             sizeof(T),
             sizeof(T) > 0 ? [](void* x){static_cast<T*>(x)->~T();} : (rttiFP)nullptr,

@@ -5,7 +5,7 @@
 namespace ECS {
 
 static_array<comp_info,32> rtti;
-const comp_info &__FOR_ZERO_INDEXING_PURPOSE__= getTypeInfo<ECS::Entity>();
+static const comp_info &__FOR_ZERO_INDEXING_PURPOSE__= getTypeInfo<ECS::Entity>();
 
 comp_info _new_id(uint32_t size, rttiFP destructor, rttiFP constructor)
 {

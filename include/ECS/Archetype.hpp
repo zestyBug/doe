@@ -8,7 +8,7 @@
 #include "cutil/basics.hpp"
 #include "cutil/unique_ptr.hpp"
 
-void Test();
+class Test;
 
 namespace ECS
 {
@@ -53,7 +53,7 @@ namespace ECS
 
         friend class ChunkJobFunction;
         friend class EntityComponentManager;
-        friend void ::Test();
+        friend class ::Test;
         // maximum number of entities that can be fit into a single chunk
         uint32_t chunkCapacity = 0;
         uint32_t lastChunkEntityCount = 0;

@@ -384,7 +384,7 @@ void EntityComponentManager::Helper_allocateInArchetype(Archetype *newArchetype,
 }
 void EntityComponentManager::Helper_allocateInArchetype(const_span<TypeID> componentTypeSet,entity_t *srcValue, Entity entity) noexcept {
     TypeID componentTypeSetBuffer[1 + componentTypeSet.size()];
-    componentTypeSetBuffer[0] = getTypeInfo<Entity>().value;
+    componentTypeSetBuffer[0] = 0;// getTypeID<Entity>()
     memcpy(componentTypeSetBuffer+1,componentTypeSet.data(),componentTypeSet.size_bytes());
     Archetype *newArchetype = this->getOrCreateArchetype({componentTypeSetBuffer,1 + componentTypeSet.size()});
     const uint32_t newIndex = newArchetype->createEntity(globalVersion);

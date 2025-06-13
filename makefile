@@ -24,14 +24,9 @@ testDir=test
 
 
 headerCutil= \
-	$(cutilDir)/advancedArray.h \
-	$(cutilDir)/advancedQueue.hpp \
-	$(cutilDir)/aStack.hpp \
 	$(cutilDir)/bitset.hpp \
-	$(cutilDir)/gc_ptr.hpp \
 	$(cutilDir)/HashHelper.hpp \
 	$(cutilDir)/prototype.hpp \
-	$(cutilDir)/QueueQueue.hpp \
 	$(cutilDir)/range.hpp \
 	$(cutilDir)/semaphore.hpp \
 	$(cutilDir)/small_vector.hpp \
@@ -41,6 +36,7 @@ headerCutil= \
 	$(cutilDir)/unique_ptr.hpp \
 	$(cutilDir)/basics.hpp \
 	$(cutilDir)/set.hpp \
+	$(cutilDir)/mini_test.hpp \
 	external/entt/advanced_array.hpp
 
 headerInclude=$(includeDir)/ECS/Archetype.hpp \
@@ -116,6 +112,10 @@ $(OBJ_DEBUG)/test/threadpool.o: $(testDir)/threadpool.cpp include/ThreadPool.hpp
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 
+$(OBJ_DEBUG)/src/system/linux_init.o: src/system/linux_init.cpp $(headerInclude) $(headerCutil)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
+
 $(OBJ_DEBUG)/test/version.o: $(testDir)/version.cpp $(headerInclude) $(headerCutil)
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
@@ -142,7 +142,7 @@ $(BIN_DEBUG)/version: $(OBJ_DEBUG)/test/version.o $(DOBJS)
 	mkdir -p $(@D)
 	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
-$(BIN_DEBUG)/linux: $(OBJ_DEBUG)/src/os/main_linux.o $(DOBJS)
+$(BIN_DEBUG)/linux: $(OBJ_DEBUG)/src/os/main_linux.o $(OBJ_DEBUG)/src/system/linux_init.o $(DOBJS)
 	mkdir -p $(@D)
 	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
