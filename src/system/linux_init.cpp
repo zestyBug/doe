@@ -9,8 +9,10 @@ struct windows_system : ECS::System {
     }
     void updateCB(ECS::SystemState&){
         count++;
+    #ifdef VERBOSE
         if((count & 0xFFFFF) == 0)
             printf("windows_system::onUpdate(): %ul\n",count);
+    #endif
     }
 };
 void add_initial_systems(ECS::SystemState &ss){

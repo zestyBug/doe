@@ -162,7 +162,10 @@ void ECS::ChunkJobFunction::callExecution(
                 countBuffer[(chunkIndex+1) == chunkCount]
             );
         }catch(const std::exception &e){
+            /// TODO: what to do!?
+        #ifdef VERBOSE
             printf("exception while executing %s: %s\n",job->context->name(),e.what());
+        #endif
             break;
         }
 

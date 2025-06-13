@@ -1,4 +1,4 @@
-#include "advanced_array/advanced_array.hpp"
+#include "ENTT/advanced_array.hpp"
 #include <iostream>
 #include <stdlib.h>
 #include <time.h>
@@ -136,8 +136,10 @@ int main(int argc, char const *argv[])
         auto view = reg.view();
         for(auto &ent : view)
         {
+        #ifdef VERBOSE
             test& val = view.get(ent);
             printf("%7X %p\n",advanced_array::to_integral(ent),&val);
+        #endif
             reg.destroy(ent);
         }
     }

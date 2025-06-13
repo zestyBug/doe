@@ -91,8 +91,10 @@ TEST(Test40) {
 }
 // iteration
 TEST(Test50) {
-    reg->iterate<int>([](span<void*>,uint32_t count){
+    reg->iterate<int>([](const_span<void*>,uint32_t count){
+    #ifdef VERBOSE
         printf("int count: %u\n",count);
+    #endif
     });
 }
 

@@ -5,7 +5,9 @@ using namespace ECS;
 
 void DependencyManager::dummyExecute(){
     for(auto&j:registeredJobs){
+    #ifdef VERBOSE
         printf("Job: \"%s\"\n",j.context->name());
+    #endif
         j.context->execute(span<void*>{},0);
     }
 }

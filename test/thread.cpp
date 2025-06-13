@@ -14,7 +14,9 @@ ECS::EntityComponentManager *ecm_ptr;
 struct DummyJob1 :  ECS::ChunkJob
 {
     void execute(span<void*> coms,uint32_t count){
+    #ifdef VERBOSE
         printf("thread %lld: dummmy job1 (CC: %u,EC: %u)\n", std::this_thread::get_id(),coms.size(),count);
+    #endif
         std::this_thread::sleep_for(std::chrono::microseconds(1));
         counters[0].fetch_add(1,std::memory_order_relaxed);
     }
@@ -29,7 +31,9 @@ struct DummyJob1 :  ECS::ChunkJob
 struct DummyJob2 :  ECS::ChunkJob
 {
     void execute(span<void*> coms,uint32_t count){
+    #ifdef VERBOSE
         printf("thread %lld: dummmy job2 (CC: %u,EC: %u)\n", std::this_thread::get_id(),coms.size(),count);
+    #endif
         std::this_thread::sleep_for(std::chrono::microseconds(1));
         counters[1].fetch_add(1,std::memory_order_relaxed);
     }
@@ -44,7 +48,9 @@ struct DummyJob2 :  ECS::ChunkJob
 struct DummyJob3 :  ECS::ChunkJob
 {
     void execute(span<void*> coms,uint32_t count){
+    #ifdef VERBOSE
         printf("thread %lld: dummmy job3 (CC: %u,EC: %u)\n", std::this_thread::get_id(),coms.size(),count);
+    #endif
         std::this_thread::sleep_for(std::chrono::microseconds(1));
         counters[2].fetch_add(1,std::memory_order_relaxed);
     }

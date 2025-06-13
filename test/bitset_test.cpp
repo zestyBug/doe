@@ -1,16 +1,22 @@
 #include "cutil/bitset.hpp"
 #include <stdio.h>
+#include "cutil/mini_test.hpp"
 
-int main(int argc, char const *argv[])
-{
+TEST(Test1) {
     bitset_static<10> set1;
     bitset_static<10> set2;
     set2.set(15,1);
     set1.set(15,1);
-    for(bool bit:set2){
+#ifdef VERBOSE
+    for(bool bit:set2)
         printf("%s",bit?"1":"0");
-    }
+#endif
 
-    printf("\n1 ?== 2 : %i",set1==set2);
+    EXPECT_EQ(set1,set2);
+}
+
+int main(int argc, char const *argv[])
+{
+    mtest::run_all();
     return 0;
 }
