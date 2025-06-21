@@ -488,7 +488,7 @@ static void inputMethodInstantiateCallback(Display* display,
         XSetIMValues(_glfw.x11.im, XNDestroyCallback, &callback, NULL);
 
         for (_GLFWwindow* window = _glfw.windowListHead;  window;  window = window->next)
-            _glfwCreateInputContextX11(window);
+            _glfwCreateInputContext(window);
     }
 }
 
@@ -516,7 +516,7 @@ static void detectEWMH(void)
     // First we read the _NET_SUPPORTING_WM_CHECK property on the root window
 
     Window* windowFromRoot = NULL;
-    if (!_glfwGetWindowPropertyX11(_glfw.x11.root,
+    if (!_glfwGetWindowProperty(_glfw.x11.root,
                                    _glfw.x11.NET_SUPPORTING_WM_CHECK,
                                    XA_WINDOW,
                                    (unsigned char**) &windowFromRoot))
@@ -524,13 +524,13 @@ static void detectEWMH(void)
         return;
     }
 
-    _glfwGrabErrorHandlerX11();
+    _glfwGrabErrorHandler();
 
     // If it exists, it should be the XID of a top-level window
     // Then we look for the same property on that window
 
     Window* windowFromChild = NULL;
-    if (!_glfwGetWindowPropertyX11(*windowFromRoot,
+    if (!_glfwGetWindowProperty(*windowFromRoot,
                                    _glfw.x11.NET_SUPPORTING_WM_CHECK,
                                    XA_WINDOW,
                                    (unsigned char**) &windowFromChild))
@@ -539,7 +539,7 @@ static void detectEWMH(void)
         return;
     }
 
-    _glfwReleaseErrorHandlerX11();
+    _glfwReleaseErrorHandler();
 
     // If the property exists, it should contain the XID of the window
 
@@ -560,7 +560,7 @@ static void detectEWMH(void)
 
     Atom* supportedAtoms = NULL;
     const unsigned long atomCount =
-        _glfwGetWindowPropertyX11(_glfw.x11.root,
+        _glfwGetWindowProperty(_glfw.x11.root,
                                   _glfw.x11.NET_SUPPORTED,
                                   XA_ATOM,
                                   (unsigned char**) &supportedAtoms);
@@ -1028,7 +1028,7 @@ static Cursor createHiddenCursor(void)
 {
     unsigned char pixels[16 * 16 * 4] = { 0 };
     GLFWimage image = { 16, 16, pixels };
-    return _glfwCreateNativeCursorX11(&image, 0, 0);
+    return _glfwCreateNativeCursor(&image, 0, 0);
 }
 
 // Create a helper window for IPC
@@ -1094,7 +1094,7 @@ static int errorHandler(Display *display, XErrorEvent* event)
 
 // Sets the X error handler callback
 //
-void _glfwGrabErrorHandlerX11(void)
+void _glfwGrabErrorHandler(void)
 {
     assert(_glfw.x11.errorHandler == NULL);
     _glfw.x11.errorCode = Success;
@@ -1103,7 +1103,7 @@ void _glfwGrabErrorHandlerX11(void)
 
 // Clears the X error handler callback
 //
-void _glfwReleaseErrorHandlerX11(void)
+void _glfwReleaseErrorHandler(void)
 {
     // Synchronize to make sure all commands are processed
     XSync(_glfw.x11.display, False);
@@ -1124,7 +1124,7 @@ void _glfwInputErrorX11(int error, const char* message)
 
 // Creates a native cursor object from the specified image and hotspot
 //
-Cursor _glfwCreateNativeCursorX11(const GLFWimage* image, int xhot, int yhot)
+Cursor _glfwCreateNativeCursor(const GLFWimage* image, int xhot, int yhot)
 {
     Cursor cursor;
 
@@ -1162,84 +1162,11 @@ Cursor _glfwCreateNativeCursorX11(const GLFWimage* image, int xhot, int yhot)
 //////                       GLFW platform API                      //////
 //////////////////////////////////////////////////////////////////////////
 
-GLFWbool _glfwConnectX11(int platformID, _GLFWplatform* platform)
+GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
 {
     const _GLFWplatform x11 =
     {
         .platformID = GLFW_PLATFORM_X11,
-        .init = _glfwInitX11,
-        .terminate = _glfwTerminateX11,
-        .getCursorPos = _glfwGetCursorPosX11,
-        .setCursorPos = _glfwSetCursorPosX11,
-        .setCursorMode = _glfwSetCursorModeX11,
-        .setRawMouseMotion = _glfwSetRawMouseMotionX11,
-        .rawMouseMotionSupported = _glfwRawMouseMotionSupportedX11,
-        .createCursor = _glfwCreateCursorX11,
-        .createStandardCursor = _glfwCreateStandardCursorX11,
-        .destroyCursor = _glfwDestroyCursorX11,
-        .setCursor = _glfwSetCursorX11,
-        .getScancodeName = _glfwGetScancodeNameX11,
-        .getKeyScancode = _glfwGetKeyScancodeX11,
-        .setClipboardString = _glfwSetClipboardStringX11,
-        .getClipboardString = _glfwGetClipboardStringX11,
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
-        .initJoysticks = _glfwInitJoysticksLinux,
-        .terminateJoysticks = _glfwTerminateJoysticksLinux,
-        .pollJoystick = _glfwPollJoystickLinux,
-        .getMappingName = _glfwGetMappingNameLinux,
-        .updateGamepadGUID = _glfwUpdateGamepadGUIDLinux,
-#else
-        .initJoysticks = _glfwInitJoysticksNull,
-        .terminateJoysticks = _glfwTerminateJoysticksNull,
-        .pollJoystick = _glfwPollJoystickNull,
-        .getMappingName = _glfwGetMappingNameNull,
-        .updateGamepadGUID = _glfwUpdateGamepadGUIDNull,
-#endif
-        .freeMonitor = _glfwFreeMonitorX11,
-        .getMonitorPos = _glfwGetMonitorPosX11,
-        .getMonitorContentScale = _glfwGetMonitorContentScaleX11,
-        .getMonitorWorkarea = _glfwGetMonitorWorkareaX11,
-        .getVideoModes = _glfwGetVideoModesX11,
-        .getVideoMode = _glfwGetVideoModeX11,
-        .getGammaRamp = _glfwGetGammaRampX11,
-        .setGammaRamp = _glfwSetGammaRampX11,
-        .createWindow = _glfwCreateWindowX11,
-        .destroyWindow = _glfwDestroyWindowX11,
-        .setWindowTitle = _glfwSetWindowTitleX11,
-        .setWindowIcon = _glfwSetWindowIconX11,
-        .getWindowPos = _glfwGetWindowPosX11,
-        .setWindowPos = _glfwSetWindowPosX11,
-        .getWindowSize = _glfwGetWindowSizeX11,
-        .setWindowSize = _glfwSetWindowSizeX11,
-        .setWindowSizeLimits = _glfwSetWindowSizeLimitsX11,
-        .setWindowAspectRatio = _glfwSetWindowAspectRatioX11,
-        .getFramebufferSize = _glfwGetFramebufferSizeX11,
-        .getWindowFrameSize = _glfwGetWindowFrameSizeX11,
-        .getWindowContentScale = _glfwGetWindowContentScaleX11,
-        .iconifyWindow = _glfwIconifyWindowX11,
-        .restoreWindow = _glfwRestoreWindowX11,
-        .maximizeWindow = _glfwMaximizeWindowX11,
-        .showWindow = _glfwShowWindowX11,
-        .hideWindow = _glfwHideWindowX11,
-        .requestWindowAttention = _glfwRequestWindowAttentionX11,
-        .focusWindow = _glfwFocusWindowX11,
-        .setWindowMonitor = _glfwSetWindowMonitorX11,
-        .windowFocused = _glfwWindowFocusedX11,
-        .windowIconified = _glfwWindowIconifiedX11,
-        .windowVisible = _glfwWindowVisibleX11,
-        .windowMaximized = _glfwWindowMaximizedX11,
-        .windowHovered = _glfwWindowHoveredX11,
-        .framebufferTransparent = _glfwFramebufferTransparentX11,
-        .getWindowOpacity = _glfwGetWindowOpacityX11,
-        .setWindowResizable = _glfwSetWindowResizableX11,
-        .setWindowDecorated = _glfwSetWindowDecoratedX11,
-        .setWindowFloating = _glfwSetWindowFloatingX11,
-        .setWindowOpacity = _glfwSetWindowOpacityX11,
-        .setWindowMousePassthrough = _glfwSetWindowMousePassthroughX11,
-        .pollEvents = _glfwPollEventsX11,
-        .waitEvents = _glfwWaitEventsX11,
-        .waitEventsTimeout = _glfwWaitEventsTimeoutX11,
-        .postEmptyEvent = _glfwPostEmptyEventX11
     };
 
     // HACK: If the application has left the locale as "C" then both wide
@@ -1311,7 +1238,7 @@ GLFWbool _glfwConnectX11(int platformID, _GLFWplatform* platform)
     return GLFW_TRUE;
 }
 
-int _glfwInitX11(void)
+int _glfwInitOS(void)
 {
     _glfw.x11.xlib.AllocClassHint = (PFN_XAllocClassHint)
         _glfwPlatformGetModuleSymbol(_glfw.x11.xlib.handle, "XAllocClassHint");
@@ -1541,18 +1468,18 @@ int _glfwInitX11(void)
                                        NULL);
     }
 
-    _glfwPollMonitorsX11();
+    _glfwPollMonitors();
     return GLFW_TRUE;
 }
 
-void _glfwTerminateX11(void)
+void _glfwTerminateOS(void)
 {
     if (_glfw.x11.helperWindowHandle)
     {
         if (XGetSelectionOwner(_glfw.x11.display, _glfw.x11.CLIPBOARD) ==
             _glfw.x11.helperWindowHandle)
         {
-            _glfwPushSelectionToManagerX11();
+            _glfwPushSelectionToManager();
         }
 
         XDestroyWindow(_glfw.x11.display, _glfw.x11.helperWindowHandle);

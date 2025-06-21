@@ -39,16 +39,12 @@ DOBJS_GLFW= \
     $(OBJ_DEBUG)/src/glfw/context.o \
 	$(OBJ_DEBUG)/src/glfw/init.o \
 	$(OBJ_DEBUG)/src/glfw/input.o \
-	$(OBJ_DEBUG)/src/glfw/linux_joystick.o \
 	$(OBJ_DEBUG)/src/glfw/monitor.o \
 	$(OBJ_DEBUG)/src/glfw/platform.o \
 	$(OBJ_DEBUG)/src/glfw/posix_module.o \
 	$(OBJ_DEBUG)/src/glfw/posix_poll.o \
 	$(OBJ_DEBUG)/src/glfw/posix_time.o \
 	$(OBJ_DEBUG)/src/glfw/window.o \
-	$(OBJ_DEBUG)/src/glfw/wl_init.o \
-	$(OBJ_DEBUG)/src/glfw/wl_monitor.o \
-	$(OBJ_DEBUG)/src/glfw/wl_window.o \
 	$(OBJ_DEBUG)/src/glfw/x11_init.o \
 	$(OBJ_DEBUG)/src/glfw/x11_monitor.o \
 	$(OBJ_DEBUG)/src/glfw/x11_window.o \

@@ -94,10 +94,6 @@
  #define GLFW_COCOA_LIBRARY_JOYSTICK_STATE
 #endif
 
-#if (defined(_GLFW_X11) || defined(_GLFW_WAYLAND)) && defined(__linux__)
- #define GLFW_BUILD_LINUX_JOYSTICK
-#endif
-
 #if defined(GLFW_BUILD_LINUX_JOYSTICK)
  #include "linux_joystick.h"
 #else

@@ -293,78 +293,79 @@ struct _GLFWjoystick
 
 // Platform API structure
 //
+
+
+
+// init
+GLFWbool _glfwInitOS(void);
+void _glfwTerminateOS(void);
+void _glfwGetCursorPosOS(_GLFWwindow*,double*,double*);
+void _glfwSetCursorPosOS(_GLFWwindow*,double,double);
+void _glfwSetCursorModeOS(_GLFWwindow*,int);
+void _glfwSetRawMouseMotionOS(_GLFWwindow*,GLFWbool);
+GLFWbool _glfwRawMouseMotionSupportedOS(void);
+GLFWbool _glfwCreateCursorOS(_GLFWcursor*,const GLFWimage*,int,int);
+GLFWbool _glfwCreateStandardCursorOS(_GLFWcursor*,int);
+void _glfwDestroyCursorOS(_GLFWcursor*);
+void _glfwSetCursorOS(_GLFWwindow*,_GLFWcursor*);
+const char* _glfwGetScancodeNameOS(int);
+int _glfwgetKeyScancodeOS(int);
+void _glfwsetClipboardStringOS(const char*);
+const char* _glfwGetClipboardStringOS(void);
+GLFWbool _glfwInitJoysticksOS(void);
+void _glfwTerminateJoysticksOS(void);
+GLFWbool _glfwPollJoystickOS(_GLFWjoystick*,int);
+const char* _glfwGetMappingNameOS(void);
+void _glfwUpdateGamepadGUIDOS(char*);
+void _glfwFreeMonitorOS(_GLFWmonitor*);
+void _glfwGetMonitorPosOS(_GLFWmonitor*,int*,int*);
+void _glfwGetMonitorContentScaleOS(_GLFWmonitor*,float*,float*);
+void _glfwGetMonitorWorkareaOS(_GLFWmonitor*,int*,int*,int*,int*);
+GLFWvidmode* _glfwGetVideoModesOS(_GLFWmonitor*,int*);
+GLFWbool _glfwGetVideoModeOS(_GLFWmonitor*,GLFWvidmode*);
+GLFWbool _glfwGetGammaRampOS(_GLFWmonitor*,GLFWgammaramp*);
+void _glfwSetGammaRampOS(_GLFWmonitor*,const GLFWgammaramp*);
+GLFWbool _glfwCreateWindowOS(_GLFWwindow*,const _GLFWwndconfig*);
+void _glfwDestroyWindowOS(_GLFWwindow*);
+void _glfwSetWindowTitleOS(_GLFWwindow*,const char*);
+void _glfwSetWindowIconOS(_GLFWwindow*,int,const GLFWimage*);
+void _glfwGetWindowPosOS(_GLFWwindow*,int*,int*);
+void _glfwSetWindowPosOS(_GLFWwindow*,int,int);
+void _glfwGetWindowSizeOS(_GLFWwindow*,int*,int*);
+void _glfwSetWindowSizeOS(_GLFWwindow*,int,int);
+void _glfwSetWindowSizeLimitsOS(_GLFWwindow*,int,int,int,int);
+void _glfwSetWindowAspectRatioOS(_GLFWwindow*,int,int);
+void _glfwGetFramebufferSizeOS(_GLFWwindow*,int*,int*);
+void _glfwGetWindowFrameSizeOS(_GLFWwindow*,int*,int*,int*,int*);
+void _glfwGetWindowContentScaleOS(_GLFWwindow*,float*,float*);
+void _glfwIconifyWindowOS(_GLFWwindow*);
+void _glfwRestoreWindowOS(_GLFWwindow*);
+void _glfwMaximizeWindowOS(_GLFWwindow*);
+void _glfwShowWindowOS(_GLFWwindow*);
+void _glfwHideWindowOS(_GLFWwindow*);
+void _glfwRequestWindowAttentionOS(_GLFWwindow*);
+void _glfwFocusWindowOS(_GLFWwindow*);
+void _glfwSetWindowMonitorOS(_GLFWwindow*,_GLFWmonitor*,int,int,int,int,int);
+GLFWbool _glfwWindowFocusedOS(_GLFWwindow*);
+GLFWbool _glfwWindowIconifiedOS(_GLFWwindow*);
+GLFWbool _glfwWindowVisibleOS(_GLFWwindow*);
+GLFWbool _glfwWindowMaximizedOS(_GLFWwindow*);
+GLFWbool _glfwWindowHoveredOS(_GLFWwindow*);
+GLFWbool _glfwFramebufferTransparentOS(_GLFWwindow*);
+float _glfwGetWindowOpacityOS(_GLFWwindow*);
+void _glfwSetWindowResizableOS(_GLFWwindow*,GLFWbool);
+void _glfwSetWindowDecoratedOS(_GLFWwindow*,GLFWbool);
+void _glfwSetWindowFloatingOS(_GLFWwindow*,GLFWbool);
+void _glfwSetWindowOpacityOS(_GLFWwindow*,float);
+void _glfwSetWindowMousePassthroughOS(_GLFWwindow*,GLFWbool);
+void _glfwPollEventsOS(void);
+void _glfwWaitEventsOS(void);
+void _glfwWaitEventsTimeoutOS(double);
+void _glfwPostEmptyEventOS(void);
+
 struct _GLFWplatform
 {
     int platformID;
-    // init
-    GLFWbool (*init)(void);
-    void (*terminate)(void);
-    // input
-    void (*getCursorPos)(_GLFWwindow*,double*,double*);
-    void (*setCursorPos)(_GLFWwindow*,double,double);
-    void (*setCursorMode)(_GLFWwindow*,int);
-    void (*setRawMouseMotion)(_GLFWwindow*,GLFWbool);
-    GLFWbool (*rawMouseMotionSupported)(void);
-    GLFWbool (*createCursor)(_GLFWcursor*,const GLFWimage*,int,int);
-    GLFWbool (*createStandardCursor)(_GLFWcursor*,int);
-    void (*destroyCursor)(_GLFWcursor*);
-    void (*setCursor)(_GLFWwindow*,_GLFWcursor*);
-    const char* (*getScancodeName)(int);
-    int (*getKeyScancode)(int);
-    void (*setClipboardString)(const char*);
-    const char* (*getClipboardString)(void);
-    GLFWbool (*initJoysticks)(void);
-    void (*terminateJoysticks)(void);
-    GLFWbool (*pollJoystick)(_GLFWjoystick*,int);
-    const char* (*getMappingName)(void);
-    void (*updateGamepadGUID)(char*);
-    // monitor
-    void (*freeMonitor)(_GLFWmonitor*);
-    void (*getMonitorPos)(_GLFWmonitor*,int*,int*);
-    void (*getMonitorContentScale)(_GLFWmonitor*,float*,float*);
-    void (*getMonitorWorkarea)(_GLFWmonitor*,int*,int*,int*,int*);
-    GLFWvidmode* (*getVideoModes)(_GLFWmonitor*,int*);
-    GLFWbool (*getVideoMode)(_GLFWmonitor*,GLFWvidmode*);
-    GLFWbool (*getGammaRamp)(_GLFWmonitor*,GLFWgammaramp*);
-    void (*setGammaRamp)(_GLFWmonitor*,const GLFWgammaramp*);
-    // window
-    GLFWbool (*createWindow)(_GLFWwindow*,const _GLFWwndconfig*);
-    void (*destroyWindow)(_GLFWwindow*);
-    void (*setWindowTitle)(_GLFWwindow*,const char*);
-    void (*setWindowIcon)(_GLFWwindow*,int,const GLFWimage*);
-    void (*getWindowPos)(_GLFWwindow*,int*,int*);
-    void (*setWindowPos)(_GLFWwindow*,int,int);
-    void (*getWindowSize)(_GLFWwindow*,int*,int*);
-    void (*setWindowSize)(_GLFWwindow*,int,int);
-    void (*setWindowSizeLimits)(_GLFWwindow*,int,int,int,int);
-    void (*setWindowAspectRatio)(_GLFWwindow*,int,int);
-    void (*getFramebufferSize)(_GLFWwindow*,int*,int*);
-    void (*getWindowFrameSize)(_GLFWwindow*,int*,int*,int*,int*);
-    void (*getWindowContentScale)(_GLFWwindow*,float*,float*);
-    void (*iconifyWindow)(_GLFWwindow*);
-    void (*restoreWindow)(_GLFWwindow*);
-    void (*maximizeWindow)(_GLFWwindow*);
-    void (*showWindow)(_GLFWwindow*);
-    void (*hideWindow)(_GLFWwindow*);
-    void (*requestWindowAttention)(_GLFWwindow*);
-    void (*focusWindow)(_GLFWwindow*);
-    void (*setWindowMonitor)(_GLFWwindow*,_GLFWmonitor*,int,int,int,int,int);
-    GLFWbool (*windowFocused)(_GLFWwindow*);
-    GLFWbool (*windowIconified)(_GLFWwindow*);
-    GLFWbool (*windowVisible)(_GLFWwindow*);
-    GLFWbool (*windowMaximized)(_GLFWwindow*);
-    GLFWbool (*windowHovered)(_GLFWwindow*);
-    GLFWbool (*framebufferTransparent)(_GLFWwindow*);
-    float (*getWindowOpacity)(_GLFWwindow*);
-    void (*setWindowResizable)(_GLFWwindow*,GLFWbool);
-    void (*setWindowDecorated)(_GLFWwindow*,GLFWbool);
-    void (*setWindowFloating)(_GLFWwindow*,GLFWbool);
-    void (*setWindowOpacity)(_GLFWwindow*,float);
-    void (*setWindowMousePassthrough)(_GLFWwindow*,GLFWbool);
-    void (*pollEvents)(void);
-    void (*waitEvents)(void);
-    void (*waitEventsTimeout)(double);
-    void (*postEmptyEvent)(void);
 };
 
 // Library global data
@@ -388,11 +389,12 @@ struct _GLFWlibrary
 
     _GLFWmonitor**      monitors;
     int                 monitorCount;
-
+#if defined(GLFW_BUILD_LINUX_JOYSTICK)
     GLFWbool            joysticksInitialized;
     _GLFWjoystick       joysticks[GLFW_JOYSTICK_LAST + 1];
     _GLFWmapping*       mappings;
     int                 mappingCount;
+#endif
 
 
     struct {
@@ -403,7 +405,9 @@ struct _GLFWlibrary
 
     struct {
         GLFWmonitorfun  monitor;
+    #if defined(GLFW_BUILD_LINUX_JOYSTICK)
         GLFWjoystickfun joystick;
+    #endif
     } callbacks;
 
     // These are defined in platform.h

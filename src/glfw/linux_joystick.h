@@ -54,11 +54,11 @@ typedef struct _GLFWlibraryLinux
     GLFWbool                dropped;
 } _GLFWlibraryLinux;
 
-void _glfwDetectJoystickConnectionLinux(void);
+void _glfwDetectJoystickConnection(void);
 
-GLFWbool _glfwInitJoysticksLinux(void);
-void _glfwTerminateJoysticksLinux(void);
-GLFWbool _glfwPollJoystickLinux(_GLFWjoystick* js, int mode);
-const char* _glfwGetMappingNameLinux(void);
-void _glfwUpdateGamepadGUIDLinux(char* guid);
+GLFWbool _glfwInitJoysticksOS(void);
+void _glfwTerminateJoysticksOS(void);
+GLFWbool _glfwPollJoystickOS(_GLFWjoystick* js, int mode);
+const char* _glfwGetMappingNameOS(void);
+void _glfwUpdateGamepadGUIDOS(char* guid);
 

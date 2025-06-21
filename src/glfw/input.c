@@ -42,6 +42,7 @@
 #define _GLFW_JOYSTICK_BUTTON   2
 #define _GLFW_JOYSTICK_HATBIT   3
 
+
 #define GLFW_MOD_MASK (GLFW_MOD_SHIFT | \
                        GLFW_MOD_CONTROL | \
                        GLFW_MOD_ALT | \
@@ -49,15 +50,17 @@
                        GLFW_MOD_CAPS_LOCK | \
                        GLFW_MOD_NUM_LOCK)
 
+#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+
 // Initializes the platform joystick API if it has not been already
 //
 static GLFWbool initJoysticks(void)
 {
     if (!_glfw.joysticksInitialized)
     {
-        if (!_glfw.platform.initJoysticks())
+        if (!_glfwInitJoysticksOS())
         {
-            _glfw.platform.terminateJoysticks();
+            _glfwTerminateJoysticksOS();
             return GLFW_FALSE;
         }
     }
@@ -239,7 +242,7 @@ static GLFWbool parseMapping(_GLFWmapping* mapping, const char* string)
             }
             else
             {
-                const char* name = _glfw.platform.getMappingName();
+                const char* name = _glfwGetMappingNameOS();
                 length = strlen(name);
                 if (strncmp(c, name, length) != 0)
                     return GLFW_FALSE;
@@ -258,10 +261,11 @@ static GLFWbool parseMapping(_GLFWmapping* mapping, const char* string)
             mapping->guid[i] += 'a' - 'A';
     }
 
-    _glfw.platform.updateGamepadGUID(mapping->guid);
+    _glfwUpdateGamepadGUIDOS(mapping->guid);
     return GLFW_TRUE;
 }
 
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 //////                         GLFW event API                       //////
@@ -411,6 +415,8 @@ void _glfwInputDrop(_GLFWwindow* window, int count, const char** paths)
         window->callbacks.drop((GLFWwindow*) window, count, paths);
 }
 
+#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+
 // Notifies shared code of a joystick connection or disconnection
 //
 void _glfwInputJoystick(_GLFWjoystick* js, int event)
@@ -476,10 +482,13 @@ void _glfwInputJoystickHat(_GLFWjoystick* js, int hat, char value)
     js->hats[hat] = value;
 }
 
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 //////                       GLFW internal API                      //////
 //////////////////////////////////////////////////////////////////////////
+
+#if defined(GLFW_BUILD_LINUX_JOYSTICK)
 
 // Adds the built-in set of gamepad mappings
 //
@@ -542,14 +551,16 @@ void _glfwFreeJoystick(_GLFWjoystick* js)
     memset(js, 0, sizeof(_GLFWjoystick));
 }
 
+#endif
+
 // Center the cursor in the content area of the specified window
 //
 void _glfwCenterCursorInContentArea(_GLFWwindow* window)
 {
     int width, height;
 
-    _glfw.platform.getWindowSize(window, &width, &height);
-    _glfw.platform.setCursorPos(window, width / 2.0, height / 2.0);
+    _glfwGetWindowSizeOS(window, &width, &height);
+    _glfwSetCursorPosOS(window, width / 2.0, height / 2.0);
 }
 
 
@@ -609,10 +620,10 @@ GLFWAPI void glfwSetInputMode(GLFWwindow* handle, int mode, int value)
 
             window->cursorMode = value;
 
-            _glfw.platform.getCursorPos(window,
+            _glfwGetCursorPosOS(window,
                                         &window->virtualCursorPosX,
                                         &window->virtualCursorPosY);
-            _glfw.platform.setCursorMode(window, value);
+            _glfwSetCursorModeOS(window, value);
             return;
         }
 
@@ -668,7 +679,7 @@ GLFWAPI void glfwSetInputMode(GLFWwindow* handle, int mode, int value)
 
         case GLFW_RAW_MOUSE_MOTION:
         {
-            if (!_glfw.platform.rawMouseMotionSupported())
+            if (!_glfwRawMouseMotionSupportedOS())
             {
                 _glfwInputError(GLFW_PLATFORM_ERROR,
                                 "Raw mouse motion is not supported on this system");
@@ -680,7 +691,7 @@ GLFWAPI void glfwSetInputMode(GLFWwindow* handle, int mode, int value)
                 return;
 
             window->rawMouseMotion = value;
-            _glfw.platform.setRawMouseMotion(window, value);
+            _glfwSetRawMouseMotionOS(window, value);
             return;
         }
     }
@@ -691,7 +702,7 @@ GLFWAPI void glfwSetInputMode(GLFWwindow* handle, int mode, int value)
 GLFWAPI int glfwRawMouseMotionSupported(void)
 {
     _GLFW_REQUIRE_INIT_OR_RETURN(GLFW_FALSE);
-    return _glfw.platform.rawMouseMotionSupported();
+    return _glfwRawMouseMotionSupportedOS();
 }
 
 GLFWAPI const char* glfwGetKeyName(int key, int scancode)
@@ -713,10 +724,10 @@ GLFWAPI const char* glfwGetKeyName(int key, int scancode)
             return NULL;
         }
 
-        scancode = _glfw.platform.getKeyScancode(key);
+        scancode = _glfwGetKeyScancode(key);
     }
 
-    return _glfw.platform.getScancodeName(scancode);
+    return _glfwGetScancodeNameOS(scancode);
 }
 
 GLFWAPI int glfwGetKeyScancode(int key)
@@ -729,7 +740,7 @@ GLFWAPI int glfwGetKeyScancode(int key)
         return -1;
     }
 
-    return _glfw.platform.getKeyScancode(key);
+    return _glfwGetKeyScancode(key);
 }
 
 GLFWAPI int glfwGetKey(GLFWwindow* handle, int key)
@@ -798,7 +809,7 @@ GLFWAPI void glfwGetCursorPos(GLFWwindow* handle, double* xpos, double* ypos)
             *ypos = window->virtualCursorPosY;
     }
     else
-        _glfw.platform.getCursorPos(window, xpos, ypos);
+        _glfwGetCursorPosOS(window, xpos, ypos);
 }
 
 GLFWAPI void glfwSetCursorPos(GLFWwindow* handle, double xpos, double ypos)
@@ -817,7 +828,7 @@ GLFWAPI void glfwSetCursorPos(GLFWwindow* handle, double xpos, double ypos)
         return;
     }
 
-    if (!_glfw.platform.windowFocused(window))
+    if (!_glfwWindowFocusedOS(window))
         return;
 
     if (window->cursorMode == GLFW_CURSOR_DISABLED)
@@ -829,7 +840,7 @@ GLFWAPI void glfwSetCursorPos(GLFWwindow* handle, double xpos, double ypos)
     else
     {
         // Update system cursor position
-        _glfw.platform.setCursorPos(window, xpos, ypos);
+        _glfwSetCursorPosOS(window, xpos, ypos);
     }
 }
 
@@ -852,7 +863,7 @@ GLFWAPI GLFWcursor* glfwCreateCursor(const GLFWimage* image, int xhot, int yhot)
     cursor->next = _glfw.cursorListHead;
     _glfw.cursorListHead = cursor;
 
-    if (!_glfw.platform.createCursor(cursor, image, xhot, yhot))
+    if (!_glfwCreateCursorOS(cursor, image, xhot, yhot))
     {
         glfwDestroyCursor((GLFWcursor*) cursor);
         return NULL;
@@ -886,7 +897,7 @@ GLFWAPI GLFWcursor* glfwCreateStandardCursor(int shape)
     cursor->next = _glfw.cursorListHead;
     _glfw.cursorListHead = cursor;
 
-    if (!_glfw.platform.createStandardCursor(cursor, shape))
+    if (!_glfwCreateStandardCursorOS(cursor, shape))
     {
         glfwDestroyCursor((GLFWcursor*) cursor);
         return NULL;
@@ -915,7 +926,7 @@ GLFWAPI void glfwDestroyCursor(GLFWcursor* handle)
         }
     }
 
-    _glfw.platform.destroyCursor(cursor);
+    _glfwDestroyCursorOS(cursor);
 
     // Unlink cursor from global linked list
     {
@@ -940,7 +951,7 @@ GLFWAPI void glfwSetCursor(GLFWwindow* windowHandle, GLFWcursor* cursorHandle)
 
     window->cursor = cursor;
 
-    _glfw.platform.setCursor(window, cursor);
+    _glfwSetCursorOS(window, cursor);
 }
 
 GLFWAPI GLFWkeyfun glfwSetKeyCallback(GLFWwindow* handle, GLFWkeyfun cbfun)
@@ -1027,6 +1038,8 @@ GLFWAPI GLFWdropfun glfwSetDropCallback(GLFWwindow* handle, GLFWdropfun cbfun)
     return cbfun;
 }
 
+#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+
 GLFWAPI int glfwJoystickPresent(int jid)
 {
     _GLFWjoystick* js;
@@ -1049,7 +1062,7 @@ GLFWAPI int glfwJoystickPresent(int jid)
     if (!js->connected)
         return GLFW_FALSE;
 
-    return _glfw.platform.pollJoystick(js, _GLFW_POLL_PRESENCE);
+    return _glfwPollJoystickOS(js, _GLFW_POLL_PRESENCE);
 }
 
 GLFWAPI const float* glfwGetJoystickAxes(int jid, int* count)
@@ -1077,7 +1090,7 @@ GLFWAPI const float* glfwGetJoystickAxes(int jid, int* count)
     if (!js->connected)
         return NULL;
 
-    if (!_glfw.platform.pollJoystick(js, _GLFW_POLL_AXES))
+    if (!_glfwPollJoystickOS(js, _GLFW_POLL_AXES))
         return NULL;
 
     *count = js->axisCount;
@@ -1109,7 +1122,7 @@ GLFWAPI const unsigned char* glfwGetJoystickButtons(int jid, int* count)
     if (!js->connected)
         return NULL;
 
-    if (!_glfw.platform.pollJoystick(js, _GLFW_POLL_BUTTONS))
+    if (!_glfwPollJoystickOS(js, _GLFW_POLL_BUTTONS))
         return NULL;
 
     if (_glfw.hints.init.hatButtons)
@@ -1145,7 +1158,7 @@ GLFWAPI const unsigned char* glfwGetJoystickHats(int jid, int* count)
     if (!js->connected)
         return NULL;
 
-    if (!_glfw.platform.pollJoystick(js, _GLFW_POLL_BUTTONS))
+    if (!_glfwPollJoystickOS(js, _GLFW_POLL_BUTTONS))
         return NULL;
 
     *count = js->hatCount;
@@ -1174,7 +1187,7 @@ GLFWAPI const char* glfwGetJoystickName(int jid)
     if (!js->connected)
         return NULL;
 
-    if (!_glfw.platform.pollJoystick(js, _GLFW_POLL_PRESENCE))
+    if (!_glfwPollJoystickOS(js, _GLFW_POLL_PRESENCE))
         return NULL;
 
     return js->name;
@@ -1202,7 +1215,7 @@ GLFWAPI const char* glfwGetJoystickGUID(int jid)
     if (!js->connected)
         return NULL;
 
-    if (!_glfw.platform.pollJoystick(js, _GLFW_POLL_PRESENCE))
+    if (!_glfwPollJoystickOS(js, _GLFW_POLL_PRESENCE))
         return NULL;
 
     return js->guid;
@@ -1333,7 +1346,7 @@ GLFWAPI int glfwJoystickIsGamepad(int jid)
     if (!js->connected)
         return GLFW_FALSE;
 
-    if (!_glfw.platform.pollJoystick(js, _GLFW_POLL_PRESENCE))
+    if (!_glfwPollJoystickOS(js, _GLFW_POLL_PRESENCE))
         return GLFW_FALSE;
 
     return js->mapping != NULL;
@@ -1361,7 +1374,7 @@ GLFWAPI const char* glfwGetGamepadName(int jid)
     if (!js->connected)
         return NULL;
 
-    if (!_glfw.platform.pollJoystick(js, _GLFW_POLL_PRESENCE))
+    if (!_glfwPollJoystickOS(js, _GLFW_POLL_PRESENCE))
         return NULL;
 
     if (!js->mapping)
@@ -1396,7 +1409,7 @@ GLFWAPI int glfwGetGamepadState(int jid, GLFWgamepadstate* state)
     if (!js->connected)
         return GLFW_FALSE;
 
-    if (!_glfw.platform.pollJoystick(js, _GLFW_POLL_ALL))
+    if (!_glfwPollJoystickOS(js, _GLFW_POLL_ALL))
         return GLFW_FALSE;
 
     if (!js->mapping)
@@ -1456,18 +1469,20 @@ GLFWAPI int glfwGetGamepadState(int jid, GLFWgamepadstate* state)
     return GLFW_TRUE;
 }
 
+#endif
+
 GLFWAPI void glfwSetClipboardString(GLFWwindow* handle, const char* string)
 {
     assert(string != NULL);
 
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.setClipboardString(string);
+    _glfwSetClipboardString(string);
 }
 
 GLFWAPI const char* glfwGetClipboardString(GLFWwindow* handle)
 {
     _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
-    return _glfw.platform.getClipboardString();
+    return _glfwGetClipboardStringOS();
 }
 
 GLFWAPI double glfwGetTime(void)

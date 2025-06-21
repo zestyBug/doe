@@ -46,6 +46,6 @@ typedef struct _GLFWjoystickWin32
     GUID                    guid;
 } _GLFWjoystickWin32;
 
-void _glfwDetectJoystickConnectionWin32(void);
-void _glfwDetectJoystickDisconnectionWin32(void);
+void _glfwDetectJoystickConnection(void);
+void _glfwDetectJoystickDisconnection(void);
 

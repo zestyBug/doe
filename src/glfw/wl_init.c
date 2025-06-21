@@ -127,7 +127,7 @@ static void registryHandleGlobal(void* userData,
     }
     else if (strcmp(interface, "wl_output") == 0)
     {
-        _glfwAddOutputWayland(name, version);
+        _glfwAddOutput(name, version);
     }
     else if (strcmp(interface, "wl_seat") == 0)
     {
@@ -136,7 +136,7 @@ static void registryHandleGlobal(void* userData,
             _glfw.wl.seat =
                 wl_registry_bind(registry, name, &wl_seat_interface,
                                  _glfw_min(4, version));
-            _glfwAddSeatListenerWayland(_glfw.wl.seat);
+            _glfwAddSeatListener(_glfw.wl.seat);
         }
     }
     else if (strcmp(interface, "wl_data_device_manager") == 0)
@@ -425,86 +425,11 @@ static GLFWbool loadCursorTheme(void)
 //////                       GLFW platform API                      //////
 //////////////////////////////////////////////////////////////////////////
 
-GLFWbool _glfwConnectWayland(int platformID, _GLFWplatform* platform)
+GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
 {
     const _GLFWplatform wayland =
     {
         .platformID = GLFW_PLATFORM_WAYLAND,
-        .init = _glfwInitWayland,
-        .terminate = _glfwTerminateWayland,
-        .getCursorPos = _glfwGetCursorPosWayland,
-        .setCursorPos = _glfwSetCursorPosWayland,
-        .setCursorMode = _glfwSetCursorModeWayland,
-        .setRawMouseMotion = _glfwSetRawMouseMotionWayland,
-        .rawMouseMotionSupported = _glfwRawMouseMotionSupportedWayland,
-        .createCursor = _glfwCreateCursorWayland,
-        .createStandardCursor = _glfwCreateStandardCursorWayland,
-        .destroyCursor = _glfwDestroyCursorWayland,
-        .setCursor = _glfwSetCursorWayland,
-        .getScancodeName = _glfwGetScancodeNameWayland,
-        .getKeyScancode = _glfwGetKeyScancodeWayland,
-        .setClipboardString = _glfwSetClipboardStringWayland,
-        .getClipboardString = _glfwGetClipboardStringWayland,
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
-        .initJoysticks = _glfwInitJoysticksLinux,
-        .terminateJoysticks = _glfwTerminateJoysticksLinux,
-        .pollJoystick = _glfwPollJoystickLinux,
-        .getMappingName = _glfwGetMappingNameLinux,
-        .updateGamepadGUID = _glfwUpdateGamepadGUIDLinux,
-#else
-        .initJoysticks = _glfwInitJoysticksNull,
-        .terminateJoysticks = _glfwTerminateJoysticksNull,
-        .pollJoystick = _glfwPollJoystickNull,
-        .getMappingName = _glfwGetMappingNameNull,
-        .updateGamepadGUID = _glfwUpdateGamepadGUIDNull,
-#endif
-        .freeMonitor = _glfwFreeMonitorWayland,
-        .getMonitorPos = _glfwGetMonitorPosWayland,
-        .getMonitorContentScale = _glfwGetMonitorContentScaleWayland,
-        .getMonitorWorkarea = _glfwGetMonitorWorkareaWayland,
-        .getVideoModes = _glfwGetVideoModesWayland,
-        .getVideoMode = _glfwGetVideoModeWayland,
-        .getGammaRamp = _glfwGetGammaRampWayland,
-        .setGammaRamp = _glfwSetGammaRampWayland,
-        .createWindow = _glfwCreateWindowWayland,
-        .destroyWindow = _glfwDestroyWindowWayland,
-        .setWindowTitle = _glfwSetWindowTitleWayland,
-        .setWindowIcon = _glfwSetWindowIconWayland,
-        .getWindowPos = _glfwGetWindowPosWayland,
-        .setWindowPos = _glfwSetWindowPosWayland,
-        .getWindowSize = _glfwGetWindowSizeWayland,
-        .setWindowSize = _glfwSetWindowSizeWayland,
-        .setWindowSizeLimits = _glfwSetWindowSizeLimitsWayland,
-        .setWindowAspectRatio = _glfwSetWindowAspectRatioWayland,
-        .getFramebufferSize = _glfwGetFramebufferSizeWayland,
-        .getWindowFrameSize = _glfwGetWindowFrameSizeWayland,
-        .getWindowContentScale = _glfwGetWindowContentScaleWayland,
-        .iconifyWindow = _glfwIconifyWindowWayland,
-        .restoreWindow = _glfwRestoreWindowWayland,
-        .maximizeWindow = _glfwMaximizeWindowWayland,
-        .showWindow = _glfwShowWindowWayland,
-        .hideWindow = _glfwHideWindowWayland,
-        .requestWindowAttention = _glfwRequestWindowAttentionWayland,
-        .focusWindow = _glfwFocusWindowWayland,
-        .setWindowMonitor = _glfwSetWindowMonitorWayland,
-        .windowFocused = _glfwWindowFocusedWayland,
-        .windowIconified = _glfwWindowIconifiedWayland,
-        .windowVisible = _glfwWindowVisibleWayland,
-        .windowMaximized = _glfwWindowMaximizedWayland,
-        .windowHovered = _glfwWindowHoveredWayland,
-        .framebufferTransparent = _glfwFramebufferTransparentWayland,
-        .getWindowOpacity = _glfwGetWindowOpacityWayland,
-        .setWindowResizable = _glfwSetWindowResizableWayland,
-        .setWindowDecorated = _glfwSetWindowDecoratedWayland,
-        .setWindowFloating = _glfwSetWindowFloatingWayland,
-        .setWindowOpacity = _glfwSetWindowOpacityWayland,
-        .setWindowMousePassthrough = _glfwSetWindowMousePassthroughWayland,
-        .pollEvents = _glfwPollEventsWayland,
-        .waitEvents = _glfwWaitEventsWayland,
-        .waitEventsTimeout = _glfwWaitEventsTimeoutWayland,
-        .postEmptyEvent = _glfwPostEmptyEventWayland,
-        .getPhysicalDevicePresentationSupport = _glfwGetPhysicalDevicePresentationSupportWayland,
-        .createWindowSurface = _glfwCreateWindowSurfaceWayland
     };
 
     void* module = _glfwPlatformLoadModule("libwayland-client.so.0");
@@ -550,7 +475,7 @@ GLFWbool _glfwConnectWayland(int platformID, _GLFWplatform* platform)
     return GLFW_TRUE;
 }
 
-int _glfwInitWayland(void)
+int _glfwInitOS(void)
 {
     // These must be set before any failure checks
     _glfw.wl.keyRepeatTimerfd = -1;
@@ -877,13 +802,13 @@ int _glfwInitWayland(void)
         _glfw.wl.dataDevice =
             wl_data_device_manager_get_data_device(_glfw.wl.dataDeviceManager,
                                                    _glfw.wl.seat);
-        _glfwAddDataDeviceListenerWayland(_glfw.wl.dataDevice);
+        _glfwAddDataDeviceListener(_glfw.wl.dataDevice);
     }
 
     return GLFW_TRUE;
 }
 
-void _glfwTerminateWayland(void)
+void _glfwTerminateOS(void)
 {
 
     if (_glfw.wl.libdecor.context)
@@ -891,7 +816,7 @@ void _glfwTerminateWayland(void)
         // Allow libdecor to finish receiving all its requested globals
         // and ensure the associated sync callback object is destroyed
         while (!_glfw.wl.libdecor.ready)
-            _glfwWaitEventsWayland();
+            _glfwWaitEventsOS();
 
         libdecor_unref(_glfw.wl.libdecor.context);
     }

@@ -121,7 +121,7 @@ static void outputHandleScale(void* userData,
             if (window->wl.outputScales[i].output == monitor->wl.output)
             {
                 window->wl.outputScales[i].factor = monitor->wl.scale;
-                _glfwUpdateBufferScaleFromOutputsWayland(window);
+                _glfwUpdateBufferScaleFromOutputs(window);
                 break;
             }
         }
@@ -156,7 +156,7 @@ static const struct wl_output_listener outputListener =
 //////                       GLFW internal API                      //////
 //////////////////////////////////////////////////////////////////////////
 
-void _glfwAddOutputWayland(uint32_t name, uint32_t version)
+void _glfwAddOutput(uint32_t name, uint32_t version)
 {
     if (version < 2)
     {
@@ -189,13 +189,13 @@ void _glfwAddOutputWayland(uint32_t name, uint32_t version)
 //////                       GLFW platform API                      //////
 //////////////////////////////////////////////////////////////////////////
 
-void _glfwFreeMonitorWayland(_GLFWmonitor* monitor)
+void _glfwFreeMonitorOS(_GLFWmonitor* monitor)
 {
     if (monitor->wl.output)
         wl_output_destroy(monitor->wl.output);
 }
 
-void _glfwGetMonitorPosWayland(_GLFWmonitor* monitor, int* xpos, int* ypos)
+void _glfwGetMonitorPosOS(_GLFWmonitor* monitor, int* xpos, int* ypos)
 {
     if (xpos)
         *xpos = monitor->wl.x;
@@ -203,7 +203,7 @@ void _glfwGetMonitorPosWayland(_GLFWmonitor* monitor, int* xpos, int* ypos)
         *ypos = monitor->wl.y;
 }
 
-void _glfwGetMonitorContentScaleWayland(_GLFWmonitor* monitor,
+void _glfwGetMonitorContentScaleOS(_GLFWmonitor* monitor,
                                         float* xscale, float* yscale)
 {
     if (xscale)
@@ -212,7 +212,7 @@ void _glfwGetMonitorContentScaleWayland(_GLFWmonitor* monitor,
         *yscale = (float) monitor->wl.scale;
 }
 
-void _glfwGetMonitorWorkareaWayland(_GLFWmonitor* monitor,
+void _glfwGetMonitorWorkareaOS(_GLFWmonitor* monitor,
                                     int* xpos, int* ypos,
                                     int* width, int* height)
 {
@@ -226,26 +226,26 @@ void _glfwGetMonitorWorkareaWayland(_GLFWmonitor* monitor,
         *height = monitor->modes[monitor->wl.currentMode].height;
 }
 
-GLFWvidmode* _glfwGetVideoModesWayland(_GLFWmonitor* monitor, int* found)
+GLFWvidmode* _glfwGetVideoModesOS(_GLFWmonitor* monitor, int* found)
 {
     *found = monitor->modeCount;
     return monitor->modes;
 }
 
-GLFWbool _glfwGetVideoModeWayland(_GLFWmonitor* monitor, GLFWvidmode* mode)
+GLFWbool _glfwGetVideoModeOS(_GLFWmonitor* monitor, GLFWvidmode* mode)
 {
     *mode = monitor->modes[monitor->wl.currentMode];
     return GLFW_TRUE;
 }
 
-GLFWbool _glfwGetGammaRampWayland(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
+GLFWbool _glfwGetGammaRampOS(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
 {
     _glfwInputError(GLFW_FEATURE_UNAVAILABLE,
                     "Wayland: Gamma ramp access is not available");
     return GLFW_FALSE;
 }
 
-void _glfwSetGammaRampWayland(_GLFWmonitor* monitor, const GLFWgammaramp* ramp)
+void _glfwSetGammaRampOS(_GLFWmonitor* monitor, const GLFWgammaramp* ramp)
 {
     _glfwInputError(GLFW_FEATURE_UNAVAILABLE,
                     "Wayland: Gamma ramp access is not available");

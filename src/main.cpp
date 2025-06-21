@@ -18,7 +18,7 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 {
     int i;
     for (i = 0;  i < count;  i++)
-        printf("%s",paths[i]);
+        printf("%s\n",paths[i]);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)

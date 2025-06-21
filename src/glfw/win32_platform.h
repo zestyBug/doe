@@ -166,24 +166,24 @@ typedef enum
 // application having a correct embedded manifest
 //
 #define IsWindowsVistaOrGreater()                                     \
-    _glfwIsWindowsVersionOrGreaterWin32(HIBYTE(_WIN32_WINNT_VISTA),   \
+    _glfwIsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_VISTA),   \
                                         LOBYTE(_WIN32_WINNT_VISTA), 0)
 #define IsWindows7OrGreater()                                         \
-    _glfwIsWindowsVersionOrGreaterWin32(HIBYTE(_WIN32_WINNT_WIN7),    \
+    _glfwIsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_WIN7),    \
                                         LOBYTE(_WIN32_WINNT_WIN7), 0)
 #define IsWindows8OrGreater()                                         \
-    _glfwIsWindowsVersionOrGreaterWin32(HIBYTE(_WIN32_WINNT_WIN8),    \
+    _glfwIsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_WIN8),    \
                                         LOBYTE(_WIN32_WINNT_WIN8), 0)
 #define IsWindows8Point1OrGreater()                                   \
-    _glfwIsWindowsVersionOrGreaterWin32(HIBYTE(_WIN32_WINNT_WINBLUE), \
+    _glfwIsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_WINBLUE), \
                                         LOBYTE(_WIN32_WINNT_WINBLUE), 0)
 
 // Windows 10 Anniversary Update
-#define _glfwIsWindows10Version1607OrGreaterWin32() \
-    _glfwIsWindows10BuildOrGreaterWin32(14393)
+#define _glfwIsWindows10Version1607OrGreater() \
+    _glfwIsWindows10BuildOrGreater(14393)
 // Windows 10 Creators Update
-#define _glfwIsWindows10Version1703OrGreaterWin32() \
-    _glfwIsWindows10BuildOrGreaterWin32(15063)
+#define _glfwIsWindows10Version1703OrGreater() \
+    _glfwIsWindows10BuildOrGreater(15063)
 
 // HACK: Define macros that some xinput.h variants don't
 #ifndef XINPUT_CAPS_WIRELESS
@@ -395,88 +395,88 @@ typedef struct _GLFWcursorWin32
 } _GLFWcursorWin32;
 
 
-GLFWbool _glfwConnectWin32(int platformID, _GLFWplatform* platform);
-int _glfwInitWin32(void);
-void _glfwTerminateWin32(void);
+GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform);
+int _glfwInitOS(void);
+void _glfwTerminateOS(void);
 
-WCHAR* _glfwCreateWideStringFromUTF8Win32(const char* source);
-char* _glfwCreateUTF8FromWideStringWin32(const WCHAR* source);
-BOOL _glfwIsWindowsVersionOrGreaterWin32(WORD major, WORD minor, WORD sp);
-BOOL _glfwIsWindows10BuildOrGreaterWin32(WORD build);
+WCHAR* _glfwCreateWideStringFromUTF8(const char* source);
+char* _glfwCreateUTF8FromWideString(const WCHAR* source);
+BOOL _glfwIsWindowsVersionOrGreater(WORD major, WORD minor, WORD sp);
+BOOL _glfwIsWindows10BuildOrGreater(WORD build);
 void _glfwInputErrorWin32(int error, const char* description);
-void _glfwUpdateKeyNamesWin32(void);
+void _glfwUpdateKeyNames(void);
 
-void _glfwPollMonitorsWin32(void);
-void _glfwSetVideoModeWin32(_GLFWmonitor* monitor, const GLFWvidmode* desired);
-void _glfwRestoreVideoModeWin32(_GLFWmonitor* monitor);
-void _glfwGetHMONITORContentScaleWin32(HMONITOR handle, float* xscale, float* yscale);
+void _glfwPollMonitors(void);
+void _glfwSetVideoMode(_GLFWmonitor* monitor, const GLFWvidmode* desired);
+void _glfwRestoreVideoMode(_GLFWmonitor* monitor);
+void _glfwGetHMONITORContentScale(HMONITOR handle, float* xscale, float* yscale);
 
-GLFWbool _glfwCreateWindowWin32(_GLFWwindow* window, const _GLFWwndconfig* wndconfig);
-void _glfwDestroyWindowWin32(_GLFWwindow* window);
-void _glfwSetWindowTitleWin32(_GLFWwindow* window, const char* title);
-void _glfwSetWindowIconWin32(_GLFWwindow* window, int count, const GLFWimage* images);
-void _glfwGetWindowPosWin32(_GLFWwindow* window, int* xpos, int* ypos);
-void _glfwSetWindowPosWin32(_GLFWwindow* window, int xpos, int ypos);
-void _glfwGetWindowSizeWin32(_GLFWwindow* window, int* width, int* height);
-void _glfwSetWindowSizeWin32(_GLFWwindow* window, int width, int height);
-void _glfwSetWindowSizeLimitsWin32(_GLFWwindow* window, int minwidth, int minheight, int maxwidth, int maxheight);
-void _glfwSetWindowAspectRatioWin32(_GLFWwindow* window, int numer, int denom);
-void _glfwGetFramebufferSizeWin32(_GLFWwindow* window, int* width, int* height);
-void _glfwGetWindowFrameSizeWin32(_GLFWwindow* window, int* left, int* top, int* right, int* bottom);
-void _glfwGetWindowContentScaleWin32(_GLFWwindow* window, float* xscale, float* yscale);
-void _glfwIconifyWindowWin32(_GLFWwindow* window);
-void _glfwRestoreWindowWin32(_GLFWwindow* window);
-void _glfwMaximizeWindowWin32(_GLFWwindow* window);
-void _glfwShowWindowWin32(_GLFWwindow* window);
-void _glfwHideWindowWin32(_GLFWwindow* window);
-void _glfwRequestWindowAttentionWin32(_GLFWwindow* window);
-void _glfwFocusWindowWin32(_GLFWwindow* window);
-void _glfwSetWindowMonitorWin32(_GLFWwindow* window, _GLFWmonitor* monitor, int xpos, int ypos, int width, int height, int refreshRate);
-GLFWbool _glfwWindowFocusedWin32(_GLFWwindow* window);
-GLFWbool _glfwWindowIconifiedWin32(_GLFWwindow* window);
-GLFWbool _glfwWindowVisibleWin32(_GLFWwindow* window);
-GLFWbool _glfwWindowMaximizedWin32(_GLFWwindow* window);
-GLFWbool _glfwWindowHoveredWin32(_GLFWwindow* window);
-GLFWbool _glfwFramebufferTransparentWin32(_GLFWwindow* window);
-void _glfwSetWindowResizableWin32(_GLFWwindow* window, GLFWbool enabled);
-void _glfwSetWindowDecoratedWin32(_GLFWwindow* window, GLFWbool enabled);
-void _glfwSetWindowFloatingWin32(_GLFWwindow* window, GLFWbool enabled);
-void _glfwSetWindowMousePassthroughWin32(_GLFWwindow* window, GLFWbool enabled);
-float _glfwGetWindowOpacityWin32(_GLFWwindow* window);
-void _glfwSetWindowOpacityWin32(_GLFWwindow* window, float opacity);
+GLFWbool _glfwCreateWindowOS(_GLFWwindow* window, const _GLFWwndconfig* wndconfig);
+void _glfwDestroyWindowOS(_GLFWwindow* window);
+void _glfwSetWindowTitleOS(_GLFWwindow* window, const char* title);
+void _glfwSetWindowIconOS(_GLFWwindow* window, int count, const GLFWimage* images);
+void _glfwGetWindowPosOS(_GLFWwindow* window, int* xpos, int* ypos);
+void _glfwSetWindowPosOS(_GLFWwindow* window, int xpos, int ypos);
+void _glfwGetWindowSizeOS(_GLFWwindow* window, int* width, int* height);
+void _glfwSetWindowSizeOS(_GLFWwindow* window, int width, int height);
+void _glfwSetWindowSizeLimitsOS(_GLFWwindow* window, int minwidth, int minheight, int maxwidth, int maxheight);
+void _glfwSetWindowAspectRatioOS(_GLFWwindow* window, int numer, int denom);
+void _glfwGetFramebufferSizeOS(_GLFWwindow* window, int* width, int* height);
+void _glfwGetWindowFrameSizeOS(_GLFWwindow* window, int* left, int* top, int* right, int* bottom);
+void _glfwGetWindowContentScaleOS(_GLFWwindow* window, float* xscale, float* yscale);
+void _glfwIconifyWindowOS(_GLFWwindow* window);
+void _glfwRestoreWindowOS(_GLFWwindow* window);
+void _glfwMaximizeWindowOS(_GLFWwindow* window);
+void _glfwShowWindowOS(_GLFWwindow* window);
+void _glfwHideWindowOS(_GLFWwindow* window);
+void _glfwRequestWindowAttentionOS(_GLFWwindow* window);
+void _glfwFocusWindowOS(_GLFWwindow* window);
+void _glfwSetWindowMonitorOS(_GLFWwindow* window, _GLFWmonitor* monitor, int xpos, int ypos, int width, int height, int refreshRate);
+GLFWbool _glfwWindowFocusedOS(_GLFWwindow* window);
+GLFWbool _glfwWindowIconifiedOS(_GLFWwindow* window);
+GLFWbool _glfwWindowVisibleOS(_GLFWwindow* window);
+GLFWbool _glfwWindowMaximizedOS(_GLFWwindow* window);
+GLFWbool _glfwWindowHoveredOS(_GLFWwindow* window);
+GLFWbool _glfwFramebufferTransparentOS(_GLFWwindow* window);
+void _glfwSetWindowResizableOS(_GLFWwindow* window, GLFWbool enabled);
+void _glfwSetWindowDecoratedOS(_GLFWwindow* window, GLFWbool enabled);
+void _glfwSetWindowFloatingOS(_GLFWwindow* window, GLFWbool enabled);
+void _glfwSetWindowMousePassthroughOS(_GLFWwindow* window, GLFWbool enabled);
+float _glfwGetWindowOpacityOS(_GLFWwindow* window);
+void _glfwSetWindowOpacityOS(_GLFWwindow* window, float opacity);
 
-void _glfwSetRawMouseMotionWin32(_GLFWwindow *window, GLFWbool enabled);
-GLFWbool _glfwRawMouseMotionSupportedWin32(void);
+void _glfwSetRawMouseMotionOS(_GLFWwindow *window, GLFWbool enabled);
+GLFWbool _glfwRawMouseMotionSupportedOS(void);
 
-void _glfwPollEventsWin32(void);
-void _glfwWaitEventsWin32(void);
-void _glfwWaitEventsTimeoutWin32(double timeout);
-void _glfwPostEmptyEventWin32(void);
+void _glfwPollEventsOS(void);
+void _glfwWaitEventsOS(void);
+void _glfwWaitEventsTimeoutOS(double timeout);
+void _glfwPostEmptyEventOS(void);
 
-void _glfwGetCursorPosWin32(_GLFWwindow* window, double* xpos, double* ypos);
-void _glfwSetCursorPosWin32(_GLFWwindow* window, double xpos, double ypos);
-void _glfwSetCursorModeWin32(_GLFWwindow* window, int mode);
-const char* _glfwGetScancodeNameWin32(int scancode);
-int _glfwGetKeyScancodeWin32(int key);
-GLFWbool _glfwCreateCursorWin32(_GLFWcursor* cursor, const GLFWimage* image, int xhot, int yhot);
-GLFWbool _glfwCreateStandardCursorWin32(_GLFWcursor* cursor, int shape);
-void _glfwDestroyCursorWin32(_GLFWcursor* cursor);
-void _glfwSetCursorWin32(_GLFWwindow* window, _GLFWcursor* cursor);
-void _glfwSetClipboardStringWin32(const char* string);
-const char* _glfwGetClipboardStringWin32(void);
+void _glfwGetCursorPosOS(_GLFWwindow* window, double* xpos, double* ypos);
+void _glfwSetCursorPosOS(_GLFWwindow* window, double xpos, double ypos);
+void _glfwSetCursorModeOS(_GLFWwindow* window, int mode);
+const char* _glfwGetScancodeNameOS(int scancode);
+int _glfwGetKeyScancode(int key);
+GLFWbool _glfwCreateCursorOS(_GLFWcursor* cursor, const GLFWimage* image, int xhot, int yhot);
+GLFWbool _glfwCreateStandardCursorOS(_GLFWcursor* cursor, int shape);
+void _glfwDestroyCursorOS(_GLFWcursor* cursor);
+void _glfwSetCursorOS(_GLFWwindow* window, _GLFWcursor* cursor);
+void _glfwSetClipboardString(const char* string);
+const char* _glfwGetClipboardStringOS(void);
 
 
-void _glfwFreeMonitorWin32(_GLFWmonitor* monitor);
-void _glfwGetMonitorPosWin32(_GLFWmonitor* monitor, int* xpos, int* ypos);
-void _glfwGetMonitorContentScaleWin32(_GLFWmonitor* monitor, float* xscale, float* yscale);
-void _glfwGetMonitorWorkareaWin32(_GLFWmonitor* monitor, int* xpos, int* ypos, int* width, int* height);
-GLFWvidmode* _glfwGetVideoModesWin32(_GLFWmonitor* monitor, int* count);
-GLFWbool _glfwGetVideoModeWin32(_GLFWmonitor* monitor, GLFWvidmode* mode);
-GLFWbool _glfwGetGammaRampWin32(_GLFWmonitor* monitor, GLFWgammaramp* ramp);
-void _glfwSetGammaRampWin32(_GLFWmonitor* monitor, const GLFWgammaramp* ramp);
+void _glfwFreeMonitorOS(_GLFWmonitor* monitor);
+void _glfwGetMonitorPosOS(_GLFWmonitor* monitor, int* xpos, int* ypos);
+void _glfwGetMonitorContentScaleOS(_GLFWmonitor* monitor, float* xscale, float* yscale);
+void _glfwGetMonitorWorkareaOS(_GLFWmonitor* monitor, int* xpos, int* ypos, int* width, int* height);
+GLFWvidmode* _glfwGetVideoModesOS(_GLFWmonitor* monitor, int* count);
+GLFWbool _glfwGetVideoModeOS(_GLFWmonitor* monitor, GLFWvidmode* mode);
+GLFWbool _glfwGetGammaRampOS(_GLFWmonitor* monitor, GLFWgammaramp* ramp);
+void _glfwSetGammaRampOS(_GLFWmonitor* monitor, const GLFWgammaramp* ramp);
 
-GLFWbool _glfwInitJoysticksWin32(void);
-void _glfwTerminateJoysticksWin32(void);
-GLFWbool _glfwPollJoystickWin32(_GLFWjoystick* js, int mode);
-const char* _glfwGetMappingNameWin32(void);
-void _glfwUpdateGamepadGUIDWin32(char* guid);
+GLFWbool _glfwInitJoysticksOS(void);
+void _glfwTerminateJoysticksOS(void);
+GLFWbool _glfwPollJoystickOS(_GLFWjoystick* js, int mode);
+const char* _glfwGetMappingNameOS(void);
+void _glfwUpdateGamepadGUIDOS(char* guid);

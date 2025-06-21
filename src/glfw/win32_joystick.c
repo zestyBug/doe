@@ -493,7 +493,7 @@ static BOOL CALLBACK deviceCallback(const DIDEVICEINSTANCE* di, void* user)
 
 // Checks for new joysticks after DBT_DEVICEARRIVAL
 //
-void _glfwDetectJoystickConnectionWin32(void)
+void _glfwDetectJoystickConnection(void)
 {
     if (_glfw.win32.xinput.instance)
     {
@@ -553,7 +553,7 @@ void _glfwDetectJoystickConnectionWin32(void)
 
 // Checks for joystick disconnection after DBT_DEVICEREMOVECOMPLETE
 //
-void _glfwDetectJoystickDisconnectionWin32(void)
+void _glfwDetectJoystickDisconnection(void)
 {
     int jid;
 
@@ -561,7 +561,7 @@ void _glfwDetectJoystickDisconnectionWin32(void)
     {
         _GLFWjoystick* js = _glfw.joysticks + jid;
         if (js->connected)
-            _glfwPollJoystickWin32(js, _GLFW_POLL_PRESENCE);
+            _glfwPollJoystickOS(js, _GLFW_POLL_PRESENCE);
     }
 }
 
@@ -570,7 +570,7 @@ void _glfwDetectJoystickDisconnectionWin32(void)
 //////                       GLFW platform API                      //////
 //////////////////////////////////////////////////////////////////////////
 
-GLFWbool _glfwInitJoysticksWin32(void)
+GLFWbool _glfwInitJoysticksOS(void)
 {
     if (_glfw.win32.dinput8.instance)
     {
@@ -586,11 +586,11 @@ GLFWbool _glfwInitJoysticksWin32(void)
         }
     }
 
-    _glfwDetectJoystickConnectionWin32();
+    _glfwDetectJoystickConnection();
     return GLFW_TRUE;
 }
 
-void _glfwTerminateJoysticksWin32(void)
+void _glfwTerminateJoysticksOS(void)
 {
     int jid;
 
@@ -601,7 +601,7 @@ void _glfwTerminateJoysticksWin32(void)
         IDirectInput8_Release(_glfw.win32.dinput8.api);
 }
 
-GLFWbool _glfwPollJoystickWin32(_GLFWjoystick* js, int mode)
+GLFWbool _glfwPollJoystickOS(_GLFWjoystick* js, int mode)
 {
     if (js->win32.device)
     {
@@ -747,12 +747,12 @@ GLFWbool _glfwPollJoystickWin32(_GLFWjoystick* js, int mode)
     return GLFW_TRUE;
 }
 
-const char* _glfwGetMappingNameWin32(void)
+const char* _glfwGetMappingNameOS(void)
 {
     return "Windows";
 }
 
-void _glfwUpdateGamepadGUIDWin32(char* guid)
+void _glfwUpdateGamepadGUIDOS(char* guid)
 {
     if (strcmp(guid + 20, "504944564944") == 0)
     {

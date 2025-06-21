@@ -56,7 +56,7 @@ void _glfwInputWindowFocus(_GLFWwindow* window, GLFWbool focused)
         {
             if (window->keys[key] == GLFW_PRESS)
             {
-                const int scancode = _glfw.platform.getKeyScancode(key);
+                const int scancode = _glfwGetKeyScancode(key);
                 _glfwInputKey(window, key, scancode, GLFW_RELEASE, 0);
             }
         }
@@ -236,7 +236,7 @@ GLFWAPI GLFWwindow* glfwCreateWindow(int width, int height,
     window->denom       = GLFW_DONT_CARE;
     window->title       = _glfw_strdup(title);
 
-    if (!_glfw.platform.createWindow(window, &wndconfig))
+    if (!_glfwCreateWindowOS(window, &wndconfig))
     {
         glfwDestroyWindow((GLFWwindow*) window);
         return NULL;
@@ -377,7 +377,7 @@ GLFWAPI void glfwDestroyWindow(GLFWwindow* handle)
     // Clear all callbacks to avoid exposing a half torn-down window object
     memset(&window->callbacks, 0, sizeof(window->callbacks));
 
-    _glfw.platform.destroyWindow(window);
+    _glfwDestroyWindowOS(window);
 
     // Unlink window from global linked list
     _glfw.windowListHead = NULL;
@@ -423,7 +423,7 @@ GLFWAPI void glfwSetWindowTitle(GLFWwindow* handle, const char* title)
     char* prev = window->title;
     window->title = _glfw_strdup(title);
 
-    _glfw.platform.setWindowTitle(window, title);
+    _glfwSetWindowTitleOS(window, title);
     _glfw_free(prev);
 }
 
@@ -457,7 +457,7 @@ GLFWAPI void glfwSetWindowIcon(GLFWwindow* handle,
         }
     }
 
-    _glfw.platform.setWindowIcon(window, count, images);
+    _glfwSetWindowIconOS(window, count, images);
 }
 
 GLFWAPI void glfwGetWindowPos(GLFWwindow* handle, int* xpos, int* ypos)
@@ -471,7 +471,7 @@ GLFWAPI void glfwGetWindowPos(GLFWwindow* handle, int* xpos, int* ypos)
         *ypos = 0;
 
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.getWindowPos(window, xpos, ypos);
+    _glfwGetWindowPosOS(window, xpos, ypos);
 }
 
 GLFWAPI void glfwSetWindowPos(GLFWwindow* handle, int xpos, int ypos)
@@ -484,7 +484,7 @@ GLFWAPI void glfwSetWindowPos(GLFWwindow* handle, int xpos, int ypos)
     if (window->monitor)
         return;
 
-    _glfw.platform.setWindowPos(window, xpos, ypos);
+    _glfwSetWindowPosOS(window, xpos, ypos);
 }
 
 GLFWAPI void glfwGetWindowSize(GLFWwindow* handle, int* width, int* height)
@@ -498,7 +498,7 @@ GLFWAPI void glfwGetWindowSize(GLFWwindow* handle, int* width, int* height)
         *height = 0;
 
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.getWindowSize(window, width, height);
+    _glfwGetWindowSizeOS(window, width, height);
 }
 
 GLFWAPI void glfwSetWindowSize(GLFWwindow* handle, int width, int height)
@@ -513,7 +513,7 @@ GLFWAPI void glfwSetWindowSize(GLFWwindow* handle, int width, int height)
     window->videoMode.width  = width;
     window->videoMode.height = height;
 
-    _glfw.platform.setWindowSize(window, width, height);
+    _glfwSetWindowSizeOS(window, width, height);
 }
 
 GLFWAPI void glfwSetWindowSizeLimits(GLFWwindow* handle,
@@ -556,7 +556,7 @@ GLFWAPI void glfwSetWindowSizeLimits(GLFWwindow* handle,
     if (window->monitor || !window->resizable)
         return;
 
-    _glfw.platform.setWindowSizeLimits(window,
+    _glfwSetWindowSizeLimitsOS(window,
                                        minwidth, minheight,
                                        maxwidth, maxheight);
 }
@@ -587,7 +587,7 @@ GLFWAPI void glfwSetWindowAspectRatio(GLFWwindow* handle, int numer, int denom)
     if (window->monitor || !window->resizable)
         return;
 
-    _glfw.platform.setWindowAspectRatio(window, numer, denom);
+    _glfwSetWindowAspectRatioOS(window, numer, denom);
 }
 
 GLFWAPI void glfwGetFramebufferSize(GLFWwindow* handle, int* width, int* height)
@@ -601,7 +601,7 @@ GLFWAPI void glfwGetFramebufferSize(GLFWwindow* handle, int* width, int* height)
         *height = 0;
 
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.getFramebufferSize(window, width, height);
+    _glfwGetFramebufferSizeOS(window, width, height);
 }
 
 GLFWAPI void glfwGetWindowFrameSize(GLFWwindow* handle,
@@ -621,7 +621,7 @@ GLFWAPI void glfwGetWindowFrameSize(GLFWwindow* handle,
         *bottom = 0;
 
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.getWindowFrameSize(window, left, top, right, bottom);
+    _glfwGetWindowFrameSizeOS(window, left, top, right, bottom);
 }
 
 GLFWAPI void glfwGetWindowContentScale(GLFWwindow* handle,
@@ -636,7 +636,7 @@ GLFWAPI void glfwGetWindowContentScale(GLFWwindow* handle,
         *yscale = 0.f;
 
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.getWindowContentScale(window, xscale, yscale);
+    _glfwGetWindowContentScaleOS(window, xscale, yscale);
 }
 
 GLFWAPI float glfwGetWindowOpacity(GLFWwindow* handle)
@@ -645,7 +645,7 @@ GLFWAPI float glfwGetWindowOpacity(GLFWwindow* handle)
     assert(window != NULL);
 
     _GLFW_REQUIRE_INIT_OR_RETURN(0.f);
-    return _glfw.platform.getWindowOpacity(window);
+    return _glfwGetWindowOpacityOS(window);
 }
 
 GLFWAPI void glfwSetWindowOpacity(GLFWwindow* handle, float opacity)
@@ -664,7 +664,7 @@ GLFWAPI void glfwSetWindowOpacity(GLFWwindow* handle, float opacity)
         return;
     }
 
-    _glfw.platform.setWindowOpacity(window, opacity);
+    _glfwSetWindowOpacityOS(window, opacity);
 }
 
 GLFWAPI void glfwIconifyWindow(GLFWwindow* handle)
@@ -673,7 +673,7 @@ GLFWAPI void glfwIconifyWindow(GLFWwindow* handle)
     assert(window != NULL);
 
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.iconifyWindow(window);
+    _glfwIconifyWindowOS(window);
 }
 
 GLFWAPI void glfwRestoreWindow(GLFWwindow* handle)
@@ -682,7 +682,7 @@ GLFWAPI void glfwRestoreWindow(GLFWwindow* handle)
     assert(window != NULL);
 
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.restoreWindow(window);
+    _glfwRestoreWindowOS(window);
 }
 
 GLFWAPI void glfwMaximizeWindow(GLFWwindow* handle)
@@ -695,7 +695,7 @@ GLFWAPI void glfwMaximizeWindow(GLFWwindow* handle)
     if (window->monitor)
         return;
 
-    _glfw.platform.maximizeWindow(window);
+    _glfwMaximizeWindowOS(window);
 }
 
 GLFWAPI void glfwShowWindow(GLFWwindow* handle)
@@ -708,10 +708,10 @@ GLFWAPI void glfwShowWindow(GLFWwindow* handle)
     if (window->monitor)
         return;
 
-    _glfw.platform.showWindow(window);
+    _glfwShowWindowOS(window);
 
     if (window->focusOnShow)
-        _glfw.platform.focusWindow(window);
+        _glfwFocusWindowOS(window);
 }
 
 GLFWAPI void glfwRequestWindowAttention(GLFWwindow* handle)
@@ -721,7 +721,7 @@ GLFWAPI void glfwRequestWindowAttention(GLFWwindow* handle)
 
     _GLFW_REQUIRE_INIT();
 
-    _glfw.platform.requestWindowAttention(window);
+    _glfwRequestWindowAttentionOS(window);
 }
 
 GLFWAPI void glfwHideWindow(GLFWwindow* handle)
@@ -734,7 +734,7 @@ GLFWAPI void glfwHideWindow(GLFWwindow* handle)
     if (window->monitor)
         return;
 
-    _glfw.platform.hideWindow(window);
+    _glfwHideWindowOS(window);
 }
 
 GLFWAPI void glfwFocusWindow(GLFWwindow* handle)
@@ -744,7 +744,7 @@ GLFWAPI void glfwFocusWindow(GLFWwindow* handle)
 
     _GLFW_REQUIRE_INIT();
 
-    _glfw.platform.focusWindow(window);
+    _glfwFocusWindowOS(window);
 }
 
 GLFWAPI int glfwGetWindowAttrib(GLFWwindow* handle, int attrib)
@@ -757,21 +757,21 @@ GLFWAPI int glfwGetWindowAttrib(GLFWwindow* handle, int attrib)
     switch (attrib)
     {
         case GLFW_FOCUSED:
-            return _glfw.platform.windowFocused(window);
+            return _glfwWindowFocusedOS(window);
         case GLFW_ICONIFIED:
-            return _glfw.platform.windowIconified(window);
+            return _glfwWindowIconifiedOS(window);
         case GLFW_VISIBLE:
-            return _glfw.platform.windowVisible(window);
+            return _glfwWindowVisibleOS(window);
         case GLFW_MAXIMIZED:
-            return _glfw.platform.windowMaximized(window);
+            return _glfwWindowMaximizedOS(window);
         case GLFW_HOVERED:
-            return _glfw.platform.windowHovered(window);
+            return _glfwWindowHoveredOS(window);
         case GLFW_FOCUS_ON_SHOW:
             return window->focusOnShow;
         case GLFW_MOUSE_PASSTHROUGH:
             return window->mousePassthrough;
         case GLFW_TRANSPARENT_FRAMEBUFFER:
-            return _glfw.platform.framebufferTransparent(window);
+            return _glfwFramebufferTransparentOS(window);
         case GLFW_RESIZABLE:
             return window->resizable;
         case GLFW_DECORATED:
@@ -806,19 +806,19 @@ GLFWAPI void glfwSetWindowAttrib(GLFWwindow* handle, int attrib, int value)
         case GLFW_RESIZABLE:
             window->resizable = value;
             if (!window->monitor)
-                _glfw.platform.setWindowResizable(window, value);
+                _glfwSetWindowResizableOS(window, value);
             return;
 
         case GLFW_DECORATED:
             window->decorated = value;
             if (!window->monitor)
-                _glfw.platform.setWindowDecorated(window, value);
+                _glfwSetWindowDecoratedOS(window, value);
             return;
 
         case GLFW_FLOATING:
             window->floating = value;
             if (!window->monitor)
-                _glfw.platform.setWindowFloating(window, value);
+                _glfwSetWindowFloatingOS(window, value);
             return;
 
         case GLFW_FOCUS_ON_SHOW:
@@ -827,7 +827,7 @@ GLFWAPI void glfwSetWindowAttrib(GLFWwindow* handle, int attrib, int value)
 
         case GLFW_MOUSE_PASSTHROUGH:
             window->mousePassthrough = value;
-            _glfw.platform.setWindowMousePassthrough(window, value);
+            _glfwSetWindowMousePassthroughOS(window, value);
             return;
     }
 
@@ -877,7 +877,7 @@ GLFWAPI void glfwSetWindowMonitor(GLFWwindow* wh,
     window->videoMode.height      = height;
     window->videoMode.refreshRate = refreshRate;
 
-    _glfw.platform.setWindowMonitor(window, monitor,
+    _glfwSetWindowMonitorOS(window, monitor,
                                     xpos, ypos, width, height,
                                     refreshRate);
 }
@@ -1002,13 +1002,13 @@ GLFWAPI GLFWwindowcontentscalefun glfwSetWindowContentScaleCallback(GLFWwindow* 
 GLFWAPI void glfwPollEvents(void)
 {
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.pollEvents();
+    _glfwPollEventsOS();
 }
 
 GLFWAPI void glfwWaitEvents(void)
 {
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.waitEvents();
+    _glfwWaitEventsOS();
 }
 
 GLFWAPI void glfwWaitEventsTimeout(double timeout)
@@ -1024,12 +1024,12 @@ GLFWAPI void glfwWaitEventsTimeout(double timeout)
         return;
     }
 
-    _glfw.platform.waitEventsTimeout(timeout);
+    _glfwWaitEventsTimeoutOS(timeout);
 }
 
 GLFWAPI void glfwPostEmptyEvent(void)
 {
     _GLFW_REQUIRE_INIT();
-    _glfw.platform.postEmptyEvent();
+    _glfwPostEmptyEventOS();
 }
 

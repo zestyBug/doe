@@ -105,7 +105,7 @@ static void terminate(void)
     {
         _GLFWmonitor* monitor = _glfw.monitors[i];
         if (monitor->originalRamp.size)
-            _glfw.platform.setGammaRamp(monitor, &monitor->originalRamp);
+            _glfwSetGammaRampOS(monitor, &monitor->originalRamp);
         _glfwFreeMonitor(monitor);
     }
 
@@ -113,12 +113,15 @@ static void terminate(void)
     _glfw.monitors = NULL;
     _glfw.monitorCount = 0;
 
+#if defined(GLFW_BUILD_LINUX_JOYSTICK)
     _glfw_free(_glfw.mappings);
     _glfw.mappings = NULL;
     _glfw.mappingCount = 0;
-
-    _glfw.platform.terminateJoysticks();
-    _glfw.platform.terminate();
+#endif
+#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+    _glfwTerminateJoysticksOS();
+#endif
+    _glfwTerminateOS();
 
     _glfw.initialized = GLFW_FALSE;
 
@@ -374,13 +377,15 @@ GLFWAPI int glfwInit(void)
     if (!_glfwSelectPlatform(_glfw.hints.init.platformID, &_glfw.platform))
         return GLFW_FALSE;
 
-    if (!_glfw.platform.init())
+    if (!_glfwInitOS())
     {
         terminate();
         return GLFW_FALSE;
     }
 
+#if defined(GLFW_BUILD_LINUX_JOYSTICK)
     _glfwInitGamepadMappings();
+#endif
 
     _glfwPlatformInitTimer();
     _glfw.timer.offset = _glfwPlatformGetTimerValue();

@@ -338,7 +338,7 @@ static LRESULT CALLBACK helperWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
     switch (uMsg)
     {
         case WM_DISPLAYCHANGE:
-            _glfwPollMonitorsWin32();
+            _glfwPollMonitors();
             break;
 
         case WM_DEVICECHANGE:
@@ -350,13 +350,13 @@ static LRESULT CALLBACK helperWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
             {
                 DEV_BROADCAST_HDR* dbh = (DEV_BROADCAST_HDR*) lParam;
                 if (dbh && dbh->dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE)
-                    _glfwDetectJoystickConnectionWin32();
+                    _glfwDetectJoystickConnection();
             }
             else if (wParam == DBT_DEVICEREMOVECOMPLETE)
             {
                 DEV_BROADCAST_HDR* dbh = (DEV_BROADCAST_HDR*) lParam;
                 if (dbh && dbh->dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE)
-                    _glfwDetectJoystickDisconnectionWin32();
+                    _glfwDetectJoystickDisconnection();
             }
 
             break;
@@ -436,7 +436,7 @@ static GLFWbool createHelperWindow(void)
 
 // Returns a wide string version of the specified UTF-8 string
 //
-WCHAR* _glfwCreateWideStringFromUTF8Win32(const char* source)
+WCHAR* _glfwCreateWideStringFromUTF8(const char* source)
 {
     WCHAR* target;
     int count;
@@ -464,7 +464,7 @@ WCHAR* _glfwCreateWideStringFromUTF8Win32(const char* source)
 
 // Returns a UTF-8 string version of the specified wide string
 //
-char* _glfwCreateUTF8FromWideStringWin32(const WCHAR* source)
+char* _glfwCreateUTF8FromWideString(const WCHAR* source)
 {
     char* target;
     int size;
@@ -513,7 +513,7 @@ void _glfwInputErrorWin32(int error, const char* description)
 
 // Updates key names according to the current keyboard layout
 //
-void _glfwUpdateKeyNamesWin32(void)
+void _glfwUpdateKeyNames(void)
 {
     int key;
     BYTE state[256] = {0};
@@ -570,7 +570,7 @@ void _glfwUpdateKeyNamesWin32(void)
 // Replacement for IsWindowsVersionOrGreater, as we cannot rely on the
 // application having a correct embedded manifest
 //
-BOOL _glfwIsWindowsVersionOrGreaterWin32(WORD major, WORD minor, WORD sp)
+BOOL _glfwIsWindowsVersionOrGreater(WORD major, WORD minor, WORD sp)
 {
     OSVERSIONINFOEXW osvi = { sizeof(osvi), major, minor, 0, 0, {0}, sp };
     DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR;
@@ -585,7 +585,7 @@ BOOL _glfwIsWindowsVersionOrGreaterWin32(WORD major, WORD minor, WORD sp)
 
 // Checks whether we are on at least the specified build of Windows 10
 //
-BOOL _glfwIsWindows10BuildOrGreaterWin32(WORD build)
+BOOL _glfwIsWindows10BuildOrGreater(WORD build)
 {
     OSVERSIONINFOEXW osvi = { sizeof(osvi), 10, 0, build };
     DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_BUILDNUMBER;
@@ -598,91 +598,26 @@ BOOL _glfwIsWindows10BuildOrGreaterWin32(WORD build)
     return RtlVerifyVersionInfo(&osvi, mask, cond) == 0;
 }
 
-GLFWbool _glfwConnectWin32(int platformID, _GLFWplatform* platform)
+GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
 {
     const _GLFWplatform win32 =
     {
         .platformID = GLFW_PLATFORM_WIN32,
-        .init = _glfwInitWin32,
-        .terminate = _glfwTerminateWin32,
-        .getCursorPos = _glfwGetCursorPosWin32,
-        .setCursorPos = _glfwSetCursorPosWin32,
-        .setCursorMode = _glfwSetCursorModeWin32,
-        .setRawMouseMotion = _glfwSetRawMouseMotionWin32,
-        .rawMouseMotionSupported = _glfwRawMouseMotionSupportedWin32,
-        .createCursor = _glfwCreateCursorWin32,
-        .createStandardCursor = _glfwCreateStandardCursorWin32,
-        .destroyCursor = _glfwDestroyCursorWin32,
-        .setCursor = _glfwSetCursorWin32,
-        .getScancodeName = _glfwGetScancodeNameWin32,
-        .getKeyScancode = _glfwGetKeyScancodeWin32,
-        .setClipboardString = _glfwSetClipboardStringWin32,
-        .getClipboardString = _glfwGetClipboardStringWin32,
-        .initJoysticks = _glfwInitJoysticksWin32,
-        .terminateJoysticks = _glfwTerminateJoysticksWin32,
-        .pollJoystick = _glfwPollJoystickWin32,
-        .getMappingName = _glfwGetMappingNameWin32,
-        .updateGamepadGUID = _glfwUpdateGamepadGUIDWin32,
-        .freeMonitor = _glfwFreeMonitorWin32,
-        .getMonitorPos = _glfwGetMonitorPosWin32,
-        .getMonitorContentScale = _glfwGetMonitorContentScaleWin32,
-        .getMonitorWorkarea = _glfwGetMonitorWorkareaWin32,
-        .getVideoModes = _glfwGetVideoModesWin32,
-        .getVideoMode = _glfwGetVideoModeWin32,
-        .getGammaRamp = _glfwGetGammaRampWin32,
-        .setGammaRamp = _glfwSetGammaRampWin32,
-        .createWindow = _glfwCreateWindowWin32,
-        .destroyWindow = _glfwDestroyWindowWin32,
-        .setWindowTitle = _glfwSetWindowTitleWin32,
-        .setWindowIcon = _glfwSetWindowIconWin32,
-        .getWindowPos = _glfwGetWindowPosWin32,
-        .setWindowPos = _glfwSetWindowPosWin32,
-        .getWindowSize = _glfwGetWindowSizeWin32,
-        .setWindowSize = _glfwSetWindowSizeWin32,
-        .setWindowSizeLimits = _glfwSetWindowSizeLimitsWin32,
-        .setWindowAspectRatio = _glfwSetWindowAspectRatioWin32,
-        .getFramebufferSize = _glfwGetFramebufferSizeWin32,
-        .getWindowFrameSize = _glfwGetWindowFrameSizeWin32,
-        .getWindowContentScale = _glfwGetWindowContentScaleWin32,
-        .iconifyWindow = _glfwIconifyWindowWin32,
-        .restoreWindow = _glfwRestoreWindowWin32,
-        .maximizeWindow = _glfwMaximizeWindowWin32,
-        .showWindow = _glfwShowWindowWin32,
-        .hideWindow = _glfwHideWindowWin32,
-        .requestWindowAttention = _glfwRequestWindowAttentionWin32,
-        .focusWindow = _glfwFocusWindowWin32,
-        .setWindowMonitor = _glfwSetWindowMonitorWin32,
-        .windowFocused = _glfwWindowFocusedWin32,
-        .windowIconified = _glfwWindowIconifiedWin32,
-        .windowVisible = _glfwWindowVisibleWin32,
-        .windowMaximized = _glfwWindowMaximizedWin32,
-        .windowHovered = _glfwWindowHoveredWin32,
-        .framebufferTransparent = _glfwFramebufferTransparentWin32,
-        .getWindowOpacity = _glfwGetWindowOpacityWin32,
-        .setWindowResizable = _glfwSetWindowResizableWin32,
-        .setWindowDecorated = _glfwSetWindowDecoratedWin32,
-        .setWindowFloating = _glfwSetWindowFloatingWin32,
-        .setWindowOpacity = _glfwSetWindowOpacityWin32,
-        .setWindowMousePassthrough = _glfwSetWindowMousePassthroughWin32,
-        .pollEvents = _glfwPollEventsWin32,
-        .waitEvents = _glfwWaitEventsWin32,
-        .waitEventsTimeout = _glfwWaitEventsTimeoutWin32,
-        .postEmptyEvent = _glfwPostEmptyEventWin32
     };
 
     *platform = win32;
     return GLFW_TRUE;
 }
 
-int _glfwInitWin32(void)
+int _glfwInitOS(void)
 {
     if (!loadLibraries())
         return GLFW_FALSE;
 
     createKeyTables();
-    _glfwUpdateKeyNamesWin32();
+    _glfwUpdateKeyNames();
 
-    if (_glfwIsWindows10Version1703OrGreaterWin32())
+    if (_glfwIsWindows10Version1703OrGreater())
         SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     else if (IsWindows8Point1OrGreater())
         SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
@@ -692,11 +627,11 @@ int _glfwInitWin32(void)
     if (!createHelperWindow())
         return GLFW_FALSE;
 
-    _glfwPollMonitorsWin32();
+    _glfwPollMonitors();
     return GLFW_TRUE;
 }
 
-void _glfwTerminateWin32(void)
+void _glfwTerminateOS(void)
 {
     if (_glfw.win32.blankCursor)
         DestroyIcon((HICON) _glfw.win32.blankCursor);

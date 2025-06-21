@@ -69,9 +69,9 @@ static _GLFWmonitor* createMonitor(DISPLAY_DEVICEW* adapter,
     RECT rect;
 
     if (display)
-        name = _glfwCreateUTF8FromWideStringWin32(display->DeviceString);
+        name = _glfwCreateUTF8FromWideString(display->DeviceString);
     else
-        name = _glfwCreateUTF8FromWideStringWin32(adapter->DeviceString);
+        name = _glfwCreateUTF8FromWideString(adapter->DeviceString);
     if (!name)
         return NULL;
 
@@ -133,7 +133,7 @@ static _GLFWmonitor* createMonitor(DISPLAY_DEVICEW* adapter,
 
 // Poll for changes in the set of connected monitors
 //
-void _glfwPollMonitorsWin32(void)
+void _glfwPollMonitors(void)
 {
     int i, disconnectedCount;
     _GLFWmonitor** disconnected = NULL;
@@ -245,7 +245,7 @@ void _glfwPollMonitorsWin32(void)
 
 // Change the current video mode
 //
-void _glfwSetVideoModeWin32(_GLFWmonitor* monitor, const GLFWvidmode* desired)
+void _glfwSetVideoMode(_GLFWmonitor* monitor, const GLFWvidmode* desired)
 {
     GLFWvidmode current;
     const GLFWvidmode* best;
@@ -253,7 +253,7 @@ void _glfwSetVideoModeWin32(_GLFWmonitor* monitor, const GLFWvidmode* desired)
     LONG result;
 
     best = _glfwChooseVideoMode(monitor, desired);
-    _glfwGetVideoModeWin32(monitor, &current);
+    _glfwGetVideoModeOS(monitor, &current);
     if (_glfwCompareVideoModes(&current, best) == 0)
         return;
 
@@ -303,7 +303,7 @@ void _glfwSetVideoModeWin32(_GLFWmonitor* monitor, const GLFWvidmode* desired)
 
 // Restore the previously saved (original) video mode
 //
-void _glfwRestoreVideoModeWin32(_GLFWmonitor* monitor)
+void _glfwRestoreVideoMode(_GLFWmonitor* monitor)
 {
     if (monitor->win32.modeChanged)
     {
@@ -313,7 +313,7 @@ void _glfwRestoreVideoModeWin32(_GLFWmonitor* monitor)
     }
 }
 
-void _glfwGetHMONITORContentScaleWin32(HMONITOR handle, float* xscale, float* yscale)
+void _glfwGetHMONITORContentScale(HMONITOR handle, float* xscale, float* yscale)
 {
     UINT xdpi, ydpi;
 
@@ -349,11 +349,11 @@ void _glfwGetHMONITORContentScaleWin32(HMONITOR handle, float* xscale, float* ys
 //////                       GLFW platform API                      //////
 //////////////////////////////////////////////////////////////////////////
 
-void _glfwFreeMonitorWin32(_GLFWmonitor* monitor)
+void _glfwFreeMonitorOS(_GLFWmonitor* monitor)
 {
 }
 
-void _glfwGetMonitorPosWin32(_GLFWmonitor* monitor, int* xpos, int* ypos)
+void _glfwGetMonitorPosOS(_GLFWmonitor* monitor, int* xpos, int* ypos)
 {
     DEVMODEW dm;
     ZeroMemory(&dm, sizeof(dm));
@@ -370,13 +370,13 @@ void _glfwGetMonitorPosWin32(_GLFWmonitor* monitor, int* xpos, int* ypos)
         *ypos = dm.dmPosition.y;
 }
 
-void _glfwGetMonitorContentScaleWin32(_GLFWmonitor* monitor,
+void _glfwGetMonitorContentScaleOS(_GLFWmonitor* monitor,
                                       float* xscale, float* yscale)
 {
-    _glfwGetHMONITORContentScaleWin32(monitor->win32.handle, xscale, yscale);
+    _glfwGetHMONITORContentScale(monitor->win32.handle, xscale, yscale);
 }
 
-void _glfwGetMonitorWorkareaWin32(_GLFWmonitor* monitor,
+void _glfwGetMonitorWorkareaOS(_GLFWmonitor* monitor,
                                   int* xpos, int* ypos,
                                   int* width, int* height)
 {
@@ -393,7 +393,7 @@ void _glfwGetMonitorWorkareaWin32(_GLFWmonitor* monitor,
         *height = mi.rcWork.bottom - mi.rcWork.top;
 }
 
-GLFWvidmode* _glfwGetVideoModesWin32(_GLFWmonitor* monitor, int* count)
+GLFWvidmode* _glfwGetVideoModesOS(_GLFWmonitor* monitor, int* count)
 {
     int modeIndex = 0, size = 0;
     GLFWvidmode* result = NULL;
@@ -463,14 +463,14 @@ GLFWvidmode* _glfwGetVideoModesWin32(_GLFWmonitor* monitor, int* count)
     {
         // HACK: Report the current mode if no valid modes were found
         result = _glfw_calloc(1, sizeof(GLFWvidmode));
-        _glfwGetVideoModeWin32(monitor, result);
+        _glfwGetVideoModeOS(monitor, result);
         *count = 1;
     }
 
     return result;
 }
 
-GLFWbool _glfwGetVideoModeWin32(_GLFWmonitor* monitor, GLFWvidmode* mode)
+GLFWbool _glfwGetVideoModeOS(_GLFWmonitor* monitor, GLFWvidmode* mode)
 {
     DEVMODEW dm;
     ZeroMemory(&dm, sizeof(dm));
@@ -493,7 +493,7 @@ GLFWbool _glfwGetVideoModeWin32(_GLFWmonitor* monitor, GLFWvidmode* mode)
     return GLFW_TRUE;
 }
 
-GLFWbool _glfwGetGammaRampWin32(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
+GLFWbool _glfwGetGammaRampOS(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
 {
     HDC dc;
     WORD values[3][256];
@@ -511,7 +511,7 @@ GLFWbool _glfwGetGammaRampWin32(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
     return GLFW_TRUE;
 }
 
-void _glfwSetGammaRampWin32(_GLFWmonitor* monitor, const GLFWgammaramp* ramp)
+void _glfwSetGammaRampOS(_GLFWmonitor* monitor, const GLFWgammaramp* ramp)
 {
     HDC dc;
     WORD values[3][256];
