@@ -22,6 +22,37 @@ includeDir=include
 srcDir=src
 testDir=test
 
+headerGLFW= \
+	external/glfw/glfw3.h \
+	external/glfw/glfw3native.h \
+	src/glfw/xkb_unicode.h \
+	src/glfw/x11_platform.h \
+	src/glfw/wl_platform.h \
+	src/glfw/posix_time.h \
+	src/glfw/posix_poll.h \
+	src/glfw/platform.h \
+	src/glfw/linux_joystick.h \
+	src/glfw/mappings.h \
+	src/glfw/internal.h
+
+DOBJS_GLFW= \
+    $(OBJ_DEBUG)/src/glfw/context.o \
+	$(OBJ_DEBUG)/src/glfw/init.o \
+	$(OBJ_DEBUG)/src/glfw/input.o \
+	$(OBJ_DEBUG)/src/glfw/linux_joystick.o \
+	$(OBJ_DEBUG)/src/glfw/monitor.o \
+	$(OBJ_DEBUG)/src/glfw/platform.o \
+	$(OBJ_DEBUG)/src/glfw/posix_module.o \
+	$(OBJ_DEBUG)/src/glfw/posix_poll.o \
+	$(OBJ_DEBUG)/src/glfw/posix_time.o \
+	$(OBJ_DEBUG)/src/glfw/window.o \
+	$(OBJ_DEBUG)/src/glfw/wl_init.o \
+	$(OBJ_DEBUG)/src/glfw/wl_monitor.o \
+	$(OBJ_DEBUG)/src/glfw/wl_window.o \
+	$(OBJ_DEBUG)/src/glfw/x11_init.o \
+	$(OBJ_DEBUG)/src/glfw/x11_monitor.o \
+	$(OBJ_DEBUG)/src/glfw/x11_window.o \
+	$(OBJ_DEBUG)/src/glfw/xkb_unicode.o
 
 headerCutil= \
 	$(cutilDir)/bitset.hpp \
@@ -39,10 +70,10 @@ headerCutil= \
 	$(cutilDir)/mini_test.hpp \
 	external/entt/advanced_array.hpp
 
-headerInclude=$(includeDir)/ECS/Archetype.hpp \
+headerInclude= \
+	$(includeDir)/ECS/Archetype.hpp \
 	$(includeDir)/ECS/ArchetypeVersionManager.hpp \
 	$(includeDir)/ECS/defs.hpp \
-	$(includeDir)/ECS/EntityCommandBuffer.hpp \
 	$(includeDir)/ECS/EntityComponentManager.hpp \
 	$(includeDir)/ECS/SystemManager.hpp \
 	$(includeDir)/ThreadPool.hpp \
@@ -58,68 +89,30 @@ DOBJS=$(OBJ_DEBUG)/src/ECS/Archetype.o \
 		$(OBJ_DEBUG)/src/ECS/ChunkJobFunction.o \
 		$(OBJ_DEBUG)/src/ECS/DependencyManager.o
 
-$(OBJ_DEBUG)/src/ECS/SystemManager.o: $(srcDir)/ECS/SystemManager.cpp $(headerInclude) $(headerCutil)
+$(OBJ_DEBUG)/src/glfw/%.o: $(srcDir)/glfw/%.c $(headerGLFW)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -D_GLFW_X11 -c $< -o $@
+
+$(OBJ_DEBUG)/src/ECS/%.o: $(srcDir)/ECS/%.cpp $(headerInclude) $(headerCutil)
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 
-$(OBJ_DEBUG)/src/ECS/Archetype.o: $(srcDir)/ECS/Archetype.cpp $(headerInclude) $(headerCutil)
+$(OBJ_DEBUG)/src/%.o: $(srcDir)/%.cpp $(headerInclude) $(headerCutil)
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 
-$(OBJ_DEBUG)/src/ECS/ArchetypeVersionManager.o: $(srcDir)/ECS/ArchetypeVersionManager.cpp $(headerInclude) $(headerCutil)
-	mkdir -p $(@D)
-	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
-$(OBJ_DEBUG)/src/ECS/defs.o: $(srcDir)/ECS/defs.cpp $(headerInclude) $(headerCutil)
-	mkdir -p $(@D)
-	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
-$(OBJ_DEBUG)/src/ECS/EntityComponentManager.o: $(srcDir)/ECS/EntityComponentManager.cpp $(headerInclude) $(headerCutil)
-	mkdir -p $(@D)
-	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
-$(OBJ_DEBUG)/src/ThreadPool.o: $(srcDir)/ThreadPool.cpp $(headerInclude) $(headerCutil)
-	mkdir -p $(@D)
-	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
-$(OBJ_DEBUG)/src/ECS/ChunkJobFunction.o: $(srcDir)/ECS/ChunkJobFunction.cpp $(headerInclude) $(headerCutil)
-	mkdir -p $(@D)
-	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
-$(OBJ_DEBUG)/src/ECS/DependencyManager.o: $(srcDir)/ECS/DependencyManager.cpp $(headerInclude) $(headerCutil)
+$(OBJ_DEBUG)/src/main.o: $(srcDir)/main.cpp $(headerGLFW) $(headerInclude) $(headerCutil)
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 
 
-$(OBJ_DEBUG)/src/os/main_linux.o: $(srcDir)/os/main_linux.cpp $(headerInclude) $(headerCutil)
-	mkdir -p $(@D)
-	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
-
-$(OBJ_DEBUG)/test/ecs.o: $(testDir)/ecs.cpp $(headerInclude) $(headerCutil)
-	mkdir -p $(@D)
-	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
-$(OBJ_DEBUG)/test/job.o: $(testDir)/job.cpp $(headerInclude) $(headerCutil)
-	mkdir -p $(@D)
-	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
-$(OBJ_DEBUG)/test/thread.o: $(testDir)/thread.cpp $(headerInclude) $(headerCutil)
+$(OBJ_DEBUG)/test/%.o: $(testDir)/%.cpp $(headerInclude) $(headerCutil)
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 
 $(OBJ_DEBUG)/test/threadpool.o: $(testDir)/threadpool.cpp include/ThreadPool.hpp
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
-$(OBJ_DEBUG)/src/system/linux_init.o: src/system/linux_init.cpp $(headerInclude) $(headerCutil)
-	mkdir -p $(@D)
-	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
-$(OBJ_DEBUG)/test/version.o: $(testDir)/version.cpp $(headerInclude) $(headerCutil)
-	mkdir -p $(@D)
-	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
-
 
 
 $(BIN_DEBUG)/ecs: $(OBJ_DEBUG)/test/ecs.o $(DOBJS)
@@ -142,7 +135,7 @@ $(BIN_DEBUG)/version: $(OBJ_DEBUG)/test/version.o $(DOBJS)
 	mkdir -p $(@D)
 	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
-$(BIN_DEBUG)/linux: $(OBJ_DEBUG)/src/os/main_linux.o $(OBJ_DEBUG)/src/system/linux_init.o $(DOBJS)
+$(BIN_DEBUG)/main: $(DOBJS_GLFW) $(OBJ_DEBUG)/src/main.o $(OBJ_DEBUG)/src/system/linux_init.o $(DOBJS)
 	mkdir -p $(@D)
 	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
@@ -151,7 +144,7 @@ test2: $(BIN_DEBUG)/job
 test3: $(BIN_DEBUG)/thread
 test4: $(BIN_DEBUG)/threadpool
 test5: $(BIN_DEBUG)/version
-test6: $(BIN_DEBUG)/linux
+main: $(BIN_DEBUG)/main
 
 clean:
 	@echo "Cleaning up..."
