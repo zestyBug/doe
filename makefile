@@ -5,14 +5,18 @@ LCPP=g++ -std=c++17
 LFLAG=-g0 -O3 -m64 -fexceptions  -march=native
 LFLAG_DEBUG=-g3 -O0 -m64 -fexceptions -DDEBUG
 # -fsanitize=address
+LFLAG_WARN=-Wall -Wconversion -Wextra -Wfatal-errors -Wshadow
+
 CCPP=g++
 CFLAG=-m64 -s -march=native
 CFLAG_DEBUG=-m64
 # -fsanitize=address -static-libasan
 
-LFLAG_WARN=-Wall -Wconversion -Wextra -Wfatal-errors -Wshadow
 
 INCLUDE=-Iexternal -Iinclude
+
+OBJ_RELEASE=obj/Release
+BIN_RELEASE=bin/Release
 
 OBJ_DEBUG=obj/Debug
 BIN_DEBUG=bin/Debug
@@ -35,6 +39,21 @@ headerGLFW= \
 	src/glfw/mappings.h \
 	src/glfw/internal.h
 
+
+OBJS_GLFW= \
+    $(OBJ_RELEASE)/src/glfw/context.o \
+	$(OBJ_RELEASE)/src/glfw/init.o \
+	$(OBJ_RELEASE)/src/glfw/input.o \
+	$(OBJ_RELEASE)/src/glfw/monitor.o \
+	$(OBJ_RELEASE)/src/glfw/platform.o \
+	$(OBJ_RELEASE)/src/glfw/posix_module.o \
+	$(OBJ_RELEASE)/src/glfw/posix_poll.o \
+	$(OBJ_RELEASE)/src/glfw/posix_time.o \
+	$(OBJ_RELEASE)/src/glfw/window.o \
+	$(OBJ_RELEASE)/src/glfw/x11_init.o \
+	$(OBJ_RELEASE)/src/glfw/x11_monitor.o \
+	$(OBJ_RELEASE)/src/glfw/x11_window.o \
+	$(OBJ_RELEASE)/src/glfw/xkb_unicode.o
 DOBJS_GLFW= \
     $(OBJ_DEBUG)/src/glfw/context.o \
 	$(OBJ_DEBUG)/src/glfw/init.o \
@@ -76,6 +95,15 @@ headerInclude= \
 	$(includeDir)/ECS/ChunkJobFunction.hpp \
 	$(includeDir)/ECS/DependencyManager.hpp
 
+OBJS=$(OBJ_RELEASE)/src/ECS/Archetype.o \
+		$(OBJ_RELEASE)/src/ECS/ArchetypeVersionManager.o \
+		$(OBJ_RELEASE)/src/ECS/defs.o \
+		$(OBJ_RELEASE)/src/ECS/EntityComponentManager.o \
+		$(OBJ_RELEASE)/src/ECS/SystemManager.o \
+		$(OBJ_RELEASE)/src/ThreadPool.o \
+		$(OBJ_RELEASE)/src/ECS/ChunkJobFunction.o \
+		$(OBJ_RELEASE)/src/ECS/DependencyManager.o
+
 DOBJS=$(OBJ_DEBUG)/src/ECS/Archetype.o \
 		$(OBJ_DEBUG)/src/ECS/ArchetypeVersionManager.o \
 		$(OBJ_DEBUG)/src/ECS/defs.o \
@@ -84,6 +112,36 @@ DOBJS=$(OBJ_DEBUG)/src/ECS/Archetype.o \
 		$(OBJ_DEBUG)/src/ThreadPool.o \
 		$(OBJ_DEBUG)/src/ECS/ChunkJobFunction.o \
 		$(OBJ_DEBUG)/src/ECS/DependencyManager.o
+
+
+
+
+$(OBJ_RELEASE)/src/glfw/%.o: $(srcDir)/glfw/%.c $(headerGLFW)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG) $(LFLAG_DEBUG) -D_GLFW_X11 -c $< -o $@
+
+$(OBJ_RELEASE)/src/ECS/%.o: $(srcDir)/ECS/%.cpp $(headerInclude) $(headerCutil)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG) $(LFLAG_DEBUG) -c $< -o $@
+
+$(OBJ_RELEASE)/src/%.o: $(srcDir)/%.cpp $(headerInclude) $(headerCutil)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG) $(LFLAG_DEBUG) -c $< -o $@
+
+$(OBJ_RELEASE)/src/main.o: $(srcDir)/main.cpp $(headerGLFW) $(headerInclude) $(headerCutil)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG) $(LFLAG_DEBUG) -c $< -o $@
+
+$(OBJ_RELEASE)/test/%.o: $(testDir)/%.cpp $(headerInclude) $(headerCutil)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG) $(LFLAG_DEBUG) -c $< -o $@
+
+$(OBJ_RELEASE)/test/threadpool.o: $(testDir)/threadpool.cpp include/ThreadPool.hpp
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG) $(LFLAG_DEBUG) -c $< -o $@
+
+
+
 
 $(OBJ_DEBUG)/src/glfw/%.o: $(srcDir)/glfw/%.c $(headerGLFW)
 	mkdir -p $(@D)
@@ -101,7 +159,6 @@ $(OBJ_DEBUG)/src/main.o: $(srcDir)/main.cpp $(headerGLFW) $(headerInclude) $(hea
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 
-
 $(OBJ_DEBUG)/test/%.o: $(testDir)/%.cpp $(headerInclude) $(headerCutil)
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
@@ -109,6 +166,10 @@ $(OBJ_DEBUG)/test/%.o: $(testDir)/%.cpp $(headerInclude) $(headerCutil)
 $(OBJ_DEBUG)/test/threadpool.o: $(testDir)/threadpool.cpp include/ThreadPool.hpp
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
+
+
+
+
 
 
 $(BIN_DEBUG)/ecs: $(OBJ_DEBUG)/test/ecs.o $(DOBJS)
@@ -131,7 +192,12 @@ $(BIN_DEBUG)/version: $(OBJ_DEBUG)/test/version.o $(DOBJS)
 	mkdir -p $(@D)
 	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
-$(BIN_DEBUG)/main: $(DOBJS_GLFW) $(OBJ_DEBUG)/src/main.o $(OBJ_DEBUG)/src/system/linux_init.o $(DOBJS)
+
+$(BIN_RELEASE)/main: $(OBJS_GLFW) $(OBJ_RELEASE)/src/main.o $(OBJ_RELEASE)/src/system/linux_init.o $(OBJS)
+	mkdir -p $(@D)
+	$(CCPP) -o $@ $^ $(CFLAG)
+
+$(BIN_DEBUG)/dmain: $(DOBJS_GLFW) $(OBJ_DEBUG)/src/main.o $(OBJ_DEBUG)/src/system/linux_init.o $(DOBJS)
 	mkdir -p $(@D)
 	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
@@ -140,7 +206,8 @@ test2: $(BIN_DEBUG)/job
 test3: $(BIN_DEBUG)/thread
 test4: $(BIN_DEBUG)/threadpool
 test5: $(BIN_DEBUG)/version
-main: $(BIN_DEBUG)/main
+dmain: $(BIN_DEBUG)/dmain
+main: $(BIN_RELEASE)/main
 
 clean:
 	@echo "Cleaning up..."
