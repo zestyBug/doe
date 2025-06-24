@@ -425,22 +425,13 @@ static GLFWbool loadCursorTheme(void)
 //////                       GLFW platform API                      //////
 //////////////////////////////////////////////////////////////////////////
 
-GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
+GLFWbool _glfwConnect()
 {
-    const _GLFWplatform wayland =
-    {
-        .platformID = GLFW_PLATFORM_WAYLAND,
-    };
 
     void* module = _glfwPlatformLoadModule("libwayland-client.so.0");
     if (!module)
     {
-        if (platformID == GLFW_PLATFORM_WAYLAND)
-        {
-            _glfwInputError(GLFW_PLATFORM_ERROR,
-                            "Wayland: Failed to load libwayland-client");
-        }
-
+        _glfwInputError(GLFW_PLATFORM_ERROR, "Wayland: Failed to load libwayland-client");
         return GLFW_FALSE;
     }
 
@@ -448,12 +439,7 @@ GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
         _glfwPlatformGetModuleSymbol(module, "wl_display_connect");
     if (!wl_display_connect)
     {
-        if (platformID == GLFW_PLATFORM_WAYLAND)
-        {
-            _glfwInputError(GLFW_PLATFORM_ERROR,
-                            "Wayland: Failed to load libwayland-client entry point");
-        }
-
+        _glfwInputError(GLFW_PLATFORM_ERROR,"Wayland: Failed to load libwayland-client entry point");
         _glfwPlatformFreeModule(module);
         return GLFW_FALSE;
     }
@@ -461,17 +447,13 @@ GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
     struct wl_display* display = wl_display_connect(NULL);
     if (!display)
     {
-        if (platformID == GLFW_PLATFORM_WAYLAND)
-            _glfwInputError(GLFW_PLATFORM_ERROR, "Wayland: Failed to connect to display");
-
+        _glfwInputError(GLFW_PLATFORM_ERROR, "Wayland: Failed to connect to display");
         _glfwPlatformFreeModule(module);
         return GLFW_FALSE;
     }
 
     _glfw.wl.display = display;
     _glfw.wl.client.handle = module;
-
-    *platform = wayland;
     return GLFW_TRUE;
 }
 

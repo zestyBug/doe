@@ -2244,7 +2244,7 @@ const char* _glfwGetScancodeNameOS(int scancode)
     return _glfw.win32.keynames[key];
 }
 
-int _glfwGetKeyScancode(int key)
+int _glfwGetKeyScancodeOS(int key)
 {
     return _glfw.win32.scancodes[key];
 }
@@ -2326,7 +2326,7 @@ void _glfwSetCursorOS(_GLFWwindow* window, _GLFWcursor* cursor)
         updateCursorImage(window);
 }
 
-void _glfwSetClipboardString(const char* string)
+void _glfwSetClipboardStringOS(const char* string)
 {
     int characterCount, tries = 0;
     HANDLE object;
@@ -2430,14 +2430,6 @@ GLFWAPI HWND glfwGetWin32Window(GLFWwindow* handle)
 {
     _GLFWwindow* window = (_GLFWwindow*) handle;
     _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
-
-    if (_glfw.platform.platformID != GLFW_PLATFORM_WIN32)
-    {
-        _glfwInputError(GLFW_PLATFORM_UNAVAILABLE,
-                        "Win32: Platform not initialized");
-        return NULL;
-    }
-
     return window->win32.handle;
 }
 

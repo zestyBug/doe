@@ -57,22 +57,11 @@ static const struct
 #endif
 };
 
-GLFWbool _glfwSelectPlatform(int desiredID, _GLFWplatform* platform)
+GLFWbool _glfwSelectPlatform()
 {
     const size_t count = sizeof(supportedPlatforms) / sizeof(supportedPlatforms[0]);
     size_t i;
-
-    if (desiredID != GLFW_ANY_PLATFORM &&
-        desiredID != GLFW_PLATFORM_WIN32 &&
-        desiredID != GLFW_PLATFORM_COCOA &&
-        desiredID != GLFW_PLATFORM_WAYLAND &&
-        desiredID != GLFW_PLATFORM_X11)
-    {
-        _glfwInputError(GLFW_INVALID_ENUM, "Invalid platform ID 0x%08X", desiredID);
-        return GLFW_FALSE;
-    }
-
-    else if (count == 0)
+    if (count == 0)
     {
         _glfwInputError(GLFW_PLATFORM_UNAVAILABLE, "This binary supports no platform");
         return GLFW_FALSE;
@@ -83,42 +72,12 @@ GLFWbool _glfwSelectPlatform(int desiredID, _GLFWplatform* platform)
         return GLFW_FALSE;
     }
 
-    return _glfwConnect(supportedPlatforms[0].ID, platform);
+    return _glfwConnect();
 }
 
 //////////////////////////////////////////////////////////////////////////
 //////                        GLFW public API                       //////
 //////////////////////////////////////////////////////////////////////////
-
-GLFWAPI int glfwGetPlatform(void)
-{
-    _GLFW_REQUIRE_INIT_OR_RETURN(0);
-    return _glfw.platform.platformID;
-}
-
-GLFWAPI int glfwPlatformSupported(int platformID)
-{
-    const size_t count = sizeof(supportedPlatforms) / sizeof(supportedPlatforms[0]);
-    size_t i;
-
-    if (platformID != GLFW_PLATFORM_WIN32 &&
-        platformID != GLFW_PLATFORM_COCOA &&
-        platformID != GLFW_PLATFORM_WAYLAND &&
-        platformID != GLFW_PLATFORM_X11)
-    {
-        _glfwInputError(GLFW_INVALID_ENUM, "Invalid platform ID 0x%08X", platformID);
-        return GLFW_FALSE;
-    }
-
-    for (i = 0;  i < count;  i++)
-    {
-        if (platformID == supportedPlatforms[i].ID)
-            return GLFW_TRUE;
-    }
-
-    return GLFW_FALSE;
-}
-
 GLFWAPI const char* glfwGetVersionString(void)
 {
     return _GLFW_MAKE_VERSION(GLFW_VERSION_MAJOR,

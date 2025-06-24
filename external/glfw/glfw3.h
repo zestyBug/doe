@@ -929,8 +929,6 @@ extern "C" {
 
 #define GLFW_NATIVE_CONTEXT_API     0x00036001
 
-#define GLFW_ANGLE_PLATFORM_TYPE_NONE    0x00037001
-
 #define GLFW_WAYLAND_PREFER_LIBDECOR    0x00038001
 #define GLFW_WAYLAND_DISABLE_LIBDECOR   0x00038002
 
@@ -1052,16 +1050,6 @@ extern "C" {
  *  Joystick hat buttons [init hint](@ref GLFW_JOYSTICK_HAT_BUTTONS).
  */
 #define GLFW_JOYSTICK_HAT_BUTTONS   0x00050001
-/*! @brief ANGLE rendering backend init hint.
- *
- *  ANGLE rendering backend [init hint](@ref GLFW_ANGLE_PLATFORM_TYPE_hint).
- */
-#define GLFW_ANGLE_PLATFORM_TYPE    0x00050002
-/*! @brief Platform selection init hint.
- *
- *  Platform selection [init hint](@ref GLFW_PLATFORM).
- */
-#define GLFW_PLATFORM               0x00050003
 /*! @brief macOS specific init hint.
  *
  *  macOS specific [init hint](@ref GLFW_COCOA_CHDIR_RESOURCES_hint).
@@ -1090,7 +1078,6 @@ extern "C" {
  *
  *  Hint value for @ref GLFW_PLATFORM that enables automatic platform selection.
  */
-#define GLFW_ANY_PLATFORM           0x00060000
 #define GLFW_PLATFORM_WIN32         0x00060001
 #define GLFW_PLATFORM_COCOA         0x00060002
 #define GLFW_PLATFORM_WAYLAND       0x00060003
@@ -1848,38 +1835,6 @@ typedef struct GLFWgamepadstate
     float axes[6];
 } GLFWgamepadstate;
 
-/*! @brief Custom heap memory allocator.
- *
- *  This describes a custom heap memory allocator for GLFW.  To set an allocator, pass it
- *  to @ref glfwInitAllocator before initializing the library.
- *
- *  @sa @ref init_allocator
- *  @sa @ref glfwInitAllocator
- *
- *  @since Added in version 3.4.
- *
- *  @ingroup init
- */
-typedef struct GLFWallocator
-{
-    /*! The memory allocation function.  See @ref GLFWallocatefun for details about
-     *  allocation function.
-     */
-    GLFWallocatefun allocate;
-    /*! The memory reallocation function.  See @ref GLFWreallocatefun for details about
-     *  reallocation function.
-     */
-    GLFWreallocatefun reallocate;
-    /*! The memory deallocation function.  See @ref GLFWdeallocatefun for details about
-     *  deallocation function.
-     */
-    GLFWdeallocatefun deallocate;
-    /*! The user pointer for this custom allocator.  This value will be passed to the
-     *  allocator functions.
-     */
-    void* user;
-} GLFWallocator;
-
 
 /*************************************************************************
  * GLFW API functions
@@ -1936,7 +1891,6 @@ typedef struct GLFWallocator
  *
  *  @sa @ref intro_init
  *  @sa @ref glfwInitHint
- *  @sa @ref glfwInitAllocator
  *  @sa @ref glfwTerminate
  *
  *  @since Added in version 1.0.
@@ -2010,37 +1964,6 @@ GLFWAPI void glfwTerminate(void);
  *  @ingroup init
  */
 GLFWAPI void glfwInitHint(int hint, int value);
-
-/*! @brief Sets the init allocator to the desired value.
- *
- *  To use the default allocator, call this function with a `NULL` argument.
- *
- *  If you specify an allocator struct, every member must be a valid function
- *  pointer.  If any member is `NULL`, this function will emit @ref
- *  GLFW_INVALID_VALUE and the init allocator will be unchanged.
- *
- *  The functions in the allocator must fulfil a number of requirements.  See the
- *  documentation for @ref GLFWallocatefun, @ref GLFWreallocatefun and @ref
- *  GLFWdeallocatefun for details.
- *
- *  @param[in] allocator The allocator to use at the next initialization, or
- *  `NULL` to use the default one.
- *
- *  @errors Possible errors include @ref GLFW_INVALID_VALUE.
- *
- *  @pointer_lifetime The specified allocator is copied before this function
- *  returns.
- *
- *  @thread_safety This function must only be called from the main thread.
- *
- *  @sa @ref init_allocator
- *  @sa @ref glfwInit
- *
- *  @since Added in version 3.4.
- *
- *  @ingroup init
- */
-GLFWAPI void glfwInitAllocator(const GLFWallocator* allocator);
 
 /*! @brief Retrieves the version of the GLFW library.
  *
@@ -2179,51 +2102,6 @@ GLFWAPI int glfwGetError(const char** description);
  *  @ingroup init
  */
 GLFWAPI GLFWerrorfun glfwSetErrorCallback(GLFWerrorfun callback);
-
-/*! @brief Returns the currently selected platform.
- *
- *  This function returns the platform that was selected during initialization.  The
- *  returned value will be one of `GLFW_PLATFORM_WIN32`, `GLFW_PLATFORM_COCOA`,
- *  `GLFW_PLATFORM_WAYLAND`, `GLFW_PLATFORM_X11` or `GLFW_PLATFORM_NULL`.
- *
- *  @return The currently selected platform, or zero if an error occurred.
- *
- *  @errors Possible errors include @ref GLFW_NOT_INITIALIZED.
- *
- *  @thread_safety This function may be called from any thread.
- *
- *  @sa @ref platform
- *  @sa @ref glfwPlatformSupported
- *
- *  @since Added in version 3.4.
- *
- *  @ingroup init
- */
-GLFWAPI int glfwGetPlatform(void);
-
-/*! @brief Returns whether the library includes support for the specified platform.
- *
- *  This function returns whether the library was compiled with support for the specified
- *  platform.  The platform must be one of `GLFW_PLATFORM_WIN32`, `GLFW_PLATFORM_COCOA`,
- *  `GLFW_PLATFORM_WAYLAND`, `GLFW_PLATFORM_X11` or `GLFW_PLATFORM_NULL`.
- *
- *  @param[in] platform The platform to query.
- *  @return `GLFW_TRUE` if the platform is supported, or `GLFW_FALSE` otherwise.
- *
- *  @errors Possible errors include @ref GLFW_INVALID_ENUM.
- *
- *  @remark This function may be called before @ref glfwInit.
- *
- *  @thread_safety This function may be called from any thread.
- *
- *  @sa @ref platform
- *  @sa @ref glfwGetPlatform
- *
- *  @since Added in version 3.4.
- *
- *  @ingroup init
- */
-GLFWAPI int glfwPlatformSupported(int platform);
 
 /*! @brief Returns the currently connected monitors.
  *

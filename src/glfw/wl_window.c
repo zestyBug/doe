@@ -2694,7 +2694,7 @@ const char* _glfwGetScancodeNameOS(int scancode)
     return _glfw.wl.keynames[key];
 }
 
-int _glfwGetKeyScancode(int key)
+int _glfwGetKeyScancodeOS(int key)
 {
     return _glfw.wl.scancodes[key];
 }
@@ -3097,7 +3097,7 @@ static const struct wl_data_source_listener dataSourceListener =
     dataSourceHandleCancelled,
 };
 
-void _glfwSetClipboardString(const char* string)
+void _glfwSetClipboardStringOS(const char* string)
 {
     if (_glfw.wl.selectionSource)
     {
@@ -3158,14 +3158,6 @@ const char* _glfwGetClipboardStringOS(void)
 GLFWAPI struct wl_display* glfwGetWaylandDisplay(void)
 {
     _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
-
-    if (_glfw.platform.platformID != GLFW_PLATFORM_WAYLAND)
-    {
-        _glfwInputError(GLFW_PLATFORM_UNAVAILABLE,
-                        "Wayland: Platform not initialized");
-        return NULL;
-    }
-
     return _glfw.wl.display;
 }
 
@@ -3173,14 +3165,6 @@ GLFWAPI struct wl_surface* glfwGetWaylandWindow(GLFWwindow* handle)
 {
     _GLFWwindow* window = (_GLFWwindow*) handle;
     _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
-
-    if (_glfw.platform.platformID != GLFW_PLATFORM_WAYLAND)
-    {
-        _glfwInputError(GLFW_PLATFORM_UNAVAILABLE,
-                        "Wayland: Platform not initialized");
-        return NULL;
-    }
-
     return window->wl.surface;
 }
 

@@ -46,12 +46,9 @@ _GLFWlibrary _glfw = { GLFW_FALSE };
 //
 static _GLFWerror _glfwMainThreadError;
 static GLFWerrorfun _glfwErrorCallback;
-static GLFWallocator _glfwInitAllocator;
 static _GLFWinitconfig _glfwInitHints =
 {
     .hatButtons = GLFW_TRUE,
-    .angleType = GLFW_ANGLE_PLATFORM_TYPE_NONE,
-    .platformID = GLFW_ANY_PLATFORM,
 #if defined(_GLFW_X11)
     .x11 =
     {
@@ -68,21 +65,21 @@ static _GLFWinitconfig _glfwInitHints =
 
 // The allocation function used when no custom allocator is set
 //
-static void* defaultAllocate(size_t size, void* user)
+static void* _glfwDefaultAllocate(size_t size, void* user)
 {
     return malloc(size);
 }
 
 // The deallocation function used when no custom allocator is set
 //
-static void defaultDeallocate(void* block, void* user)
+static void _glfwDefaultDeallocate(void* block, void* user)
 {
     free(block);
 }
 
 // The reallocation function used when no custom allocator is set
 //
-static void* defaultReallocate(void* block, size_t size, void* user)
+static void* _glfwDefaultReallocate(void* block, size_t size, void* user)
 {
     return realloc(block, size);
 }
@@ -247,7 +244,7 @@ void* _glfw_calloc(size_t count, size_t size)
             return NULL;
         }
 
-        block = _glfw.allocator.allocate(count * size, _glfw.allocator.user);
+        block = _glfwDefaultAllocate(count * size, NULL);
         if (block)
             return memset(block, 0, count * size);
         else
@@ -264,7 +261,7 @@ void* _glfw_realloc(void* block, size_t size)
 {
     if (block && size)
     {
-        void* resized = _glfw.allocator.reallocate(block, size, _glfw.allocator.user);
+        void* resized = _glfwDefaultReallocate(block, size, NULL);
         if (resized)
             return resized;
         else
@@ -285,7 +282,7 @@ void* _glfw_realloc(void* block, size_t size)
 void _glfw_free(void* block)
 {
     if (block)
-        _glfw.allocator.deallocate(block, _glfw.allocator.user);
+        _glfwDefaultDeallocate(block, NULL);
 }
 
 
@@ -366,15 +363,7 @@ GLFWAPI int glfwInit(void)
     memset(&_glfw, 0, sizeof(_glfw));
     _glfw.hints.init = _glfwInitHints;
 
-    _glfw.allocator = _glfwInitAllocator;
-    if (!_glfw.allocator.allocate)
-    {
-        _glfw.allocator.allocate   = defaultAllocate;
-        _glfw.allocator.reallocate = defaultReallocate;
-        _glfw.allocator.deallocate = defaultDeallocate;
-    }
-
-    if (!_glfwSelectPlatform(_glfw.hints.init.platformID, &_glfw.platform))
+    if (!_glfwSelectPlatform())
         return GLFW_FALSE;
 
     if (!_glfwInitOS())
@@ -411,12 +400,6 @@ GLFWAPI void glfwInitHint(int hint, int value)
         case GLFW_JOYSTICK_HAT_BUTTONS:
             _glfwInitHints.hatButtons = value;
             return;
-        case GLFW_ANGLE_PLATFORM_TYPE:
-            _glfwInitHints.angleType = value;
-            return;
-        case GLFW_PLATFORM:
-            _glfwInitHints.platformID = value;
-            return;
         #if defined(_GLFW_WAYLAND)
         case GLFW_WAYLAND_LIBDECOR:
             _glfwInitHints.wl.libdecorMode = value;
@@ -426,19 +409,6 @@ GLFWAPI void glfwInitHint(int hint, int value)
 
     _glfwInputError(GLFW_INVALID_ENUM,
                     "Invalid init hint 0x%08X", hint);
-}
-
-GLFWAPI void glfwInitAllocator(const GLFWallocator* allocator)
-{
-    if (allocator)
-    {
-        if (allocator->allocate && allocator->reallocate && allocator->deallocate)
-            _glfwInitAllocator = *allocator;
-        else
-            _glfwInputError(GLFW_INVALID_VALUE, "Missing function in allocator");
-    }
-    else
-        memset(&_glfwInitAllocator, 0, sizeof(GLFWallocator));
 }
 
 GLFWAPI void glfwGetVersion(int* major, int* minor, int* rev)

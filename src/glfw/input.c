@@ -724,7 +724,7 @@ GLFWAPI const char* glfwGetKeyName(int key, int scancode)
             return NULL;
         }
 
-        scancode = _glfwGetKeyScancode(key);
+        scancode = _glfwGetKeyScancodeOS(key);
     }
 
     return _glfwGetScancodeNameOS(scancode);
@@ -740,7 +740,7 @@ GLFWAPI int glfwGetKeyScancode(int key)
         return -1;
     }
 
-    return _glfwGetKeyScancode(key);
+    return _glfwGetKeyScancodeOS(key);
 }
 
 GLFWAPI int glfwGetKey(GLFWwindow* handle, int key)
@@ -1476,7 +1476,7 @@ GLFWAPI void glfwSetClipboardString(GLFWwindow* handle, const char* string)
     assert(string != NULL);
 
     _GLFW_REQUIRE_INIT();
-    _glfwSetClipboardString(string);
+    _glfwSetClipboardStringOS(string);
 }
 
 GLFWAPI const char* glfwGetClipboardString(GLFWwindow* handle)

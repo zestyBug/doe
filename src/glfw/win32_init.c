@@ -598,14 +598,8 @@ BOOL _glfwIsWindows10BuildOrGreater(WORD build)
     return RtlVerifyVersionInfo(&osvi, mask, cond) == 0;
 }
 
-GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
+GLFWbool _glfwConnect()
 {
-    const _GLFWplatform win32 =
-    {
-        .platformID = GLFW_PLATFORM_WIN32,
-    };
-
-    *platform = win32;
     return GLFW_TRUE;
 }
 

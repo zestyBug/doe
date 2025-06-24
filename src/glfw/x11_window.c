@@ -2880,7 +2880,7 @@ const char* _glfwGetScancodeNameOS(int scancode)
     return _glfw.x11.keynames[key];
 }
 
-int _glfwGetKeyScancode(int key)
+int _glfwGetKeyScancodeOS(int key)
 {
     return _glfw.x11.scancodes[key];
 }
@@ -3010,7 +3010,7 @@ void _glfwSetCursorOS(_GLFWwindow* window, _GLFWcursor* cursor)
     }
 }
 
-void _glfwSetClipboardString(const char* string)
+void _glfwSetClipboardStringOS(const char* string)
 {
     char* copy = _glfw_strdup(string);
     _glfw_free(_glfw.x11.clipboardString);
@@ -3043,13 +3043,6 @@ const char* _glfwGetClipboardStringOS(void)
 GLFWAPI Display* glfwGetX11Display(void)
 {
     _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
-
-    if (_glfw.platform.platformID != GLFW_PLATFORM_X11)
-    {
-        _glfwInputError(GLFW_PLATFORM_UNAVAILABLE, "X11: Platform not initialized");
-        return NULL;
-    }
-
     return _glfw.x11.display;
 }
 
@@ -3057,25 +3050,12 @@ GLFWAPI Window glfwGetX11Window(GLFWwindow* handle)
 {
     _GLFWwindow* window = (_GLFWwindow*) handle;
     _GLFW_REQUIRE_INIT_OR_RETURN(None);
-
-    if (_glfw.platform.platformID != GLFW_PLATFORM_X11)
-    {
-        _glfwInputError(GLFW_PLATFORM_UNAVAILABLE, "X11: Platform not initialized");
-        return None;
-    }
-
     return window->x11.handle;
 }
 
 GLFWAPI void glfwSetX11SelectionString(const char* string)
 {
     _GLFW_REQUIRE_INIT();
-
-    if (_glfw.platform.platformID != GLFW_PLATFORM_X11)
-    {
-        _glfwInputError(GLFW_PLATFORM_UNAVAILABLE, "X11: Platform not initialized");
-        return;
-    }
 
     _glfw_free(_glfw.x11.primarySelectionString);
     _glfw.x11.primarySelectionString = _glfw_strdup(string);
@@ -3096,12 +3076,6 @@ GLFWAPI void glfwSetX11SelectionString(const char* string)
 GLFWAPI const char* glfwGetX11SelectionString(void)
 {
     _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
-
-    if (_glfw.platform.platformID != GLFW_PLATFORM_X11)
-    {
-        _glfwInputError(GLFW_PLATFORM_UNAVAILABLE, "X11: Platform not initialized");
-        return NULL;
-    }
 
     return getSelectionString(_glfw.x11.PRIMARY);
 }

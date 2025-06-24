@@ -1162,12 +1162,8 @@ Cursor _glfwCreateNativeCursor(const GLFWimage* image, int xhot, int yhot)
 //////                       GLFW platform API                      //////
 //////////////////////////////////////////////////////////////////////////
 
-GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
+GLFWbool _glfwConnect()
 {
-    const _GLFWplatform x11 =
-    {
-        .platformID = GLFW_PLATFORM_X11,
-    };
 
     // HACK: If the application has left the locale as "C" then both wide
     //       character text input and explicit UTF-8 input via XIM will break
@@ -1185,8 +1181,7 @@ GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
 #endif
     if (!module)
     {
-        if (platformID == GLFW_PLATFORM_X11)
-            _glfwInputError(GLFW_PLATFORM_ERROR, "X11: Failed to load Xlib");
+        _glfwInputError(GLFW_PLATFORM_ERROR, "X11: Failed to load Xlib");
 
         return GLFW_FALSE;
     }
@@ -1199,8 +1194,7 @@ GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
         _glfwPlatformGetModuleSymbol(module, "XOpenDisplay");
     if (!XInitThreads || !XrmInitialize || !XOpenDisplay)
     {
-        if (platformID == GLFW_PLATFORM_X11)
-            _glfwInputError(GLFW_PLATFORM_ERROR, "X11: Failed to load Xlib entry point");
+        _glfwInputError(GLFW_PLATFORM_ERROR, "X11: Failed to load Xlib entry point");
 
         _glfwPlatformFreeModule(module);
         return GLFW_FALSE;
@@ -1212,19 +1206,14 @@ GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
     Display* display = XOpenDisplay(NULL);
     if (!display)
     {
-        if (platformID == GLFW_PLATFORM_X11)
+        const char* name = getenv("DISPLAY");
+        if (name)
         {
-            const char* name = getenv("DISPLAY");
-            if (name)
-            {
-                _glfwInputError(GLFW_PLATFORM_UNAVAILABLE,
-                                "X11: Failed to open display %s", name);
-            }
-            else
-            {
-                _glfwInputError(GLFW_PLATFORM_UNAVAILABLE,
-                                "X11: The DISPLAY environment variable is missing");
-            }
+            _glfwInputError(GLFW_PLATFORM_UNAVAILABLE, "X11: Failed to open display %s", name);
+        }
+        else
+        {
+            _glfwInputError(GLFW_PLATFORM_UNAVAILABLE, "X11: The DISPLAY environment variable is missing");
         }
 
         _glfwPlatformFreeModule(module);
@@ -1234,7 +1223,6 @@ GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform)
     _glfw.x11.display = display;
     _glfw.x11.xlib.handle = module;
 
-    *platform = x11;
     return GLFW_TRUE;
 }
 

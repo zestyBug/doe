@@ -1,4 +1,3 @@
-
 #include "ECS/SystemManager.hpp"
 #include "glfw/glfw3.h"
 #include <stdio.h>
@@ -39,14 +38,10 @@ int main()
 {
     glfwSetErrorCallback(error_callback);
     if (!glfwInit())
-    {
-        // Initialization failed
-    }
+        return 1;
     GLFWwindow* window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
     if (!window)
-    {
-        // Window or OpenGL context creation failed
-    }
+        return 1;
 
     glfwSetDropCallback(window, drop_callback);
     glfwSetKeyCallback(window, key_callback);

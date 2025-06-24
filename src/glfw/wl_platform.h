@@ -594,7 +594,7 @@ typedef struct _GLFWcursorWayland
     int                         currentImage;
 } _GLFWcursorWayland;
 
-GLFWbool _glfwConnect(int platformID, _GLFWplatform* platform);
+GLFWbool _glfwConnect();
 int _glfwInitOS(void);
 void _glfwTerminateOS(void);
 
@@ -644,12 +644,12 @@ void _glfwGetCursorPosOS(_GLFWwindow* window, double* xpos, double* ypos);
 void _glfwSetCursorPosOS(_GLFWwindow* window, double xpos, double ypos);
 void _glfwSetCursorModeOS(_GLFWwindow* window, int mode);
 const char* _glfwGetScancodeNameOS(int scancode);
-int _glfwGetKeyScancode(int key);
+int _glfwGetKeyScancodeOS(int key);
 GLFWbool _glfwCreateCursorOS(_GLFWcursor* cursor, const GLFWimage* image, int xhot, int yhot);
 GLFWbool _glfwCreateStandardCursorOS(_GLFWcursor* cursor, int shape);
 void _glfwDestroyCursorOS(_GLFWcursor* cursor);
 void _glfwSetCursorOS(_GLFWwindow* window, _GLFWcursor* cursor);
-void _glfwSetClipboardString(const char* string);
+void _glfwSetClipboardStringOS(const char* string);
 const char* _glfwGetClipboardStringOS(void);
 
 void _glfwFreeMonitorOS(_GLFWmonitor* monitor);

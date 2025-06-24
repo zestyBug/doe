@@ -56,7 +56,7 @@ void _glfwInputWindowFocus(_GLFWwindow* window, GLFWbool focused)
         {
             if (window->keys[key] == GLFW_PRESS)
             {
-                const int scancode = _glfwGetKeyScancode(key);
+                const int scancode = _glfwGetKeyScancodeOS(key);
                 _glfwInputKey(window, key, scancode, GLFW_RELEASE, 0);
             }
         }

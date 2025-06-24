@@ -99,8 +99,6 @@ struct _GLFWerror
 struct _GLFWinitconfig
 {
     GLFWbool      hatButtons;
-    int           angleType;
-    int           platformID;
 #if defined(_GLFW_X11)
     struct {
         GLFWbool  xcbVulkanSurface;
@@ -363,19 +361,14 @@ void _glfwWaitEventsOS(void);
 void _glfwWaitEventsTimeoutOS(double);
 void _glfwPostEmptyEventOS(void);
 
-struct _GLFWplatform
-{
-    int platformID;
-};
+
 
 // Library global data
 //
 struct _GLFWlibrary
 {
     GLFWbool            initialized;
-    GLFWallocator       allocator;
 
-    _GLFWplatform       platform;
 
     struct {
         _GLFWinitconfig init;
@@ -478,7 +471,7 @@ void _glfwInputError(int code, const char* format, ...);
 //////                       GLFW internal API                      //////
 //////////////////////////////////////////////////////////////////////////
 
-GLFWbool _glfwSelectPlatform(int platformID, _GLFWplatform* platform);
+GLFWbool _glfwSelectPlatform();
 
 GLFWbool _glfwStringInExtensionString(const char* string, const char* extensions);
 
