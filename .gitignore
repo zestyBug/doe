@@ -1,7 +1,6 @@
 .vscode
 obj
 bin
-dump
 *.depend
 *.layout
 *.exe
