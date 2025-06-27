@@ -18,6 +18,14 @@
 // new () T() should be global
 #include <memory>
 
+#if defined(_WIN32) || (defined(__WIN32__) || defined(WIN32) || defined(__MINGW32__))
+#define DOE_WIN32 1
+#define DOE_UNIX 0
+#else
+#define DOE_WIN32 0
+#define DOE_UNIX 1
+#endif
+
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
@@ -58,7 +66,11 @@ class allocator
         if(likely(__n > 0)){
             if(__n>0xFFFFFFF)  throw std::bad_alloc();
             __n = alignTo64(sizeof(_Tp),(uint32_t)__n);
+        #if DOE_WIN32
+            ret = (_Tp*) _aligned_malloc(__n,64);
+        #else
             ret = (_Tp*) aligned_alloc(64,__n);
+        #endif
             if(ret == nullptr) throw std::bad_alloc();
         #ifdef DEBUG
             allocator_counter++;
@@ -74,7 +86,11 @@ class allocator
     void deallocate(void* __p, uint32_t __n=0) {
         (void)__n;
         if(likely(__p != nullptr)){
+        #if DOE_WIN32
+            _aligned_free(__p);
+        #else
             free(__p);
+        #endif
         #ifdef VERBOSE
             printf("allocator::deallocate(): %p\n",__p);
         #endif
