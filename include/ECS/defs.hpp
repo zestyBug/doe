@@ -68,6 +68,9 @@ namespace ECS
         bool exactSame(const TypeID v) const {
             return this->value == v.value && this->flag == v.flag;
         }
+        bool same(const TypeID v) const {
+            return this->value == v.value;
+        }
         // can be 1,2,3,...
         static constexpr uint16_t MaxTypeCount = 0x2000;
     };
@@ -126,92 +129,112 @@ namespace ECS
         // default no-argument constructor function
         void (*constructor)(void*) = nullptr;
     };
-    // this value is hard coded means
-    // modification in binary file is much harder
-    // so new component needs new version of compiled engine
-    // also the more component, the more memory is allocated exponentially
-    #define COMPOMEN_COUNT 32
-    // contains runtime typeinfo,
-    // technically array can be erased to reassign type ids
-    // unless values are stored somewhere and spreaded
-    // WARN: dont access this directly
-    // WARN: TypeID index must be 0
-    extern static_array<comp_info,COMPOMEN_COUNT> rtti;
 
-    typedef void (*rttiFP)(void*);
-
-    [[nodiscard]] comp_info _new_id(uint32_t size, rttiFP destructor, rttiFP constructor);
-
-    /**
-     * Following functions are not part of run-time core.
-     */
-
-
-    // actuall core of compile-time-type-information
-    // returns real index of that type
-    template<typename T>
-    [[nodiscard]] uint16_t __type_id__()
+    namespace internal
     {
-        static_assert(sizeof(T) <= 0x7000);
-        static const comp_info value = _new_id(
-            sizeof(T),
-            sizeof(T) > 0 ? [](void* x){static_cast<T*>(x)->~T();} : (rttiFP)nullptr,
-            sizeof(T) > 0 ? [](void* x){new (static_cast<T*>(x)) T();} : (rttiFP)nullptr
-        );
-        return value.value.realIndex();
-    }
+        // this value is hard coded means
+        // modification in binary file is much harder
+        // so new component needs new version of compiled engine
+        // also the more component, the more memory is allocated exponentially
+        constexpr uint32_t COMPOMEN_COUNT = 32;
+        // contains runtime typeinfo,
+        // technically array can be erased to reassign type ids
+        // unless values are stored somewhere and spreaded
+        // WARN: dont access this directly
+        // WARN: TypeID index must be 0
+        extern static_array<comp_info,COMPOMEN_COUNT> rtti;
+
+        typedef void (*rttiFP)(void*);
+
+        [[nodiscard]] comp_info _new_id(uint32_t size, rttiFP destructor, rttiFP constructor);
+
+        /**
+         * Following functions are not part of run-time core.
+         */
+
+
+        // actuall core of compile-time-type-information
+        // returns real index of that type
+        template<typename T>
+        [[nodiscard]] uint16_t __type_id__()
+        {
+            static_assert(sizeof(T) <= 0x7000);
+            static const comp_info value = _new_id(
+                sizeof(T),
+                sizeof(T) > 0 ? [](void* x){static_cast<T*>(x)->~T();} : (rttiFP)nullptr,
+                sizeof(T) > 0 ? [](void* x){new (static_cast<T*>(x)) T();} : (rttiFP)nullptr
+            );
+            return value.value.realIndex();
+        }
+    } // namespace internal
+    
 
     // type can be specialized to fix a type id
     template<typename T>
     inline comp_info& getTypeInfo()
     {
-        return rtti[__type_id__<std::remove_const_t<std::remove_reference_t<T>>>()];
+        return internal::rtti[internal::__type_id__<std::remove_const_t<std::remove_reference_t<T>>>()];
     }
     template<typename T>
     inline TypeID getTypeID()
     {
-        return rtti[__type_id__<std::remove_const_t<std::remove_reference_t<T>>>()].value;
+        return internal::rtti[internal::__type_id__<std::remove_const_t<std::remove_reference_t<T>>>()].value;
     }
     [[nodiscard]] inline comp_info& getTypeInfo(const TypeID id)
     {
-        if(unlikely(rtti.size() < id.realIndex()))
+        if(unlikely(internal::rtti.size() < id.realIndex()))
             throw std::bad_typeid();
-        return rtti[id.realIndex()];
+        return internal::rtti[id.realIndex()];
     }
     [[nodiscard]] inline comp_info& getTypeInfo(const uint16_t realIndex)
     {
-        if(unlikely(rtti.size() < realIndex))
+        if(unlikely(internal::rtti.size() < realIndex))
             throw std::bad_typeid();
-        return rtti[realIndex];
+        return internal::rtti[realIndex];
     }
 
+    namespace internal
+    {
+        static bool customCompare (TypeID a,TypeID b) {
+            if(unlikely(a.value == b.value))
+                throw std::bad_typeid();
+            return a.value < b.value;
+        }
+        template<typename ... T>
+        static_array<uint16_t,sizeof...(T)> _INIT_COMPONENTS_INDECIES_() {
+            static_array<uint16_t,sizeof...(T)> ret;
+            (ret.emplace_back(getTypeID<T>()), ...);
+            std::sort(ret.begin(),ret.end(),customCompare);
+            return ret;
+        }
+        template<typename ... T>
+        static_array<TypeID,sizeof...(T)> _INIT_COMPONENTS_TYPES_() {
+            static_array<TypeID,sizeof...(T)> ret;
+            (ret.emplace_back(getTypeID<T>()), ...);
+            std::sort(ret.begin(),ret.end(),customCompare);
+            return ret;
+        }
+        template<typename ... T>
+        static_array<TypeID,sizeof...(T)> _INIT_COMPONENTS_TYPES_RAW_() {
+            static_array<TypeID,sizeof...(T)> ret;
+            (ret.emplace_back(getTypeInfo<T>().value), ...);
+            return ret;
+        }
+    } // namespace internal
 
-    static bool customCompare (TypeID a,TypeID b) {
-        if(unlikely(a.value == b.value))
-            throw std::bad_typeid();
-        return a.value < b.value;
-    }
     template<typename ... T>
-    static_array<TypeID,sizeof...(T)> _INIT_COMPONENTS_TYPES_() {
-        static_array<TypeID,sizeof...(T)> ret;
-        (ret.emplace_back(getTypeInfo<T>().value), ...);
-        std::sort(ret.begin(),ret.end(),customCompare);
-        return ret;
-    }
-    template<typename ... T>
-    static_array<TypeID,sizeof...(T)> _INIT_COMPONENTS_TYPES_RAW_() {
-        static_array<TypeID,sizeof...(T)> ret;
-        (ret.emplace_back(getTypeInfo<T>().value), ...);
-        return ret;
+    const_span<uint16_t> componentIndecies() {
+        static const static_array<uint16_t,sizeof...(T)> ret = internal::_INIT_COMPONENTS_INDECIES_<T...>();
+        return {ret.data(),ret.size()};
     }
     template<typename ... T>
     const_span<TypeID> componentTypes() {
-        static const static_array<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_<T...>();
+        static const static_array<TypeID,sizeof...(T)> ret = internal::_INIT_COMPONENTS_TYPES_<T...>();
         return {ret.data(),ret.size()};
     }
     template<typename ... T>
     const_span<TypeID> componentTypesRaw() {
-        static const static_array<TypeID,sizeof...(T)> ret = _INIT_COMPONENTS_TYPES_RAW_<T...>();
+        static const static_array<TypeID,sizeof...(T)> ret = internal::_INIT_COMPONENTS_TYPES_RAW_<T...>();
         return {ret.data(),ret.size()};
     }
 

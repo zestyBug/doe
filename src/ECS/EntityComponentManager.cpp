@@ -327,7 +327,7 @@ void* EntityComponentManager::getComponent(Entity entity,TypeID type){
             throw std::runtime_error("destroyEntity(): entity points to invalid archetype");
         const int tindex = arch->getIndex(type);
         if((tindex & 0xFFFF) == tindex)
-            return arch->getComponent(tindex,value.index,globalVersion);
+            return arch->getComponent((uint16_t)tindex,value.index,globalVersion);
     }
     return nullptr;
 }
@@ -339,7 +339,7 @@ const void* EntityComponentManager::getComponent(Entity entity,TypeID type) cons
             throw std::runtime_error("destroyEntity(): entity points to invalid archetype");
         const int tindex = arch->getIndex(type);
         if((tindex & 0xFFFF) == tindex)
-            return arch->getComponent(tindex,value.index);
+            return arch->getComponent((uint16_t)tindex,value.index);
     }
     return nullptr;
 }

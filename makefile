@@ -93,7 +93,8 @@ headerInclude= \
 	$(includeDir)/ECS/SystemManager.hpp \
 	$(includeDir)/ThreadPool.hpp \
 	$(includeDir)/ECS/ChunkJobFunction.hpp \
-	$(includeDir)/ECS/DependencyManager.hpp
+	$(includeDir)/ECS/DependencyManager.hpp \
+	$(includeDir)/ECS/ResourceGC.hpp
 
 OBJS=$(OBJ_RELEASE)/src/ECS/Archetype.o \
 		$(OBJ_RELEASE)/src/ECS/ArchetypeVersionManager.o \
@@ -192,6 +193,10 @@ $(BIN_DEBUG)/version: $(OBJ_DEBUG)/test/version.o $(DOBJS)
 	mkdir -p $(@D)
 	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
+$(BIN_DEBUG)/resourcegc: $(OBJ_DEBUG)/test/resourcegc.o $(DOBJS)
+	mkdir -p $(@D)
+	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
+
 
 $(BIN_RELEASE)/main: $(OBJS_GLFW) $(OBJ_RELEASE)/src/main.o $(OBJ_RELEASE)/src/system/linux_init.o $(OBJS)
 	mkdir -p $(@D)
@@ -206,6 +211,7 @@ test2: $(BIN_DEBUG)/job
 test3: $(BIN_DEBUG)/thread
 test4: $(BIN_DEBUG)/threadpool
 test5: $(BIN_DEBUG)/version
+test6: $(BIN_DEBUG)/resourcegc
 dmain: $(BIN_DEBUG)/dmain
 main: $(BIN_RELEASE)/main
 

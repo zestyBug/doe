@@ -4,10 +4,10 @@
 
 namespace ECS {
 
-static_array<comp_info,32> rtti;
+static_array<comp_info,32> internal::rtti;
 static const comp_info &__FOR_ZERO_INDEXING_PURPOSE__= getTypeInfo<ECS::Entity>();
 
-comp_info _new_id(uint32_t size, rttiFP destructor, rttiFP constructor)
+comp_info internal::_new_id(uint32_t size, rttiFP destructor, rttiFP constructor)
 {
     TypeID ti;
     ti.value = (uint16_t)rtti.size();
