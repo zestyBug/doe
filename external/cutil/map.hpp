@@ -163,7 +163,7 @@ public:
         }
         void remove(_Tp* ptr){
             int32_t offset = indexOf(ptr);
-            if(offset != -1)
+            if(offset < 0)
                 throw std::runtime_error("remove(): pointer not found");
             hashes[offset] = _SkipCode;
             ++skipNodes;

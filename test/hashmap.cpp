@@ -1,5 +1,5 @@
-#include "ECS/HashMap.hpp"
-#include "../src/HashMap.cpp"
+#include "cutil/map.hpp"
+#include "ECS/Archetype.hpp"
 #include "cutil/unique_ptr.hpp"
 
 static int test_num=1;
@@ -8,9 +8,9 @@ static int test_num=1;
 
 int main(int argc, char const *argv[])
 {
-    ECS::ArchetypeHashMap list;
+    map<const_span<ECS::TypeID>,ECS::Archetype> list;
     list.init(4);
-    std::vector<ArchetypeHolder> archs;
+    std::vector<ECS::ArchetypeHolder> archs;
 
     archs.emplace_back(ECS::Archetype::createArchetype(ECS::componentTypes<int>()));
     archs.emplace_back(ECS::Archetype::createArchetype(ECS::componentTypes<float>()));

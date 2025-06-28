@@ -79,8 +79,7 @@ namespace mtest {
     void class::name()
 
 // Macro to define test
-#define TEST(name) \
-    void name(); \
+#define TEST(name) void name(); \
     static mtest::Register reg_##name(#name, name); \
     void name()
 

@@ -133,10 +133,10 @@ public:
         }
         void remove(Type value){
             int32_t offset = indexOf(value);
-            if(offset != -1)
-                throw std::runtime_error("remove(): archtype not found");
+            if(offset < 0)
+                throw std::runtime_error("remove(): value not found");
             hashes[offset] = _SkipCode;
-            unoccupied[1]--;
+            unoccupied[1]++;
             possiblyShrink();
         }
         int indexOf(Type value) const {
@@ -171,7 +171,7 @@ public:
 };
 
 /**
- * @brief a integer set on vector, containing unique values except default value as reserved!
+ * @brief a integer set on vector, containing unique values (except default value as reserved!).
  * suitable for simple data types like int (uses lots of copy constructor)
  */
 template <typename Type,typename Allocator = std::allocator<Type>>
@@ -307,10 +307,10 @@ public:
     }
     void remove(Type value){
         int32_t offset = indexOf(value);
-        if(offset != -1)
-            throw std::runtime_error("remove(): archtype not found");
+        if(offset < 0)
+            throw std::runtime_error("remove(): value not found");
         values[offset] = invalidValue;
-        unoccupied--;
+        unoccupied++;
         possiblyShrink();
     }
     bool contains(Type value) const {
