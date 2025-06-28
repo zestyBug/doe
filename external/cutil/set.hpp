@@ -244,7 +244,7 @@ public:
         for (uint32_t offset = 0; offset < src.size(); ++offset)
         {
             uint32_t value = src.values[offset];
-            if (value != 0)
+            if (value != invalidValue)
                 insert(value);
         }
     }

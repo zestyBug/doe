@@ -197,6 +197,10 @@ $(BIN_DEBUG)/resourcegc: $(OBJ_DEBUG)/test/resourcegc.o $(DOBJS)
 	mkdir -p $(@D)
 	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
 
+$(BIN_DEBUG)/structs: $(OBJ_DEBUG)/test/structs.o $(DOBJS)
+	mkdir -p $(@D)
+	$(CCPP) -o $@ $^ $(CFLAG_DEBUG)
+
 
 $(BIN_RELEASE)/main: $(OBJS_GLFW) $(OBJ_RELEASE)/src/main.o $(OBJ_RELEASE)/src/system/linux_init.o $(OBJS)
 	mkdir -p $(@D)
@@ -212,6 +216,7 @@ test3: $(BIN_DEBUG)/thread
 test4: $(BIN_DEBUG)/threadpool
 test5: $(BIN_DEBUG)/version
 test6: $(BIN_DEBUG)/resourcegc
+test7: $(BIN_DEBUG)/structs
 dmain: $(BIN_DEBUG)/dmain
 main: $(BIN_RELEASE)/main
 

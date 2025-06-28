@@ -2,6 +2,8 @@
 #define MAP_HPP
 
 #include "basics.hpp"
+#include "HashHelper.hpp"
+#include <vector>
 
 // TODO: add custome allocator like:  std::pair<std::allocator<uint32_t>,std::allocator<_Tp*>>
 
