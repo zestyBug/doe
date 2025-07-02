@@ -24,8 +24,10 @@
 //
 //========================================================================
 
-#define GLFW_WIN32_JOYSTICK_STATE         _GLFWjoystickWin32 win32;
-#define GLFW_WIN32_LIBRARY_JOYSTICK_STATE
+ 
+
+#define GLFW_PLATFORM_JOYSTICK_STATE         _GLFWjoystickWin32 win32;
+#define GLFW_PLATFORM_LIBRARY_JOYSTICK_STATE
 
 // Joystick element (axis, button or slider)
 //

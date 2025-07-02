@@ -286,7 +286,9 @@ struct _GLFWjoystick
     _GLFWmapping*   mapping;
 
     // This is defined in platform.h
+#if defined(GLFW_BUILD_JOYSTICK)
     GLFW_PLATFORM_JOYSTICK_STATE
+#endif
 };
 
 // Platform API structure
@@ -382,7 +384,7 @@ struct _GLFWlibrary
 
     _GLFWmonitor**      monitors;
     int                 monitorCount;
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+#if defined(GLFW_BUILD_JOYSTICK)
     GLFWbool            joysticksInitialized;
     _GLFWjoystick       joysticks[GLFW_JOYSTICK_LAST + 1];
     _GLFWmapping*       mappings;
@@ -398,14 +400,16 @@ struct _GLFWlibrary
 
     struct {
         GLFWmonitorfun  monitor;
-    #if defined(GLFW_BUILD_LINUX_JOYSTICK)
+    #if defined(GLFW_BUILD_JOYSTICK)
         GLFWjoystickfun joystick;
     #endif
     } callbacks;
 
     // These are defined in platform.h
     GLFW_PLATFORM_LIBRARY_WINDOW_STATE
+#if defined(GLFW_BUILD_JOYSTICK)
     GLFW_PLATFORM_LIBRARY_JOYSTICK_STATE
+#endif
 };
 
 // Global state shared between compilation units of GLFW

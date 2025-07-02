@@ -1203,7 +1203,7 @@ static void inputText(_GLFWwindow* window, uint32_t scancode)
 
 static void handleEvents(double* timeout)
 {
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+#if defined(GLFW_BUILD_JOYSTICK)
     if (_glfw.joysticksInitialized)
         _glfwDetectJoystickConnection();
 #endif

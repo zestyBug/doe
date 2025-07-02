@@ -75,8 +75,8 @@ const char* _glfwDefaultMappings[] =
 @GLFW_COCOA_MAPPINGS@
 #endif // _GLFW_COCOA
 
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+#if defined(_GLFW_X11) || defined(_GLFW_WAYLAND)
 @GLFW_LINUX_MAPPINGS@
-#endif // GLFW_BUILD_LINUX_JOYSTICK
+#endif // 
 };
 

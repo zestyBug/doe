@@ -50,7 +50,7 @@
                        GLFW_MOD_CAPS_LOCK | \
                        GLFW_MOD_NUM_LOCK)
 
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+#if defined(GLFW_BUILD_JOYSTICK)
 
 // Initializes the platform joystick API if it has not been already
 //
@@ -415,7 +415,7 @@ void _glfwInputDrop(_GLFWwindow* window, int count, const char** paths)
         window->callbacks.drop((GLFWwindow*) window, count, paths);
 }
 
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+#if defined(GLFW_BUILD_JOYSTICK)
 
 // Notifies shared code of a joystick connection or disconnection
 //
@@ -488,7 +488,7 @@ void _glfwInputJoystickHat(_GLFWjoystick* js, int hat, char value)
 //////                       GLFW internal API                      //////
 //////////////////////////////////////////////////////////////////////////
 
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+#if defined(GLFW_BUILD_JOYSTICK)
 
 // Adds the built-in set of gamepad mappings
 //
@@ -1038,7 +1038,7 @@ GLFWAPI GLFWdropfun glfwSetDropCallback(GLFWwindow* handle, GLFWdropfun cbfun)
     return cbfun;
 }
 
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+#if defined(GLFW_BUILD_JOYSTICK)
 
 GLFWAPI int glfwJoystickPresent(int jid)
 {

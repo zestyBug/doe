@@ -110,12 +110,10 @@ static void terminate(void)
     _glfw.monitors = NULL;
     _glfw.monitorCount = 0;
 
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+#if defined(GLFW_BUILD_JOYSTICK)
     _glfw_free(_glfw.mappings);
     _glfw.mappings = NULL;
     _glfw.mappingCount = 0;
-#endif
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
     _glfwTerminateJoysticksOS();
 #endif
     _glfwTerminateOS();
@@ -372,7 +370,7 @@ GLFWAPI int glfwInit(void)
         return GLFW_FALSE;
     }
 
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+#if defined(GLFW_BUILD_JOYSTICK)
     _glfwInitGamepadMappings();
 #endif
 

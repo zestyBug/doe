@@ -28,8 +28,8 @@
 #include <linux/limits.h>
 #include <regex.h>
 
-#define GLFW_LINUX_JOYSTICK_STATE         _GLFWjoystickLinux linjs;
-#define GLFW_LINUX_LIBRARY_JOYSTICK_STATE _GLFWlibraryLinux  linjs;
+#define GLFW_PLATFORM_JOYSTICK_STATE         _GLFWjoystickLinux linjs;
+#define GLFW_PLATFORM_LIBRARY_JOYSTICK_STATE _GLFWlibraryLinux  linjs;
 
 // Linux-specific joystick data
 //

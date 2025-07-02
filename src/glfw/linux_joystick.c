@@ -27,7 +27,7 @@
 
 #include "internal.h"
 
-#if defined(GLFW_BUILD_LINUX_JOYSTICK)
+#if defined(GLFW_BUILD_JOYSTICK)
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -432,5 +432,5 @@ void _glfwUpdateGamepadGUIDOS(char* guid)
 {
 }
 
-#endif // GLFW_BUILD_LINUX_JOYSTICK
+#endif // GLFW_BUILD_JOYSTICK
 
