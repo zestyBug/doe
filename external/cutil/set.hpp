@@ -243,7 +243,7 @@ public:
     void appendFrom(const vector_set& src){
         for (uint32_t offset = 0; offset < src.size(); ++offset)
         {
-            uint32_t value = src.values[offset];
+            Type value = src.values[offset];
             if (value != invalidValue)
                 insert(value);
         }
@@ -304,14 +304,6 @@ public:
             if (attempts == size())
                 return -1;
         }
-    }
-    void remove(Type value){
-        int32_t offset = indexOf(value);
-        if(offset < 0)
-            throw std::runtime_error("remove(): value not found");
-        values[offset] = invalidValue;
-        unoccupied++;
-        possiblyShrink();
     }
     bool contains(Type value) const {
         return indexOf(value) != -1;

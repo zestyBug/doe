@@ -23,6 +23,13 @@ struct Archetype {
     }
 };
 
+namespace HashHelper
+{
+    inline uint32_t FNV1A32(const Archetype *ptr){
+        return HashHelper::FNV1A32(ptr->types);
+    }
+}
+
 TEST(Test1) {
     map<const_span<ECS::TypeID>,Archetype> list;
     list.init(4);
@@ -60,6 +67,7 @@ TEST(Test2) {
     vector_set<uint32_t> vs;
     vs.insert(1);
     vs.insert(2);
+    vs.insert(1);
     vs.insert(3);
 
     const uint32_t bbuffer = vs.unoccupiedNodes();
@@ -75,15 +83,6 @@ TEST(Test2) {
     EXPECT_EQ(vs.contains(2), true);
     EXPECT_EQ(vs.contains(3), true);
     EXPECT_EQ(vs.contains(4), false);
-
-    vs.remove(1);
-
-    i = vs.indexOf(1);
-    EXPECT_EQ(i, -1);
-
-    EXPECT_EQ(vs.occupiedNodes(), 2u);
-    EXPECT_EQ(vs.unoccupiedNodes(), bbuffer + 1);
-    EXPECT_EQ(vs.contains(1), false);
 }
 
 
