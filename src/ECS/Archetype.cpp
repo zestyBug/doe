@@ -1,5 +1,4 @@
 #include "ECS/Archetype.hpp"
-#include "cutil/HashHelper.hpp"
 using namespace ECS;
 
 
@@ -191,13 +190,6 @@ bool Archetype::getIndecies(const_span<TypeID> rtypes,uint16_t* out) const noexc
         return true;
     return false;
 }
-uint32_t Archetype::getHash() const noexcept {
-    uint32_t result = HashHelper::FNV1A32(this->types);
-    if (result == 0xFFFFFFFF || result == 0)
-        result = 1;
-    return result;
-}
-
 
 
 

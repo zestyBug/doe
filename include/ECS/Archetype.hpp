@@ -7,8 +7,18 @@
 #include "ArchetypeVersionManager.hpp"
 #include "cutil/basics.hpp"
 #include "cutil/unique_ptr.hpp"
+#include "cutil/HashHelper.hpp"
 
 class Test;
+
+namespace ECS
+{
+    class Archetype;
+}
+namespace HashHelper
+{
+    inline uint32_t FNV1A32(const ECS::Archetype *ptr);
+}
 
 namespace ECS
 {
@@ -60,6 +70,8 @@ namespace ECS
         template <typename Type,Type>
         friend class ResourceGC;
         friend class ::Test;
+        friend uint32_t HashHelper::FNV1A32(const ECS::Archetype*);
+
         // maximum number of entities that can be fit into a single chunk
         uint32_t chunkCapacity = 0;
         uint32_t lastChunkEntityCount = 0;
@@ -182,7 +194,6 @@ namespace ECS
         /// @return true on success on locating every type
         bool getIndecies(const_span<TypeID> t, uint16_t* out) const noexcept;
 
-        uint32_t getHash() const noexcept;
         /// @brief check if this archetype matches exact the same with param _types
         /// @note flag sensitive
         /// @param _types sorted array of types
@@ -272,5 +283,11 @@ namespace ECS
     };
 } // namespace ECS
 
+namespace HashHelper
+{
+    inline uint32_t FNV1A32(const ECS::Archetype *ptr){
+        return HashHelper::FNV1A32(ptr->types);
+    }
+}
 
 #endif // ARCHETYPE_HPP

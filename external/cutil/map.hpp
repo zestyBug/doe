@@ -22,13 +22,6 @@ protected:
     uint32_t emptyNodes=0;
     uint32_t skipNodes=0;
 
-    static uint32_t getHashCode(_Key key)
-    {
-        uint32_t result = HashHelper::FNV1A32(key);
-        if (result == 0 || result == _SkipCode)
-            result = _AValidHashCode;
-        return result;
-    }
 public:
 
         map() = default;
@@ -127,7 +120,9 @@ public:
         void add(_Tp* ptr) {
             if(ptr == nullptr)
                 throw std::invalid_argument("add(): null pointer");
-            uint32_t desiredHash = ptr->getHash();
+            uint32_t desiredHash = HashHelper::FNV1A32((const _Tp*)ptr);
+            if (desiredHash == 0 || desiredHash == _SkipCode)
+                desiredHash = _AValidHashCode;
             uint32_t offset = (int)(desiredHash & hashMask());
             uint32_t attempts = 0;
             while (true)
@@ -174,7 +169,9 @@ public:
         /// @brief find a pointer with a key using hash list
         /// @return value or nullptr
         _Tp* tryGet(_Key key) const {
-            uint32_t desiredHash = getHashCode(key);
+            uint32_t desiredHash = HashHelper::FNV1A32(key);
+            if (desiredHash == 0 || desiredHash == _SkipCode)
+                desiredHash = _AValidHashCode;
             uint32_t offset = desiredHash & hashMask();
             uint32_t attempts = 0;
             while (true)
@@ -197,7 +194,9 @@ public:
         int indexOf(_Tp* ptr) const {
             if(ptr == nullptr)
                 return -1;
-            uint32_t desiredHash = ptr->getHash();
+            uint32_t desiredHash = HashHelper::FNV1A32((const _Tp*)ptr);
+            if (desiredHash == 0 || desiredHash == _SkipCode)
+                desiredHash = _AValidHashCode;
             uint32_t offset = (desiredHash & hashMask());
             uint32_t attempts = 0;
             while (true)
