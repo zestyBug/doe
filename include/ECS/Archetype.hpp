@@ -52,8 +52,6 @@ namespace ECS
     using ArchetypeHolder = unique_ptr<Archetype,allocator<Archetype>>;
 
 
-    template <typename Type,Type>
-    class ResourceGC;
 
     /**
      * @brief A structure holding single archetype of components.
@@ -67,7 +65,7 @@ namespace ECS
 
         friend class ChunkJobFunction;
         friend class EntityComponentManager;
-        template <typename Type,Type>
+        template <typename Type>
         friend class ResourceGC;
         friend class ::Test;
         friend uint32_t HashHelper::FNV1A32(const ECS::Archetype*);

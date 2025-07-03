@@ -1,7 +1,7 @@
 #include "ECS/ResourceGC.hpp"
 #include "cutil/mini_test.hpp"
 ECS::EntityComponentManager *reg;
-ECS::ResourceGC<int32_t,-1> *rgc;
+ECS::ResourceGC<uint32_t> *rgc;
 
 struct com1 {
     uint8_t a[4] = {0,0,0,0};
@@ -15,13 +15,10 @@ struct com3 {
 };
 
 static int dtor1_counter = 0;
-void dtor1(int v){
+static uint32_t dtor1_last_value;
+void dtor1(uint32_t v){
     dtor1_counter++;
-}
-
-static int dtor2_counter = 0;
-void dtor2(int v){
-    dtor1_counter++;
+    dtor1_last_value = v;
 }
 
 // Test0: when value wasnt here at all
@@ -33,11 +30,21 @@ TEST(Test0) {
         val.v = (int32_t)0xFF000000;
     }
 
-    rgc->insert(0xFF,dtor1);
+    rgc->add(dtor1,0xFF);
+    rgc->add(dtor1,0xFE);
+
+    rgc->add(dtor1,0xFD);
+    rgc->add(dtor1,0xFC);
+
+    rgc->add(dtor1,0xFB);
+    rgc->add(dtor1,0xFA);
+
+    rgc->add(dtor1,0xFF);
 
     rgc->mark(reg);
     rgc->sweep();
-    EXPECT_EQ(dtor1_counter,1);
+    EXPECT_EQ(dtor1_counter,6);
+    EXPECT_EQ(rgc->occupiedNodes(),0u);
     dtor1_counter = 0;
 }
 
@@ -49,13 +56,14 @@ TEST(Test1) {
 
     auto v0 = reg->createEntity(ECS::componentTypes<com1>());
     com1& val = reg->getComponent<com1>(v0);
-    
+
     val.v = 0xFF;
-    rgc->insert(0xFF,dtor1);
+    rgc->add(dtor1,0xFF);
 
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,0);
+    EXPECT_EQ(rgc->occupiedNodes(),1u);
 
     val.v = 0x0;
 
@@ -63,6 +71,8 @@ TEST(Test1) {
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,1);
+    EXPECT_EQ(dtor1_last_value,0xFF);
+    EXPECT_EQ(rgc->occupiedNodes(),0u);
 
     dtor1_counter = 0;
 }
@@ -70,19 +80,22 @@ TEST(Test1) {
 TEST(Test2) {
     auto v0 = reg->createEntity(ECS::componentTypes<com1>());
     com1& val = reg->getComponent<com1>(v0);
-    
+
     val.v = 0x7EFEFEFE;
-    rgc->insert(0x7EFEFEFE,dtor1);
+    rgc->add(dtor1,0x7EFEFEFE);
 
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,0);
+    EXPECT_EQ(rgc->occupiedNodes(),1u);
 
     reg->destroyEntity(v0);
 
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,1);
+    EXPECT_EQ(dtor1_last_value,0x7EFEFEFE);
+    EXPECT_EQ(rgc->occupiedNodes(),0u);
 
     dtor1_counter = 0;
 }
@@ -103,14 +116,14 @@ bool isLittleEndian() {
 TEST(Test3) {
     auto v0 = reg->createEntity(ECS::componentTypes<com1>());
     com1& val = reg->getComponent<com1>(v0);
-    
+
     val.v = 0x12345678;
-    rgc->insert(0x12345678,dtor1);
+    rgc->add(dtor1,0x12345678);
 
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,0);
-    EXPECT_EQ(rgc->occupiedNodes(),1);
+    EXPECT_EQ(rgc->occupiedNodes(),1u);
 
     val.v = 0x0;
     if(isLittleEndian())
@@ -121,6 +134,7 @@ TEST(Test3) {
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,1);
+    EXPECT_EQ(dtor1_last_value,0x12345678);
     EXPECT_EQ(rgc->occupiedNodes(),0);
     dtor1_counter = 0;
 }
@@ -131,15 +145,15 @@ TEST(Test4) {
     auto v1 = reg->createEntity(ECS::componentTypes<com1,com2>());
     com1& val1 = reg->getComponent<com1>(v0);
     com2& val2 = reg->getComponent<com2>(v1);
-    
+
     val1.v = 0x01234567;
     val2.v = 0x01234566;
-    rgc->insert(0x01234567,dtor1);
+    rgc->add(dtor1,0x01234567);
 
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,0);
-    EXPECT_EQ(rgc->occupiedNodes(),1);
+    EXPECT_EQ(rgc->occupiedNodes(),1u);
 
     val1.v = 0x01234566;
     val2.v = 0x01234567;
@@ -147,14 +161,15 @@ TEST(Test4) {
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,0);
-    EXPECT_EQ(rgc->occupiedNodes(),1);
+    EXPECT_EQ(rgc->occupiedNodes(),1u);
 
     reg->destroyEntity(v1);
-    
+
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,1);
-    EXPECT_EQ(rgc->occupiedNodes(),0);
+    EXPECT_EQ(dtor1_last_value,0x01234567);
+    EXPECT_EQ(rgc->occupiedNodes(),0u);
     dtor1_counter = 0;
 }
 
@@ -162,20 +177,20 @@ TEST(Test4) {
 TEST(Test5) {
     for (size_t i = 0; i < 2048; i++)
     {
-        auto v0 = reg->createEntity(ECS::componentTypes<com1>());
-        com1& val1 = reg->getComponent<com1>(v0);
+        auto v1 = reg->createEntity(ECS::componentTypes<com1>());
+        com1& val1 = reg->getComponent<com1>(v1);
         val1.v = (int32_t)0xFFFFFFFE;
     }
-    
+
     auto v0 = reg->createEntity(ECS::componentTypes<com1>());
-    com1& val1 = reg->getComponent<com1>(v0);
-    val1.v = (int32_t)0xFFFFFFEF;
-    rgc->insert(0xFFFFFFEF,dtor1);
+    com1& val0 = reg->getComponent<com1>(v0);
+    val0.v = (int32_t)0xFFFFFFEF;
+    rgc->add(dtor1,0xFFFFFFEF);
 
     for (size_t i = 0; i < 2048; i++)
     {
-        auto v0 = reg->createEntity(ECS::componentTypes<com1>());
-        com1& val1 = reg->getComponent<com1>(v0);
+        auto v1 = reg->createEntity(ECS::componentTypes<com1>());
+        com1& val1 = reg->getComponent<com1>(v1);
         val1.v = (int32_t)0xFFFFFFFE;
     }
 
@@ -183,15 +198,16 @@ TEST(Test5) {
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,0);
 
-    val1.v = (int32_t)0xFFFFFFFE;
-    
+    val0.v = (int32_t)0xFFFFFFFE;
+
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,1);
+    EXPECT_EQ(dtor1_last_value,0xFFFFFFEF);
     dtor1_counter = 0;
 }
 
-// Test6: invalide memory iteration
+// Test6: invalid memory iteration
 TEST(Test6) {
     // enought entities to have multiple chunks
     for (size_t i = 0; i < 2048; i++)
@@ -202,17 +218,18 @@ TEST(Test6) {
         val1.v = (int32_t)0xFFFFFFFE;
         val3.v = (int32_t)0xFFFFFFEF;
     }
-    rgc->insert(0xFFFFFFEF,dtor1);
-    
+    rgc->add(dtor1,0xFFFFFFEF);
+
     rgc->mark(reg);
     rgc->sweep();
     EXPECT_EQ(dtor1_counter,1);
+    EXPECT_EQ(dtor1_last_value,0xFFFFFFEF);
     dtor1_counter = 0;
 }
 
 int main() {
     ECS::EntityComponentManager _ecm;
-    ECS::ResourceGC<int32_t,-1> _rgc{ECS::componentTypes<com1,com2>()};
+    ECS::ResourceGC<uint32_t> _rgc{ECS::componentTypes<com1,com2>()};
     reg = &_ecm;
     rgc = &_rgc;
     mtest::run_all();
