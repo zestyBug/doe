@@ -10,7 +10,7 @@
 namespace mtest {
 
     struct Test {
-        std::string name;
+        const char *name;
         std::function<void()> func;
     };
 
@@ -20,7 +20,7 @@ namespace mtest {
     }
 
     struct Register {
-        Register(const std::string& name, std::function<void()> func) {
+        Register(const char *name, std::function<void()> func) {
             get_tests().push_back({name, func});
         }
     };
@@ -30,10 +30,10 @@ namespace mtest {
         for (auto& test : get_tests()) {
             try {
                 test.func();
-                printf("✔ %s\n", test.name.c_str());
+                printf("✔ %s\n", test.name);
                 ++passed;
             } catch (const std::exception& ex) {
-                printf("✘ %s - %s\n", test.name.c_str(), ex.what());
+                printf("✘ %s - %s\n", test.name, ex.what());
                 ++failed;
             }
         }
@@ -73,7 +73,7 @@ namespace mtest {
 
 // Macro to define test
 #define CLASS_TEST(class,name) \
-    static mtest::Register reg_##class##name(#class "::" #name, class::name); \
+    static mtest::Register reg_##class##name(#class "::" #name, &class::name); \
     void class::name()
 
 // Macro to define test

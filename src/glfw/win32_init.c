@@ -343,6 +343,7 @@ static LRESULT CALLBACK helperWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
 
         case WM_DEVICECHANGE:
         {
+        #ifdef GLFW_BUILD_JOYSTICK
             if (!_glfw.joysticksInitialized)
                 break;
 
@@ -358,6 +359,7 @@ static LRESULT CALLBACK helperWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
                 if (dbh && dbh->dbch_devicetype == DBT_DEVTYP_DEVICEINTERFACE)
                     _glfwDetectJoystickDisconnection();
             }
+        #endif
 
             break;
         }
