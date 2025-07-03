@@ -3,8 +3,8 @@
 
 #include "cutil/basics.hpp"
 #include "cutil/span.hpp"
+#include "cutil/HashHelper.hpp"
 #include "defs.hpp"
-#include "ECS/EntityComponentManager.hpp"
 #include <limits>
 
 namespace ECS
@@ -44,10 +44,10 @@ namespace internal {
 }
 
 /// @brief stores set of values. garbage collects values with mark & sweep algorithm, searching inside ECMs.
-template <typename Type = int32_t>
 class ResourceGC
 {
 public:
+    using Type = intptr_t;
     static const uint32_t INVALID_INDEX = 0xFFFFFFFF;
     typedef void (dtor_fn)(Type);
 protected:
@@ -58,7 +58,6 @@ protected:
     uint32_t _size = 0;
     uint32_t mitems = 0;
     uint32_t unoccupied = 0;
-    const const_span<ECS::TypeID> components;
     Type minValue=std::numeric_limits<Type>::max();
     Type maxValue=std::numeric_limits<Type>::min();
     float loadFactor = 0.9;
@@ -196,7 +195,7 @@ protected:
         if(size < this->occupiedNodes())
             throw std::out_of_range("rehash(): size smaller than needed, causing infinite loop.");
     #endif
-        ResourceGC temp(this->components,size);
+        ResourceGC temp(size);
         temp.appendFrom(*this);
         *this = std::move(temp);
     }
@@ -211,13 +210,11 @@ protected:
             this->rehash(new_size);
     }
 public:
-    ResourceGC(const_span<ECS::TypeID> _components,uint32_t count = 0) : components{_components} {
+    ResourceGC(uint32_t count = 0) {
         if (count < minimumSize())
             count = minimumSize();
         // isnt power of 2?
     #ifdef DEBUG
-        if(components.size() < 1)
-            throw std::invalid_argument("ResourceGC(): component(s) count must be GE 1");
         if(count < 1)
             throw std::invalid_argument("ResourceGC(): array size must be atleast 1");
     #endif
@@ -242,7 +239,7 @@ public:
         memset(flags,0,sizeof(internal::GCFlag)*count);
     }
     ResourceGC(const ResourceGC&) = delete;
-    ResourceGC(ResourceGC&& v):components{v.components}{
+    ResourceGC(ResourceGC&& v) {
         *this = std::move(v);
     }
     ResourceGC& operator=(const ResourceGC&) = delete;
@@ -294,76 +291,10 @@ protected:
             i = (i+1) % this->size(); j++;
         }
     }
-    void iterateChunks(Archetype const * const archetype,
-            uint32_t numBuffers,
-            const uint16_t* sizeBuffer,
-            const uint32_t* offsetBuffer) {
-        const_span<Chunk> archetypeChunks   = archetype->chunksData;
-        const uint32_t lastChunkEntityCount = archetype->lastChunkEntityCount;
-        const uint32_t chunkCapacity        = archetype->chunkCapacity;
-        // may underflow!
-        const uint32_t lastChunkIndex       = archetypeChunks.size() - 1;
-
-    #ifdef DEBUG
-        if(unlikely(  chunkCapacity == 0 ||
-            (archetypeChunks.size() > 0 && lastChunkEntityCount == 0 )
-        )) throw std::runtime_error("iterateChunks(): bad archetype!");
-    #endif
-
-        for(uint32_t chunckIndex = 0; chunckIndex < archetypeChunks.size(); chunckIndex++)
-        {
-            const uint8_t *chunkMemory = (const uint8_t *)archetypeChunks[chunckIndex].memory;
-            const uint32_t entityCount = chunckIndex == lastChunkIndex ? lastChunkEntityCount : chunkCapacity ;
-        #ifdef DEBUG
-            if(unlikely(chunkMemory == nullptr))
-                throw std::runtime_error("iterateChunks(): found an uninitialized chunk in archetype!");
-        #endif
-            for (size_t index = 0; index < numBuffers; index++)
-                searchMemory(chunkMemory + offsetBuffer[index], entityCount * sizeBuffer[index]);
-        }
-    }
-    void searchArchetype(Archetype const * const archetype)
-    {
-        uint32_t number_of_found = 0;
-        uint16_t size_buffer[this->components.size()];
-        uint32_t offset_buffer[this->components.size()];
-        {
-            const const_span<uint32_t> archetypeOffsets = archetype->offsets;
-            const const_span<uint16_t> archetypeSizes = archetype->sizeOfs;
-            const const_span<TypeID> archetypeTypes = archetype->types;
-            uint32_t archetypeTypeIndex = 0;
-            uint32_t componentIndex = 0;
-            // fill offset_buffer
-            while(archetypeTypeIndex < archetypeTypes.size() && componentIndex < this->components.size())
-            {
-                if(this->components[componentIndex].value == archetypeTypes[archetypeTypeIndex].value)
-                {
-                    size_buffer[number_of_found] = archetypeSizes[archetypeTypeIndex];
-                    offset_buffer[number_of_found] = archetypeOffsets[archetypeTypeIndex];
-                    ++number_of_found;
-                    ++componentIndex;
-                    ++archetypeTypeIndex;
-                }
-                else if(this->components[componentIndex].value < archetypeTypes[archetypeTypeIndex].value)
-                    ++componentIndex;
-                else
-                    ++archetypeTypeIndex;
-            }
-        }
-        if(number_of_found)
-            iterateChunks(archetype,number_of_found,size_buffer,offset_buffer);
-    }
 public:
     void searchMemory(const uint8_t *region,const uint32_t regionSizeInByte) {
         for (uint32_t k = 0; k < regionSizeInByte/sizeof(Type); k++)
             markValue(((const Type*)region)[k]);
-    }
-    void mark(const EntityComponentManager* ecm) {
-        const Archetype *arch;
-        uint32_t archetypeIndex;
-        for (archetypeIndex = 0; archetypeIndex < ecm->archetypes.size(); archetypeIndex++)
-            if((arch = ecm->archetypes[archetypeIndex].get()))
-                searchArchetype(arch);
     }
     void sweep() {
         uint32_t i;
@@ -375,17 +306,14 @@ public:
             this->dtors[i](this->values[i]);
         }
         for (i = 0; i < this->size();) {
-            
             if (this->hashes[i] == 0) { i++;continue; }
-            if ((this->flags[i] & internal::GCFlag::MARK) != internal::GCFlag::NONE)
-            {
-                this->flags[i] &= ~internal::GCFlag::MARK;
-                i++;
-                continue;
-            }
+            if ((this->flags[i] & internal::GCFlag::MARK) != internal::GCFlag::NONE) { i++;continue; }
             if ((this->flags[i] & internal::GCFlag::ROOT) != internal::GCFlag::NONE) { i++;continue; }
             remIndex(i);
         }
+        for (i = 0; i < this->size();i++)
+            if ((this->flags[i] & internal::GCFlag::MARK) != internal::GCFlag::NONE)
+                this->flags[i] &= ~internal::GCFlag::MARK;
         this->resizeLess();
         this->mitems = this->occupiedNodes() + (size_t)(this->occupiedNodes() * this->sweepFactor) + 1;
     }

@@ -18,8 +18,6 @@ namespace ECS
     // the class that holds all entities
     class EntityComponentManager final {
         friend class ChunkJobFunction;
-        template <typename Type>
-        friend class ResourceGC;
         friend class ::Test;
     protected:
         // array of entities value,

@@ -65,8 +65,6 @@ namespace ECS
 
         friend class ChunkJobFunction;
         friend class EntityComponentManager;
-        template <typename Type>
-        friend class ResourceGC;
         friend class ::Test;
         friend uint32_t HashHelper::FNV1A32(const ECS::Archetype*);
 
