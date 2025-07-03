@@ -103,20 +103,18 @@ namespace ECS
             const_span<uint32_t> archOffsets = this->offsets;
             const_span<TypeID> archTypes = this->types;
             for (uint32_t typeIndex = 0; typeIndex < this->nonZeroSizedTypesCount(); typeIndex++)
-            {
-                auto destructor =  getTypeInfo(archTypes[typeIndex]).destructor;
-                for (uint32_t chunkIndex = 0; chunkIndex < archChunks.size(); chunkIndex++)
-                {
-                    uint8_t * const componentMemory =
-                        (uint8_t*)(archChunks[chunkIndex].memory) + archOffsets[typeIndex];
-                    const uint32_t entityCount = (chunkIndex + 1) == archChunks.size() ?
-                        this->lastChunkEntityCount : this->chunkCapacity;
-                    const uint32_t typeSize = archSizes[typeIndex];
-                    for (uint32_t valueIndex = 0; valueIndex < entityCount; valueIndex++)
-                        destructor(componentMemory + typeSize*valueIndex);
+                if(auto destructor =  getTypeInfo(archTypes[typeIndex]).destructor;destructor)
+                    for (uint32_t chunkIndex = 0; chunkIndex < archChunks.size(); chunkIndex++)
+                    {
+                        uint8_t * const componentMemory =
+                            (uint8_t*)(archChunks[chunkIndex].memory) + archOffsets[typeIndex];
+                        const uint32_t entityCount = (chunkIndex + 1) == archChunks.size() ?
+                            this->lastChunkEntityCount : this->chunkCapacity;
+                        const uint32_t typeSize = archSizes[typeIndex];
+                        for (uint32_t valueIndex = 0; valueIndex < entityCount; valueIndex++)
+                            destructor(componentMemory + typeSize*valueIndex);
 
-                }
-            }
+                    }
         }
 
         /// @brief maximum number of entities an archetype can hold any value equal higther that this can be used as invalid value

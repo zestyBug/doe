@@ -34,7 +34,7 @@ namespace ECS
          * for example when you want to diffrentiate anable and disabled components
          * only time you may not need to use it is for performance reasons
          * that proven to be wrong!
-         */ 
+         */
         enum TypeFlags : uint16_t {
             prefab = 0x1,
             disabled = 0x2
@@ -157,7 +157,7 @@ namespace ECS
         // actuall core of compile-time-type-information
         // returns real index of that type
         template<typename T>
-        [[nodiscard]] uint16_t __type_id__()
+        uint16_t __type_id__()
         {
             static_assert(sizeof(T) <= 0x7000);
             static const comp_info value = _new_id(
@@ -167,8 +167,13 @@ namespace ECS
             );
             return value.value.realIndex();
         }
+        template<>
+        inline uint16_t __type_id__<ECS::Entity>()
+        {
+            return 0;
+        }
     } // namespace internal
-    
+
 
     // type can be specialized to fix a type id
     template<typename T>
