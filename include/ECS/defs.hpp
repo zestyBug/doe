@@ -142,7 +142,8 @@ namespace ECS
         // unless values are stored somewhere and spreaded
         // WARN: dont access this directly
         // WARN: TypeID index must be 0
-        extern static_array<comp_info,COMPOMEN_COUNT> rtti;
+        extern size_t rtti_count;
+        extern comp_info rtti[COMPOMEN_COUNT];
 
         typedef void (*rttiFP)(void*);
 
@@ -182,13 +183,13 @@ namespace ECS
     }
     [[nodiscard]] inline comp_info& getTypeInfo(const TypeID id)
     {
-        if(unlikely(internal::rtti.size() < id.realIndex()))
+        if(unlikely(internal::rtti_count < id.realIndex()))
             throw std::bad_typeid();
         return internal::rtti[id.realIndex()];
     }
     [[nodiscard]] inline comp_info& getTypeInfo(const uint16_t realIndex)
     {
-        if(unlikely(internal::rtti.size() < realIndex))
+        if(unlikely(internal::rtti_count < realIndex))
             throw std::bad_typeid();
         return internal::rtti[realIndex];
     }

@@ -4,19 +4,20 @@
 
 namespace ECS {
 
-static_array<comp_info,32> internal::rtti;
+size_t internal::rtti_count = 0;
+comp_info internal::rtti[COMPOMEN_COUNT];
 static const comp_info &__FOR_ZERO_INDEXING_PURPOSE__= getTypeInfo<ECS::Entity>();
 
 comp_info internal::_new_id(uint32_t size, rttiFP destructor, rttiFP constructor)
 {
     TypeID ti;
-    ti.value = (uint16_t)rtti.size();
+    ti.value = (uint16_t)rtti_count;
     if(unlikely(ti.value > (TypeID::MaxTypeCount-1)))
         throw std::bad_typeid();
     if(size < 1)
         ti.value |= (1 << 13);
     comp_info info{ti, size, destructor, constructor};
-    rtti.push_back(info);
+    rtti[rtti_count++] = info;
     return info;
 }
 bool didChange(version_t version, version_t lastVersion)
