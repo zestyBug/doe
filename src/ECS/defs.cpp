@@ -36,22 +36,4 @@ void updateVersion(version_t& lastVersion){
 
 }
 
-/**
- * @brief User defined literal for hashed strings.
- * @param str The literal without its suffix.
- * @return A properly initialized hashed string.
- */
-[[nodiscard]] uint32_t operator""_hash32(const char *str, std::size_t count) noexcept {
-    return HashHelper::FNV1A32((void*)str,count*sizeof(char));
-}
-
-/**
- * @brief User defined literal for hashed wstrings.
- * @param str The literal without its suffix.
- * @return A properly initialized hashed wstring.
- */
-[[nodiscard]] uint32_t operator""_hash32(const wchar_t *str, std::size_t count) noexcept {
-    return HashHelper::FNV1A32((void*)str,count*sizeof(wchar_t));
-}
-
 ssize_t allocator_counter = 0;

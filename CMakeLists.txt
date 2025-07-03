@@ -18,31 +18,33 @@ endif()
 add_executable(DOE src/main.cpp)
 
 target_sources(DOE PRIVATE include/ThreadPool.hpp
+		external/cutil/HashHelper.cpp
 		src/ThreadPool.cpp
-		include/ECS/Archetype.hpp 
+		include/ECS/ResourceGC.hpp
+		include/ECS/Archetype.hpp
 		src/ECS/Archetype.cpp
-		include/ECS/ArchetypeVersionManager.hpp 
+		include/ECS/ArchetypeVersionManager.hpp
 		src/ECS/ArchetypeVersionManager.cpp
-		include/ECS/defs.hpp 
+		include/ECS/defs.hpp
 		src/ECS/defs.cpp
-		include/ECS/DependencyManager.hpp 
+		include/ECS/DependencyManager.hpp
 		src/ECS/DependencyManager.cpp
-		include/ECS/SystemManager.hpp 
+		include/ECS/SystemManager.hpp
 		src/ECS/SystemManager.cpp
-		include/ECS/ChunkJobFunction.hpp 
+		include/ECS/ChunkJobFunction.hpp
 		src/ECS/ChunkJobFunction.cpp
-		include/ECS/EntityComponentManager.hpp 
+		include/ECS/EntityComponentManager.hpp
 		src/ECS/EntityComponentManager.cpp)
 
 target_sources(DOE PRIVATE external/glfw/glfw3.h
 		external/glfw/glfw3native.h
-		src/glfw/internal.h 
-		src/glfw/platform.h 
+		src/glfw/internal.h
+		src/glfw/platform.h
 		src/glfw/mappings.h
-		src/glfw/context.c 
-		src/glfw/init.c 
-		src/glfw/input.c 
-		src/glfw/monitor.c 
+		src/glfw/context.c
+		src/glfw/init.c
+		src/glfw/input.c
+		src/glfw/monitor.c
 		src/glfw/platform.c
 		src/glfw/window.c)
 

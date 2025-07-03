@@ -30,16 +30,14 @@ namespace mtest {
         for (auto& test : get_tests()) {
             try {
                 test.func();
-                std::cout << "✔ " << test.name << "\n";
+                printf("✔ %s\n", test.name.c_str());
                 ++passed;
             } catch (const std::exception& ex) {
-                std::cout << "✘ " << test.name << " - " << ex.what() << "\n";
+                printf("✘ %s - %s\n", test.name.c_str(), ex.what());
                 ++failed;
             }
         }
-        std::cout << "\n=== SUMMARY ===\n";
-        std::cout << "Passed: " << passed << "\n";
-        std::cout << "Failed: " << failed << "\n";
+        printf("\n=== SUMMARY ===\nPassed: %d\nFailed: %d\n", passed, failed);
     }
 
     // Assertion helpers

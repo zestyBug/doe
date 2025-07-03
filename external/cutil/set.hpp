@@ -265,7 +265,7 @@ public:
     }
     void insert(Type value) {
         if(value == invalidValue)
-            throw std::invalid_argument("insert(): invalide argument");
+            throw std::invalid_argument("insert(): invalid argument");
         uint32_t hmask = hashMask();
         uint32_t offset = (int)(value & hmask);
         uint32_t attempts = 0;
@@ -291,7 +291,7 @@ public:
     }
     int indexOf(Type value) const {
         if(value == invalidValue)
-            throw std::invalid_argument("insert(): invalide argument");
+            throw std::invalid_argument("insert(): invalid argument");
         uint32_t offset = (value & hashMask());
         uint32_t attempts = 0;
         while (true)

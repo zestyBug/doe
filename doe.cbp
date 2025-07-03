@@ -14,7 +14,12 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g3 -O0" />
+					<Add option="-D_GLFW_WIN32" />
+					<Add option="-DDEBUG" />
 				</Compiler>
+				<Linker>
+					<Add library="libgdi32" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/doe" prefix_auto="1" extension_auto="1" />
@@ -22,10 +27,28 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-g0 -s -Ofast" />
+					<Add option="-O3" />
+					<Add option="-g0 -march=native" />
+					<Add option="-D_GLFW_WIN32" />
 				</Compiler>
 				<Linker>
+					<Add option="-O3" />
 					<Add option="-s" />
+					<Add option="-march=native" />
+				</Linker>
+			</Target>
+			<Target title="Test6">
+				<Option output="bin/Debug/test6" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g3 -O0" />
+					<Add option="-D_GLFW_WIN32" />
+					<Add option="-DDEBUG" />
+				</Compiler>
+				<Linker>
+					<Add library="libgdi32" />
 				</Linker>
 			</Target>
 		</Build>
@@ -43,26 +66,139 @@
 		<Linker>
 			<Add option="-m64" />
 		</Linker>
-		<Unit filename="external/cutil/small_vector.hpp" />
-		<Unit filename="external/cutil/static_array.hpp" />
-		<Unit filename="external/cutil/bitset.hpp" />
+		<Unit filename="external/cutil/HashHelper.cpp" />
 		<Unit filename="external/cutil/HashHelper.hpp" />
+		<Unit filename="external/cutil/basics.hpp" />
+		<Unit filename="external/cutil/bitset.hpp" />
+		<Unit filename="external/cutil/map.hpp" />
+		<Unit filename="external/cutil/mini_test.hpp" />
 		<Unit filename="external/cutil/prototype.hpp" />
 		<Unit filename="external/cutil/range.hpp" />
+		<Unit filename="external/cutil/set.hpp" />
+		<Unit filename="external/cutil/small_vector.hpp" />
 		<Unit filename="external/cutil/span.hpp" />
+		<Unit filename="external/cutil/static_array.hpp" />
 		<Unit filename="external/cutil/unique_ptr.hpp" />
+		<Unit filename="external/glfw/glfw3.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="external/glfw/glfw3native.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
 		<Unit filename="include/ECS/Archetype.hpp" />
 		<Unit filename="include/ECS/ArchetypeVersionManager.hpp" />
+		<Unit filename="include/ECS/ChunkJobFunction.hpp" />
+		<Unit filename="include/ECS/DependencyManager.hpp" />
 		<Unit filename="include/ECS/EntityComponentManager.hpp" />
-		<Unit filename="include/ECS/HashMap.hpp" />
+		<Unit filename="include/ECS/ResourceGC.hpp" />
+		<Unit filename="include/ECS/SystemManager.hpp" />
 		<Unit filename="include/ECS/defs.hpp" />
-		<Unit filename="external/cutil/basics.hpp" />
-		<Unit filename="src/Archetype.cpp" />
-		<Unit filename="src/ArchetypeVersionManager.cpp" />
-		<Unit filename="src/EntityComponentManager.cpp" />
-		<Unit filename="src/HashMap.cpp" />
-		<Unit filename="src/defs.cpp" />
-		<Unit filename="test/ecs.cpp" />
+		<Unit filename="src/ECS/Archetype.cpp" />
+		<Unit filename="src/ECS/ArchetypeVersionManager.cpp" />
+		<Unit filename="src/ECS/ChunkJobFunction.cpp" />
+		<Unit filename="src/ECS/DependencyManager.cpp">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/ECS/EntityComponentManager.cpp" />
+		<Unit filename="src/ECS/SystemManager.cpp">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/ECS/defs.cpp" />
+		<Unit filename="src/ThreadPool.cpp">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/context.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/init.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/input.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/internal.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/mappings.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/monitor.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/platform.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/platform.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/win32_init.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/win32_joystick.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/win32_module.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/win32_monitor.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/win32_platform.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/win32_time.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/win32_time.h">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/win32_window.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/glfw/window.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="src/main.cpp">
+			<Option target="Debug" />
+			<Option target="Release" />
+		</Unit>
+		<Unit filename="test/resourcegc.cpp">
+			<Option weight="51" />
+			<Option target="Test6" />
+		</Unit>
 		<Extensions>
 			<lib_finder disable_auto="1" />
 		</Extensions>
