@@ -1,5 +1,6 @@
 #include "ECS/SystemManager.hpp"
 #include "glfw/glfw3.h"
+#include "system/example.hpp"
 #include <stdio.h>
 
 void error_callback(int error, const char* description)
@@ -61,6 +62,8 @@ int main()
 
     {
         ECS::SystemState engine;
+        engine.manager.systems.emplace(engine.manager.systems.create(),new ECS::example_system());
+
         while (!glfwWindowShouldClose(window))
         {
             //glfwPollEvents();

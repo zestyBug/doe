@@ -780,8 +780,6 @@ GLFWAPI int glfwGetWindowAttrib(GLFWwindow* handle, int attrib)
             return window->floating;
         case GLFW_AUTO_ICONIFY:
             return window->autoIconify;
-        case GLFW_DOUBLEBUFFER:
-            return window->doublebuffer;
     }
 
     _glfwInputError(GLFW_INVALID_ENUM, "Invalid window attribute 0x%08X", attrib);
