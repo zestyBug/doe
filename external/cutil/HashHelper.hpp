@@ -35,6 +35,11 @@ namespace HashHelper
     /// @return Hash of input.
     uint32_t FNV1A32(int32_t val);
 
+    /// @brief Generates a FNV1A32 hash.
+    /// @param val Value to hash.
+    /// @return Hash of input.
+    uint32_t FNV1A32(int64_t val);
+
     /// @brief Combines a FNV1A32 hash with a value.
     /// @param hash Input Hash.
     /// @param value Value to add to the hash.
@@ -45,6 +50,10 @@ namespace HashHelper
     inline uint32_t FNV1A32(const_span<T> data)
     {
         return FNV1A32(data.data(),data.size_bytes());
+    }
+
+    inline uint32_t tgc_hash(uintptr_t v) {
+        return (uint32_t) ((13*v) ^ (v >> 32));
     }
 }
 

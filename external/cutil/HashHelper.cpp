@@ -55,6 +55,18 @@ namespace HashHelper {
         return result;
     }
 
+    uint32_t FNV1A32(int64_t val) {
+        uint32_t result = internal::FNV1A32OffsetBasis;
+        for(int i=0;i<2;i++) {
+            result = (((val & 0x000000FF) >>  0) ^ result) * internal::FNV1A32Prime;
+            result = (((val & 0x0000FF00) >>  8) ^ result) * internal::FNV1A32Prime;
+            result = (((val & 0x00FF0000) >> 16) ^ result) * internal::FNV1A32Prime;
+            result = (((val & 0xFF000000) >> 24) ^ result) * internal::FNV1A32Prime;
+            val = val >> 32;
+        }
+        return result;
+    }
+
     uint32_t FNV1A32(int32_t val)
     {
         uint32_t result = internal::FNV1A32OffsetBasis;
@@ -66,7 +78,7 @@ namespace HashHelper {
         }
 
         return result;
-    }
+    }    
 }
 
 [[nodiscard]] uint32_t operator""_hash32(const char *str, std::size_t count) noexcept {

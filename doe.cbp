@@ -103,6 +103,7 @@
 			<Option target="Release" />
 		</Unit>
 		<Unit filename="src/ECS/EntityComponentManager.cpp" />
+		<Unit filename="src/ECS/ResourceGC.cpp" />
 		<Unit filename="src/ECS/SystemManager.cpp">
 			<Option target="Debug" />
 			<Option target="Release" />

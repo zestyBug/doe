@@ -201,7 +201,7 @@ namespace ECS
 
     namespace internal
     {
-        static bool customCompare (TypeID a,TypeID b) {
+        inline bool customCompare (TypeID a,TypeID b) {
             if(unlikely(a.value == b.value))
                 throw std::bad_typeid();
             return a.value < b.value;

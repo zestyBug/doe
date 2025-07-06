@@ -103,7 +103,9 @@ OBJS=$(OBJ_RELEASE)/src/ECS/Archetype.o \
 		$(OBJ_RELEASE)/src/ECS/SystemManager.o \
 		$(OBJ_RELEASE)/src/ThreadPool.o \
 		$(OBJ_RELEASE)/src/ECS/ChunkJobFunction.o \
-		$(OBJ_RELEASE)/src/ECS/DependencyManager.o
+		$(OBJ_RELEASE)/src/ECS/DependencyManager.o \
+		$(OBJ_RELEASE)/src/ECS/ResourceGC.o \
+		$(OBJ_RELEASE)/external/cutil/HashHelper.o
 
 DOBJS=$(OBJ_DEBUG)/src/ECS/Archetype.o \
 		$(OBJ_DEBUG)/src/ECS/ArchetypeVersionManager.o \
@@ -112,7 +114,9 @@ DOBJS=$(OBJ_DEBUG)/src/ECS/Archetype.o \
 		$(OBJ_DEBUG)/src/ECS/SystemManager.o \
 		$(OBJ_DEBUG)/src/ThreadPool.o \
 		$(OBJ_DEBUG)/src/ECS/ChunkJobFunction.o \
-		$(OBJ_DEBUG)/src/ECS/DependencyManager.o
+		$(OBJ_DEBUG)/src/ECS/DependencyManager.o \
+		$(OBJ_RELEASE)/src/ECS/ResourceGC.o \
+		$(OBJ_RELEASE)/external/cutil/HashHelper.o
 
 
 
@@ -130,6 +134,10 @@ $(OBJ_RELEASE)/src/%.o: $(srcDir)/%.cpp $(headerInclude) $(headerCutil)
 	$(LCPP) $(INCLUDE) $(LFLAG) $(LFLAG_DEBUG) -c $< -o $@
 
 $(OBJ_RELEASE)/src/main.o: $(srcDir)/main.cpp $(headerGLFW) $(headerInclude) $(headerCutil)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG) $(LFLAG_DEBUG) -c $< -o $@
+
+$(OBJ_RELEASE)/$(cutilDir)/%.o: $(cutilDir)/%.cpp $(headerCutil)
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG) $(LFLAG_DEBUG) -c $< -o $@
 
@@ -157,6 +165,10 @@ $(OBJ_DEBUG)/src/%.o: $(srcDir)/%.cpp $(headerInclude) $(headerCutil)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 
 $(OBJ_DEBUG)/src/main.o: $(srcDir)/main.cpp $(headerGLFW) $(headerInclude) $(headerCutil)
+	mkdir -p $(@D)
+	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
+
+$(OBJ_DEBUG)/$(cutilDir)/%.o: $(cutilDir)/%.cpp $(headerCutil)
 	mkdir -p $(@D)
 	$(LCPP) $(INCLUDE) $(LFLAG_WARN) $(LFLAG_DEBUG) -c $< -o $@
 

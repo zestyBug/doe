@@ -19,6 +19,7 @@ static intptr_t dtor1_last_value;
 void dtor1(intptr_t v){
     dtor1_counter++;
     dtor1_last_value = v;
+    // printf("dtor(): %lld\n",v);
 }
 
 struct Test {
@@ -115,6 +116,7 @@ ECS::ResourceGC Test::rgc;
 
 CLASS_TEST(Test,Test0) {
     EXPECT_EQ(ECS::getTypeID<ECS::Entity>().realIndex(),0);
+    EXPECT_EQ(dtor1_counter,0);
 
     for (size_t i = 0; i < 31; i++)
     {
@@ -125,15 +127,19 @@ CLASS_TEST(Test,Test0) {
 
     rgc.add(dtor1,0xFF);
     rgc.add(dtor1,0xFE);
-
     rgc.add(dtor1,0xFD);
     rgc.add(dtor1,0xFC);
-
     rgc.add(dtor1,0xFB);
     rgc.add(dtor1,0xFA);
 
     rgc.add(dtor1,0xFF);
+    rgc.add(dtor1,0xFE);
+    rgc.add(dtor1,0xFD);
+    rgc.add(dtor1,0xFC);
+    rgc.add(dtor1,0xFB);
+    rgc.add(dtor1,0xFA);
 
+    dtor1_counter = 0;
     mark();
     rgc.sweep();
     EXPECT_EQ(dtor1_counter,6);
@@ -187,7 +193,7 @@ CLASS_TEST(Test,Test2) {
     mark();
     rgc.sweep();
     EXPECT_EQ(dtor1_counter,1);
-    EXPECT_EQ(dtor1_last_value,0xFFEFFFFFFFFFFFFF);
+    EXPECT_EQ(dtor1_last_value,(intptr_t)0xFFEFFFFFFFFFFFFF);
     EXPECT_EQ(rgc.occupiedNodes(),0u);
 }
 
@@ -211,11 +217,12 @@ CLASS_TEST(Test,Test3) {
 
     val.v = 0xAA;
     rgc.add(dtor1,0xAA);
+    rgc.add(dtor1,0x696969);
 
     dtor1_counter = 0;
     mark();
     rgc.sweep();
-    EXPECT_EQ(dtor1_counter,0);
+    EXPECT_EQ(dtor1_counter,1);
     EXPECT_EQ(rgc.occupiedNodes(),1u);
 
     val.v = 0x0;
@@ -223,6 +230,15 @@ CLASS_TEST(Test,Test3) {
         val.a[0]=0xAA;
     else
         val.a[7]=0xAA;
+
+    dtor1_counter = 0;
+    mark();
+    rgc.sweep();
+    EXPECT_EQ(dtor1_counter,0);
+    EXPECT_EQ(rgc.occupiedNodes(),1u);
+
+
+
 
     dtor1_counter = 0;
     mark();
@@ -289,7 +305,7 @@ CLASS_TEST(Test,Test5) {
     mark();
     rgc.sweep();
     EXPECT_EQ(dtor1_counter,1);
-    EXPECT_EQ(dtor1_last_value,0xFFFFFFEFFFFFFFFF);
+    EXPECT_EQ(dtor1_last_value,(intptr_t)0xFFFFFFEFFFFFFFFF);
     EXPECT_EQ(rgc.occupiedNodes(),2u);
 }
 
@@ -309,11 +325,10 @@ CLASS_TEST(Test,Test6) {
     mark();
     rgc.sweep();
     EXPECT_EQ(dtor1_counter,1);
-    EXPECT_EQ(dtor1_last_value,0xFFFFFFFFFFFFEFFF);
+    EXPECT_EQ(dtor1_last_value,(intptr_t)0xFFFFFFFFFFFFEFFF);
 }
 
 int main() {
     mtest::run_all();
-    ECS::internal::rtti;
     return 0;
 }
