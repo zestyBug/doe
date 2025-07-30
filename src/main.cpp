@@ -1,81 +1,42 @@
 #include "ECS/SystemManager.hpp"
-#include "glfw/glfw3.h"
 #include "system/example.hpp"
-#include <stdio.h>
+#include "VulkanApp.hpp"
 
-void error_callback(int error, const char* description)
-{
-    printf("Error: %s\n", description);
-}
-
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-}
-
-void drop_callback(GLFWwindow* window, int count, const char** paths)
-{
-    int i;
-    for (i = 0;  i < count;  i++)
-        printf("%s\n",paths[i]);
-}
-
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-}
-
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
-{
-    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
-        puts("pop menu!");
-}
-
-void character_callback(GLFWwindow* window, unsigned int codepoint)
-{
-}
-
-int main()
-{
-    glfwSetErrorCallback(error_callback);
-    if (!glfwInit())
-        return 1;
-    GLFWwindow* window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
-    if (!window)
-        return 1;
-
-    glfwSetDropCallback(window, drop_callback);
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetScrollCallback(window, scroll_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetCharCallback(window, character_callback);
-
-    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
-    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-    glfwSetWindowSizeLimits(window, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
-
-    if (glfwRawMouseMotionSupported())
-        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-
+int main(){
+	VulkanApp app;
+	if(VKInitialize()) return 1;
+	if(app.initInstance()) return 1;
+	if(VKInitializeWInstance(app.instance)) return 1;
+    if (!glfwInit()) return 1;
+	app.window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
+	if (!app.window) return 1;
+	if(app.initSurface()) return 1;
+	if(app.autoSelectDevice()) return 1;
+	if(app.initDevice()) return 1;
+	if(VKInitializeWDevice(app.ldevice)) return 1;
+	if(app.initQueue()) return 1;
+    glfwSetWindowSizeLimits(app.window, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
     {
         ECS::SystemState engine;
-        engine.manager.systems.emplace(engine.manager.systems.create(),new ECS::example_system());
+        engine.context = &app;
+		{
+			ECS::example_system *ptr=allocator<ECS::example_system>().allocate(1);
+			allocator<ECS::example_system>().construct(ptr);
+			engine.manager.systems.emplace(engine.manager.systems.create(),ptr);
+		}
 
-        while (!glfwWindowShouldClose(window))
+        while (!glfwWindowShouldClose(app.window))
         {
             //glfwPollEvents();
             //glfwWaitEventsTimeout(0.7);
             glfwWaitEvents();
             auto view = engine.manager.systems.view();
             for (const auto value:view)
-                if(ECS::System *s = view.get(value).get();s != nullptr && s->onUpdate != nullptr)
-                    s->onUpdate(s,engine);
+                if(ECS::System *s = view.get(value).get();s != nullptr)
+                    s->onUpdate(engine);
         }
     }
-    glfwDestroyWindow(window);
+    glfwDestroyWindow(app.window);
     glfwTerminate();
     return 0;
 }

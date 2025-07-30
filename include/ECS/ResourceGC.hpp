@@ -54,6 +54,7 @@ protected:
     float sweepFactor = 0.5;
 
     /// @brief probes index of the hash in the array for sorting hashes
+    /// @return original offset from the desired hash location
     uint32_t probe(uint32_t i, uint32_t h) const ;
     uint32_t getIndex(Type value) const ;
     void addValue(dtor_fn* dtor, Type value, internal::GCFlag flag = internal::GCFlag::NONE);

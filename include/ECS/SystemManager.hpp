@@ -14,7 +14,7 @@ struct SystemState;
 
 struct System {
     const char* name="System";
-    void (*onUpdate)(System*,SystemState&)=nullptr;
+    virtual void onUpdate(SystemState&){};
     virtual ~System() {}
 };
 

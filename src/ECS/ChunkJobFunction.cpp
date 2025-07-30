@@ -1,5 +1,5 @@
 #include "cutil/basics.hpp"
-#include "ECS/ChunkJobFunction.hpp"
+#include "ChunkJobFunction.hpp"
 #include "ECS/DependencyManager.hpp"
 #include "ECS/Archetype.hpp"
 #include <atomic>

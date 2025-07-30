@@ -86,9 +86,7 @@ extern "C" {
  * System headers and types
  *************************************************************************/
 
-#if !defined(GLFW_NATIVE_INCLUDE_NONE)
-
- #if defined(GLFW_EXPOSE_NATIVE_WIN32)
+ #if defined(_GLFW_WIN32)
   /* This is a workaround for the fact that glfw3.h needs to export APIENTRY (for
    * example to allow applications to correctly declare a GL_KHR_debug callback)
    * but windows.h assumes no one will define APIENTRY before it does
@@ -100,7 +98,7 @@ extern "C" {
   #include <windows.h>
  #endif
 
- #if defined(GLFW_EXPOSE_NATIVE_COCOA) || defined(GLFW_EXPOSE_NATIVE_NSGL)
+ #if defined(_GLFW_COCOA) || defined(_GLFW_NSGL)
   #if defined(__OBJC__)
    #import <Cocoa/Cocoa.h>
   #else
@@ -109,23 +107,21 @@ extern "C" {
   #endif
  #endif
 
- #if defined(GLFW_EXPOSE_NATIVE_X11)
+ #if defined(_GLFW_X11)
   #include <X11/Xlib.h>
   #include <X11/extensions/Xrandr.h>
  #endif
 
- #if defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+ #if defined(_GLFW_WAYLAND)
   #include <wayland-client.h>
  #endif
-
-#endif /*GLFW_NATIVE_INCLUDE_NONE*/
 
 
 /*************************************************************************
  * Functions
  *************************************************************************/
 
-#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+#if defined(_GLFW_WIN32)
 /*! @brief Returns the adapter device name of the specified monitor.
  *
  *  @return The UTF-8 encoded adapter device name (for example `\\.\DISPLAY1`)
@@ -189,7 +185,7 @@ GLFWAPI HWND glfwGetWin32Window(GLFWwindow* window);
 #endif
 
 
-#if defined(GLFW_EXPOSE_NATIVE_COCOA)
+#if defined(_GLFW_COCOA)
 /*! @brief Returns the `CGDirectDisplayID` of the specified monitor.
  *
  *  @return The `CGDirectDisplayID` of the specified monitor, or
@@ -242,7 +238,7 @@ GLFWAPI id glfwGetCocoaWindow(GLFWwindow* window);
 GLFWAPI id glfwGetCocoaView(GLFWwindow* window);
 #endif
 
-#if defined(GLFW_EXPOSE_NATIVE_X11)
+#if defined(_GLFW_X11)
 /*! @brief Returns the `Display` used by GLFW.
  *
  *  @return The `Display` used by GLFW, or `NULL` if an
@@ -362,7 +358,7 @@ GLFWAPI void glfwSetX11SelectionString(const char* string);
 GLFWAPI const char* glfwGetX11SelectionString(void);
 #endif
 
-#if defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+#if defined(_GLFW_WAYLAND)
 /*! @brief Returns the `struct wl_display*` used by GLFW.
  *
  *  @return The `struct wl_display*` used by GLFW, or `NULL` if an

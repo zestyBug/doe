@@ -3,7 +3,7 @@
 #include <atomic>
 #include "ECS/DependencyManager.hpp"
 #include "ECS/EntityComponentManager.hpp"
-#include "ECS/ChunkJobFunction.hpp"
+#include "../src/ECS/ChunkJobFunction.hpp"
 #include "cutil/mini_test.hpp"
 
 ECS::EntityComponentManager *reg;

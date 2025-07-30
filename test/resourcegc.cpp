@@ -131,6 +131,11 @@ CLASS_TEST(Test,Test0) {
     rgc.add(dtor1,0xFC);
     rgc.add(dtor1,0xFB);
     rgc.add(dtor1,0xFA);
+    rgc.add(dtor1,0xF9);
+    rgc.add(dtor1,0xF8);
+    rgc.add(dtor1,0xF7);
+    rgc.add(dtor1,0xF6);
+    rgc.add(dtor1,0xF5);
 
     rgc.add(dtor1,0xFF);
     rgc.add(dtor1,0xFE);
@@ -138,11 +143,16 @@ CLASS_TEST(Test,Test0) {
     rgc.add(dtor1,0xFC);
     rgc.add(dtor1,0xFB);
     rgc.add(dtor1,0xFA);
+    rgc.add(dtor1,0xF9);
+    rgc.add(dtor1,0xF8);
+    rgc.add(dtor1,0xF7);
+    rgc.add(dtor1,0xF6);
+    rgc.add(dtor1,0xF5);
 
     dtor1_counter = 0;
     mark();
     rgc.sweep();
-    EXPECT_EQ(dtor1_counter,6);
+    EXPECT_EQ(dtor1_counter,11);
     EXPECT_EQ(rgc.occupiedNodes(),0u);
 }
 

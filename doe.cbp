@@ -79,6 +79,7 @@
 		<Unit filename="external/cutil/span.hpp" />
 		<Unit filename="external/cutil/static_array.hpp" />
 		<Unit filename="external/cutil/unique_ptr.hpp" />
+		<Unit filename="src/ECS/ChunkJobFunction.hpp" />
 		<Unit filename="external/glfw/glfw3.h">
 			<Option target="Debug" />
 			<Option target="Release" />
@@ -89,7 +90,6 @@
 		</Unit>
 		<Unit filename="include/ECS/Archetype.hpp" />
 		<Unit filename="include/ECS/ArchetypeVersionManager.hpp" />
-		<Unit filename="include/ECS/ChunkJobFunction.hpp" />
 		<Unit filename="include/ECS/DependencyManager.hpp" />
 		<Unit filename="include/ECS/EntityComponentManager.hpp" />
 		<Unit filename="include/ECS/ResourceGC.hpp" />
