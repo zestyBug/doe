@@ -13,20 +13,16 @@ namespace ECS
 struct SystemState;
 
 struct System {
-    const char* name="System";
-    virtual void onUpdate(SystemState&){};
-    virtual ~System() {}
-};
-
-struct SystemManager final
-{
-    advanced_array::registry<unique_ptr<System,allocator<System>>> systems;
+    const char* name;
+    void *ctx;
+    int32_t (*onUpdate)(void *ctx,SystemState&);
+    void (*onDestroy)(void *ctx,SystemState&);
 };
 
 
 struct SystemState final {
     void *context=nullptr;
-    SystemManager manager{};
+    advanced_array::registry<System> systems{};
     DependencyManager jobs{};
     EntityComponentManager entities{};
 };

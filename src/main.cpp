@@ -19,21 +19,23 @@ int main(){
     {
         ECS::SystemState engine;
         engine.context = &app;
-		{
-			ECS::example_system *ptr=allocator<ECS::example_system>().allocate(1);
-			allocator<ECS::example_system>().construct(ptr);
-			engine.manager.systems.emplace(engine.manager.systems.create(),ptr);
-		}
 
         while (!glfwWindowShouldClose(app.window))
         {
             //glfwPollEvents();
             //glfwWaitEventsTimeout(0.7);
             glfwWaitEvents();
-            auto view = engine.manager.systems.view();
+            auto view = engine.systems.view();
             for (const auto value:view)
-                if(ECS::System *s = view.get(value).get();s != nullptr)
-                    s->onUpdate(engine);
+                if(ECS::System &s = view.get(value);s.onUpdate)
+                    if(s.onUpdate(s.ctx,engine))
+                        break;
+        }
+        {
+            auto view = engine.systems.view();
+            for (const auto value:view)
+                if(ECS::System &s = view.get(value);s.onDestroy)
+                    s.onDestroy(s.ctx,engine);
         }
     }
     glfwDestroyWindow(app.window);

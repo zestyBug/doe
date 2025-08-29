@@ -3,14 +3,6 @@
 
 #include "ECS/SystemManager.hpp"
 
-namespace ECS
-{
-    struct example_system : ECS::System {
-        ECS::version_t systemVersion = 0;
-        example_system();
-        void onUpdate(ECS::SystemState&);
-    };
-} // namespace ECS
-
+void initExampleSystem(ECS::SystemState&);
 
 #endif // VULKAN_HPP
