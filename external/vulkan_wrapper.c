@@ -37,6 +37,7 @@
     #define VKLibraryOpen(N) dlopen(N, RTLD_NOW | RTLD_LOCAL)
     #define VKLibraryError() dlerror()
     #define VKLibraryClose(HANDLE) dlclose(HANDLE)
+    // GETPROCADDR
     #define PROC_LEGACY(V) res|=(V=(__typeof__(V))dlsym(libvulkan,#V))==NULL
 #endif
 
@@ -68,11 +69,14 @@ int VKInitialize(void) {
         //printf("unable to load %s\n",VKLibraryName);
         return 1;
     }
-    // Vulkan supported, set function addresses
+    // Minimum Vulkan supported functions.
     // obtain the address of a symbol defined within an object.
+
     PROC_LEGACY(vkCreateInstance);
     PROC_LEGACY(vkDestroyInstance);
     PROC_LEGACY(vkGetInstanceProcAddr);
+    PROC_LEGACY(vkEnumerateInstanceExtensionProperties);
+    PROC_LEGACY(vkEnumerateInstanceLayerProperties);
     if(res)
         return 2;
     return 0;
@@ -109,9 +113,7 @@ int VKInitializeWInstance(VkInstance pd) {
     PROC_LEGACY(vkGetDeviceProcAddr);
     PROC_LEGACY(vkCreateDevice);
     PROC_LEGACY(vkDestroyDevice);
-    PROC_LEGACY(vkEnumerateInstanceExtensionProperties);
     PROC_LEGACY(vkEnumerateDeviceExtensionProperties);
-    PROC_LEGACY(vkEnumerateInstanceLayerProperties);
     PROC_LEGACY(vkEnumerateDeviceLayerProperties);
 
     PROC_LEGACY(vkGetPhysicalDeviceSurfaceSupportKHR);

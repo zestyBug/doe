@@ -354,8 +354,8 @@ public:
         puts("");
     }
     // Helper: Hash a vector of type_index (order-insensitive)
-    inline uint64_t hash() const {
-        return HashHelper::FNV1A64(this->data,BYTE);
+    inline uint32_t hash() const {
+        return HashHelper::FNV1A32(this->data,BYTE);
     }
 protected:
 };

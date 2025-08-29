@@ -38,8 +38,8 @@ class Test{
         dm.ScheduleJob(j,{},reg->getVersion());
         reg->updateVersion();
         void* ctx = ECS::ChunkJobFunction::createContext(dm.registeredJobs,reg->archetypes,reg->getVersion());
-        size_t buffer=UINT64_MAX;
-        while(UINT64_MAX != (buffer=ECS::ChunkJobFunction::function(ctx,buffer)));
+        size_t buffer = SIZE_MAX;
+        while(SIZE_MAX != (buffer=ECS::ChunkJobFunction::function(ctx,buffer)));
         ECS::ChunkJobFunction::destroyContext(ctx);
     }
 public:

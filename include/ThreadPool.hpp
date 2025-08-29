@@ -13,7 +13,7 @@ namespace ECS
     // thread pool for job system,
     // manages threads and arrays of jobs
     struct ThreadPool final {
-        static constexpr size_t STOP_SIGNAL = UINT64_MAX;
+        static constexpr size_t STOP_SIGNAL = SIZE_MAX;
         typedef size_t(JobFunctionSignature)(void*,size_t);
         struct alignas(64) thread_param {
             /// @brief function argumenst are context + previous returns value.

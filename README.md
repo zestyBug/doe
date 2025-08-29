@@ -3,6 +3,8 @@ A template framework. Suitable for data-oriented app design following the founda
 The whole idea is to bring the performance of the DOD and the readability of other languages to C++.
 
 ### TODO
+- ECS memory safty (ownership + barrow model)
+- 32 bit systems compatibility
 - a better README and documentation
 - gcc Ofast compatibility
 - currect version-ing

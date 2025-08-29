@@ -44,7 +44,7 @@ struct entt_traits {
     /*! @brief Underlying version type. */
     using version_type = std::uint16_t;
     /*! @brief Difference type. */
-    using difference_type = std::int64_t;
+    using difference_type = ssize_t;
 
     /*! @brief Mask to use to get the entity number out of an identifier. */
     static constexpr entity_type entity_mask = 0xFFFFF;
