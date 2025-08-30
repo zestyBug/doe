@@ -393,7 +393,7 @@ void EntityComponentManager::Helper_allocateInArchetype(const_span<TypeID> compo
     srcValue->archetype = newArchetype->archetypeIndex;
 } 
 void EntityComponentManager::Helper_removeFromArchetype(Archetype *srcArchetype,entity_t *srcValue) noexcept {
-    Entity replacedEntity = Archetype::managedRemoveEntity(srcArchetype,srcValue->index);
+    Entity replacedEntity = srcArchetype->managedRemoveEntity(srcValue->index);
     // if it index was filled with other entity
     if(replacedEntity.valid())
             this->entity_value.at(replacedEntity.index()).index = srcValue->index;
@@ -408,13 +408,13 @@ void EntityComponentManager::Helper_moveEntityToNewArchetype(Archetype *__restri
     const uint32_t srcIndex = srcValue->index;
     const uint32_t newIndex = newArchetype->createEntity(globalVersion);
 
-    Archetype::moveComponentValues(newArchetype,srcArchetype,newIndex,srcIndex);
+    newArchetype->moveComponentValues(srcArchetype,newIndex,srcIndex);
 
     const uint32_t replacedIndex = srcArchetype->removeEntity(srcIndex);
     // if it index was filled with other entity
     if(replacedIndex!=srcIndex)
     {
-        const Entity replacedEntity = Archetype::copyComponentValues(srcArchetype,srcIndex,replacedIndex);
+        const Entity replacedEntity = srcArchetype->copyComponentValues(srcIndex,replacedIndex);
         this->entity_value.at(replacedEntity.index()).index = srcIndex;
     }
 

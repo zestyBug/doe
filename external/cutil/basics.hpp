@@ -130,4 +130,27 @@ private:
     size_t _M_max_size() const {return std::size_t(-1) / sizeof(_Tp);}
 };
 
+template<typename _Tp>
+struct deleter
+{
+    /// Default constructor
+    constexpr deleter() noexcept = default;
+
+    /** @brief Converting constructor.
+     *
+     * Allows conversion from a deleter for objects of another type, `_Up`,
+     * only if `_Up*` is convertible to `_Tp*`.
+     */
+    template<typename _Up, typename = std::_Require<std::is_convertible<_Up*, _Tp*>>>
+    deleter(const deleter<_Up>&) noexcept { }
+    /// Calls `delete __ptr`
+    void operator()(_Tp* __ptr) const
+    {
+        static_assert(!std::is_void<_Tp>::value, "can't delete pointer to incomplete type");
+        static_assert(sizeof(_Tp)>0, "can't delete pointer to incomplete type");
+        __ptr->~_Tp();
+        allocator().deallocate(__ptr);
+    }
+};
+
 #endif // BASICS_HPP

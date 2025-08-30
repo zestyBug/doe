@@ -244,22 +244,22 @@ namespace ECS
         /// @note dsr.~T(); pull src;  memcpy(dst,src);
         /// @param entity srcIndex to be removed
         /// @return value of entity that has replaced it, Entity::null if nothing happened
-        static Entity managedRemoveEntity(Archetype *archetype, uint32_t dstIndex);
+        Entity managedRemoveEntity(uint32_t dstIndex);
 
         /// @brief in-archetype move operation
         /// @note dst.~T(); memcpy(dst,src);
         /// @param entity value of srcIndex to be updated
-        static Entity moveComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex);
+        Entity moveComponentValues(uint32_t dstIndex, uint32_t srcIndex);
 
         /// @brief in-archetype move operation
         /// @note memcpy(dst,src);
         /// @param entity value of srcIndex to be updated
-        static Entity copyComponentValues(Archetype *archetype, uint32_t dstIndex, uint32_t srcIndex);
+        Entity copyComponentValues(uint32_t dstIndex, uint32_t srcIndex);
 
         /// @brief between-archetype move operation
         /// @note dst.~T(); src.T(); memcpy(dst,src);
         /// @param entity value of srcIndex to be updated
-        static Entity moveComponentValues(Archetype *__restrict__ dstArchetype,Archetype *__restrict__ srcArchetype, uint32_t dstIndex, uint32_t srcIndex);
+        Entity moveComponentValues(Archetype *__restrict__ srcArchetype, uint32_t dstIndex, uint32_t srcIndex);
 
         void inArchetypeCopy(void *__restrict__ srcChunk, void *__restrict__ dstChunk ,const uint32_t srcInChunkIndex, const uint32_t dstInChunkIndex);
         void inArchetypeCopy(void *chunk, const uint32_t srcInChunkIndex, const uint32_t dstInChunkIndex);
