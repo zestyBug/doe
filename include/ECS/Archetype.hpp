@@ -6,7 +6,7 @@
 #include "defs.hpp"
 #include "ArchetypeVersionManager.hpp"
 #include "cutil/basics.hpp"
-#include "cutil/unique_ptr.hpp"
+#include "cutil/mark_ptr.hpp"
 #include "cutil/HashHelper.hpp"
 
 class Test;
@@ -23,33 +23,15 @@ namespace HashHelper
 namespace ECS
 {
     struct Chunk final {
-        void *memory = nullptr;
-        Chunk() = default;
-        Chunk(const Chunk& ) = delete;
-        Chunk& operator = (const Chunk& ) = delete;
-        Chunk& operator = (Chunk&& obj){
-            if(this != &obj){
-                this->memory = obj.memory;
-                obj.memory = nullptr;
-            }
-            return *this;
-        }
-        Chunk(Chunk&& obj) {
-            *this = std::move(obj);
-        }
-        ~Chunk() {
-            allocator().deallocate(this->memory);
-        }
-
         static constexpr uint32_t memoryOffset = 64; // (must be cache line aligned)
         static constexpr uint32_t memorySize = 16 * 1024; /// any number larger than 0xFFFF may cause overflow in offset array!
         static constexpr uint32_t bufferSize = memorySize - memoryOffset;
         // lower the number, the better component version-ing perform
         static constexpr uint32_t maximumEntitiesPerChunk = 512;
+
+        uint8_t memory[Chunk::memorySize];
     };
     class Archetype;
-    
-    using ArchetypeHolder = unique_ptr<Archetype,allocator<Archetype>>;
 
 
 
@@ -75,7 +57,7 @@ namespace ECS
         // if we remove a entity for a random chunk,
         // last entity on last chunk will be
         // filled in it place so iterating more efficiently.
-        std::vector<Chunk,allocator<Chunk>> chunksData{};
+        std::vector<align_ptr<Chunk>> chunksData{};
         ArchetypeVersionManager chunksVersion{};
 
 
@@ -95,11 +77,11 @@ namespace ECS
         Archetype(/* args */) = default;
     public:
 
-        static ArchetypeHolder createArchetype(const_span<TypeID> types);
+        static mark_ptr<Archetype> createArchetype(const_span<TypeID> types);
 
         ~Archetype(/* args */) noexcept {
             const_span<uint16_t> archSizes = this->sizeOfs;
-            const_span<Chunk> archChunks = this->chunksData;
+            const_span<align_ptr<ECS::Chunk>> archChunks = this->chunksData;
             const_span<uint32_t> archOffsets = this->offsets;
             const_span<TypeID> archTypes = this->types;
             for (uint32_t typeIndex = 0; typeIndex < this->nonZeroSizedTypesCount(); typeIndex++)
@@ -107,7 +89,7 @@ namespace ECS
                     for (uint32_t chunkIndex = 0; chunkIndex < archChunks.size(); chunkIndex++)
                     {
                         uint8_t * const componentMemory =
-                            (uint8_t*)(archChunks[chunkIndex].memory) + archOffsets[typeIndex];
+                            archChunks[chunkIndex]->memory + archOffsets[typeIndex];
                         const uint32_t entityCount = (chunkIndex + 1) == archChunks.size() ?
                             this->lastChunkEntityCount : this->chunkCapacity;
                         const uint32_t typeSize = archSizes[typeIndex];
@@ -172,7 +154,7 @@ namespace ECS
         const void* getComponent(uint16_t componentIndex,uint32_t entityIndex) const;
 
         void* getChunkComponent(uint16_t componentIndex,size_t chunkIndex){
-            uint8_t * const mem = (uint8_t*) this->chunksData.at(chunkIndex).memory;
+            uint8_t * const mem = this->chunksData.at(chunkIndex)->memory;
             return mem + offsets.at(componentIndex);
         }
 

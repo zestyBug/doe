@@ -57,7 +57,7 @@ headerCutil= \
 	$(cutilDir)/span.hpp \
 	$(cutilDir)/static_array.hpp \
 	$(cutilDir)/string_view.hpp \
-	$(cutilDir)/unique_ptr.hpp \
+	$(cutilDir)/mark_ptr.hpp \
 	$(cutilDir)/basics.hpp \
 	$(cutilDir)/set.hpp \
 	$(cutilDir)/mini_test.hpp \
@@ -75,7 +75,7 @@ headerInclude= \
 	$(includeDir)/ECS/ResourceGC.hpp \
 	$(includeDir)/VulkanApp.hpp
 
-OBJ_DOE=$(OBJ)/src/ECS/Archetype.o \
+OBJ_ECS=$(OBJ)/src/ECS/Archetype.o \
 		$(OBJ)/src/ECS/ArchetypeVersionManager.o \
 		$(OBJ)/src/ECS/defs.o \
 		$(OBJ)/src/ECS/EntityComponentManager.o \
@@ -84,8 +84,9 @@ OBJ_DOE=$(OBJ)/src/ECS/Archetype.o \
 		$(OBJ)/src/ECS/ChunkJobFunction.o \
 		$(OBJ)/src/ECS/DependencyManager.o \
 		$(OBJ)/src/ECS/ResourceGC.o \
-		$(OBJ)/$(cutilDir)/HashHelper.o \
-		$(OBJ)/external/vulkan_wrapper.o \
+		$(OBJ)/$(cutilDir)/HashHelper.o
+
+OBJ_DOE=$(OBJ)/external/vulkan_wrapper.o \
 		$(OBJ)/src/VulkanApp.o
 
 
@@ -161,7 +162,7 @@ include $(systemDir)/makefile.mk
 
 OBJ_system ?= 
 
-$(BIN)/%: $(OBJ)/test/%.o $(OBJ_DOE)
+$(BIN)/%: $(OBJ)/test/%.o $(OBJ_ECS)
 	mkdir -p $(@D)
 	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
@@ -169,7 +170,7 @@ $(BIN)/threadpool: $(OBJ)/test/threadpool.o $(OBJ)/src/ThreadPool.o
 	mkdir -p $(@D)
 	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
-$(BIN)/main: $(OBJ)/src/main.o  $(OBJS_GLFW) $(OBJ_DOE) $(OBJ_system)
+$(BIN)/main: $(OBJ)/src/main.o  $(OBJS_GLFW) $(OBJ_ECS) $(OBJ_DOE) $(OBJ_system)
 	mkdir -p $(@D)
 	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
 

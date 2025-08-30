@@ -9,7 +9,7 @@
 
 struct thread_info {
     ECS::ChunkJobContext  *job=nullptr;
-    ECS::ArchetypeHolder  *archetypes=nullptr;
+    mark_ptr<ECS::Archetype>  *archetypes=nullptr;
     uint32_t jobCount=0;
     uint32_t archetypeCount=0;
     std::atomic<uint32_t> *jobDependencyCounterBuffer=nullptr;
@@ -21,7 +21,10 @@ struct thread_info {
 };
 static_assert(sizeof(thread_info)==64);
 
-void* ECS::ChunkJobFunction::createContext(span<ECS::ChunkJobContext> jobs,span<ECS::ArchetypeHolder> archs, ECS::version_t globalVersion) noexcept
+void* ECS::ChunkJobFunction::createContext(
+    span<ECS::ChunkJobContext> jobs,
+    span<mark_ptr<Archetype>> archs, 
+    ECS::version_t globalVersion) noexcept
 {
     size_t size = alignTo64(sizeof(std::atomic<uint32_t>),jobs.size());
     thread_info* context = (thread_info *) allocator().allocate(sizeof(thread_info) + size * 2);
@@ -91,7 +94,7 @@ void ECS::ChunkJobFunction::destroyContext(void* context) noexcept {
 
 void ECS::ChunkJobFunction::proccess(
     ECS::ChunkJobContext* job,
-    ECS::ArchetypeHolder* archetypes, 
+    mark_ptr<ECS::Archetype>* archetypes, 
     ECS::version_t sv,
     ECS::version_t gv,
     uint32_t archetypeCount
@@ -153,7 +156,7 @@ void ECS::ChunkJobFunction::callExecution(
             if(!didChange(v,sv))
                 goto endChunk;
         }
-        buffer = (uint8_t*)(archetype->chunksData[chunkIndex].memory);
+        buffer = archetype->chunksData[chunkIndex]->memory;
         for (i = 0; i < argCount; i++)
             argsBuffer[i] = buffer + argsOffsets[i];
         try{

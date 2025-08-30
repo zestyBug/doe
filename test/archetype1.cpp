@@ -29,7 +29,7 @@ int main(int argc, char const *argv[])
     types.reserve(10);
     types.emplace_back(ECS::getTypeInfo<int>().value);
     types.emplace_back(ECS::getTypeInfo<prototype>().value);
-    ECS::ArchetypeHolder h_arch = std::move(ECS::Archetype::createArchetype(types));
+    mark_ptr<ECS::Archetype> h_arch = std::move(ECS::Archetype::createArchetype(types));
     arch = h_arch.get();
 
     mtest::run_all();

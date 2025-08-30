@@ -19,7 +19,7 @@ Archetype* EntityComponentManager::getOrCreateArchetype(const_span<TypeID> types
     }
     {
         // unique_ptr manages deallocation on exceptions
-        ArchetypeHolder archetype_ptr{Archetype::createArchetype(types)};
+        mark_ptr<Archetype> archetype_ptr{Archetype::createArchetype(types)};
         Archetype * const archetype = archetype_ptr.get();
 
         if(!archetype)
@@ -34,7 +34,7 @@ Archetype* EntityComponentManager::getOrCreateArchetype(const_span<TypeID> types
             archetype->archetypeIndex = archetypeIndex;
             archetypes.push_back(std::move(archetype_ptr));
         }else{
-            ArchetypeHolder& ptr = archetypes.at(FreeArchetypeIndex);
+            mark_ptr<Archetype>& ptr = archetypes.at(FreeArchetypeIndex);
             /// TODO: may a invalid index check be good
             if(( (intptr_t)ptr.get_raw() & 0x1) != 1)
                 throw std::runtime_error("getOrCreateArchetype(): unexpected free archetype");

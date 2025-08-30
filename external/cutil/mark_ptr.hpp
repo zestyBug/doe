@@ -1,13 +1,12 @@
-#if !defined(UNIQUEPTR_HPP)
-#define UNIQUEPTR_HPP
+#if !defined(MARK_PTR_HPP)
+#define MARK_PTR_HPP
 
 #include "cutil/basics.hpp"
 
 
-
 /// @brief supports pointer marking for first bit, it disables destruction and access
-template <typename Type, typename Allocator = std::allocator<Type>>
-class unique_ptr
+template <typename Type, typename Allocator = allocator<Type>>
+class mark_ptr
 {
     Type *_M_t = nullptr;
 
@@ -18,8 +17,8 @@ class unique_ptr
     public:
     // Constructors.
 
-    /// @brief Default constructor, creates a unique_ptr that owns nothing.
-    constexpr unique_ptr() noexcept : _M_t(nullptr){ }
+    /// @brief Default constructor, creates a mark_ptr that owns nothing.
+    constexpr mark_ptr() noexcept : _M_t(nullptr){ }
 
     /** Takes ownership of a pointer.
      *
@@ -27,22 +26,22 @@ class unique_ptr
      *
      * The deleter will be value-initialized.
      */
-    explicit unique_ptr(Type* __p) noexcept : _M_t(__p){ }
+    explicit mark_ptr(Type* __p) noexcept : _M_t(__p){ }
 
-    /// @brief Creates a unique_ptr that owns nothing.
-    constexpr unique_ptr(nullptr_t) noexcept : _M_t(nullptr) { }
+    /// @brief Creates a mark_ptr that owns nothing.
+    constexpr mark_ptr(nullptr_t) noexcept : _M_t(nullptr) { }
 
     /// @brief Move constructor.
-    unique_ptr(unique_ptr&&v){
+    mark_ptr(mark_ptr&&v){
         reset(v._M_t);
         v._M_t = nullptr;
     }
 
     /// @brief Destructor, invokes the deleter if the stored pointer is not null.
-    ~unique_ptr() noexcept
+    ~mark_ptr() noexcept
     {
         if(_M_t != nullptr && ((intptr_t)_M_t&1) != 1){
-            Allocator().destroy(_M_t);
+            _M_t->~Type();
             Allocator().deallocate(_M_t);
         }
         _M_t = nullptr;
@@ -54,7 +53,7 @@ class unique_ptr
      *
      * Invokes the deleter if this object owns a pointer.
      */
-    unique_ptr& operator=(unique_ptr &&v){
+    mark_ptr& operator=(mark_ptr &&v){
         if(this != &v){
             _M_t = v._M_t;
             v._M_t = nullptr;
@@ -62,9 +61,8 @@ class unique_ptr
         return *this;
     }
 
-    /// @brief Reset the %unique_ptr to empty, invoking the deleter if necessary.
-    unique_ptr&
-    operator=(nullptr_t) noexcept
+    /// @brief Reset the %mark_ptr to empty, invoking the deleter if necessary.
+    mark_ptr& operator=(nullptr_t) noexcept
     {
         reset();
         return *this;
@@ -111,7 +109,7 @@ class unique_ptr
     }
 
     /// @brief Exchange the pointer and deleter with another object.
-    void swap(unique_ptr& __u) noexcept
+    void swap(mark_ptr& __u) noexcept
     {
         Type * const buffer = __u._M_t;
         __u._M_t = this->_M_t;
@@ -119,9 +117,9 @@ class unique_ptr
     }
 
     /// @brief Disable copy from lvalue.
-    unique_ptr(const unique_ptr&) = delete;
-    unique_ptr& operator=(const unique_ptr&) = delete;
+    mark_ptr(const mark_ptr&) = delete;
+    mark_ptr& operator=(const mark_ptr&) = delete;
 };
 
 
-#endif // UNIQUEPTR_HPP
+#endif // MARK_PTR_HPP

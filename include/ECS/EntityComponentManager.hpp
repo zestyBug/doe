@@ -8,7 +8,6 @@
 #include "Archetype.hpp"
 #include "cutil/bitset.hpp"
 #include "cutil/span.hpp"
-#include "cutil/unique_ptr.hpp"
 #include "cutil/map.hpp"
 
 class Test;
@@ -24,7 +23,7 @@ namespace ECS
         // contains index of it archetype and it index in that archetype
         std::vector<entity_t,allocator<entity_t>> entity_value{};
 
-        std::vector<ArchetypeHolder,allocator<ArchetypeHolder>> archetypes{};
+        std::vector<mark_ptr<Archetype>> archetypes{};
         /// @brief hash does not include "Entity" component
         map<const_span<TypeID>,Archetype> archetypeTypeMap{};
 
@@ -236,12 +235,12 @@ namespace ECS
                             }
                         }
                         {
-                            const_span<Chunk> archChunks{arch->chunksData};
+                            const_span<align_ptr<Chunk>> archChunks{arch->chunksData};
                             const uint32_t lastChunkEntityCount = arch->lastChunkEntityCount;
                             const uint32_t chunkCapacity = arch->chunkCapacity;
                             const uint32_t lastChunkIndex = archChunks.size() - 1;
                             for(uint32_t chunckIndex = 0; chunckIndex < archChunks.size(); chunckIndex++) {
-                                uint8_t * const chunkMemory = (uint8_t *)archChunks[chunckIndex].memory;
+                                uint8_t * const chunkMemory = archChunks[chunckIndex]->memory;
                                 const uint32_t count = chunckIndex == lastChunkIndex ? lastChunkEntityCount : chunkCapacity ;
                                 if(unlikely(chunkMemory == nullptr || count == 0))
                                     throw std::runtime_error("found an empty chunk");

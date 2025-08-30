@@ -4,7 +4,6 @@
 #include "cutil/basics.hpp"
 #include "ECS/defs.hpp"
 #include <vector>
-#include "cutil/unique_ptr.hpp"
 
 namespace ECS
 {
