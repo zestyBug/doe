@@ -32,7 +32,6 @@
     #else
         #define VKLibraryName "libvulkan.so.1"
     #endif
-    #define VKLibraryName "libvulkan.so"
     #define VKLibraryHandle void*
     #define VKLibraryOpen(N) dlopen(N, RTLD_NOW | RTLD_LOCAL)
     #define VKLibraryError() dlerror()
@@ -62,6 +61,7 @@ int VKInitialized(void){
 }
 int VKInitialize(void) {
     int res=0;
+
     // makes an executable object file specified by file available to the calling program.
     libvulkan = VKLibraryOpen(VKLibraryName);
     if (!libvulkan)
@@ -69,6 +69,7 @@ int VKInitialize(void) {
         //printf("unable to load %s\n",VKLibraryName);
         return 1;
     }
+
     // Minimum Vulkan supported functions.
     // obtain the address of a symbol defined within an object.
 

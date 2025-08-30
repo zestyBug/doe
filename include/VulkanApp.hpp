@@ -37,7 +37,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 		uint32_t index = 0;
 		VkQueue queue = VK_NULL_HANDLE;
 		VkFence fence = VK_NULL_HANDLE;
-	} graphic,transfer;
+	} gqueue;
 
 	VkResult test();
 };

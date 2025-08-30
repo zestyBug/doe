@@ -102,7 +102,7 @@ ifeq ($(OS),Windows_NT)
 		$(OBJ)/src/glfw/win32_time.o \
 		$(OBJ)/src/glfw/win32_window.o
 	CPPFLAGS+=-D_GLFW_WIN32 -DVK_USE_PLATFORM_WIN32_KHR
-	LDLIBS+=-lgdi32
+	LDLIBS+=-lgdi32 -lrt
 else
 	headerGLFW+= \
 		$(srcDir)/glfw/xkb_unicode.h \

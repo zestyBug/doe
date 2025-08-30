@@ -12,7 +12,8 @@ VkResult VulkanApp::initInstance() {
     uint32_t line;
 	const VkDebugUtilsMessengerCreateInfoEXT MessengerCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-		.pNext = NULL,
+		.pNext = nullptr,
+		.flags = 0,
 		.messageSeverity = //VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
 		//VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
@@ -45,7 +46,7 @@ VkResult VulkanApp::initInstance() {
 	#endif
         VK_EXT_DEBUG_UTILS_EXTENSION_NAME 
     };
-	char const* const lays[] = { "VK_LAYER_KHRONOS_validation" };
+	char const* const lays[] = { };//"VK_LAYER_KHRONOS_validation" };
 
 	// initialize the VkInstanceCreateInfo structure
 	const VkInstanceCreateInfo inst_info = {
@@ -80,9 +81,9 @@ VkResult VulkanApp::initSurface() {
 	VkXlibSurfaceCreateInfoKHR createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
 	createInfo.pNext = NULL;
-	createInfo.dpy = glfwGetX11Display(window);//hInstance;
+	createInfo.dpy = glfwGetX11Display();
 	createInfo.window = glfwGetX11Window(window);
-	checkError(vkCreateWin32SurfaceKHR(this->instance, &createInfo, NULL, &surface));
+	checkError(vkCreateXlibSurfaceKHR(this->instance, &createInfo, NULL, &surface));
 #else
 	#error unexpected device
 #endif
@@ -138,8 +139,8 @@ VkResult VulkanApp::autoSelectDevice()
 	else {
 		VkPhysicalDevice physical_devices[gpu_count];
 		checkError(vkEnumeratePhysicalDevices(this->instance, &gpu_count, physical_devices));
-		uint32_t graphic_queue_index = 0;
-		uint32_t transfer_queue_index = 0;
+		uint32_t queue_index = 0;
+
 
 		for (VkPhysicalDevice pd : physical_devices)
 		{
@@ -158,36 +159,22 @@ VkResult VulkanApp::autoSelectDevice()
 			for (unsigned int i = 0; i < queue_family_count; i++)
 			{
 				// some devices are made for computation and does not support graphical commands
-				if (!(queue_family_prop[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)) continue;
 				if(queue_family_prop[i].queueCount < 1) continue;
-				graphic_queue_index = i;
-				goto search_for_transform_queue;
+				if ((queue_family_prop[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && 
+				(queue_family_prop[i].queueFlags & VK_QUEUE_TRANSFER_BIT)) {
+					queue_index = i;
+					goto search_for_present_queue;
+				}
 			}
 			// gpu was not suitable
 			continue;
-		search_for_transform_queue:
-
-			// search for transfer only queue
-			for (unsigned int i = 0; i < queue_family_count; i++)
-				if (i != graphic_queue_index && (queue_family_prop[i].queueFlags & VK_QUEUE_TRANSFER_BIT)){
-					transfer_queue_index = i;
-					goto search_for_present_queue;
-				}
-			if (queue_family_prop[graphic_queue_index].queueFlags & VK_QUEUE_TRANSFER_BIT)			
-				if(queue_family_prop[graphic_queue_index].queueCount > 2){
-					transfer_queue_index = graphic_queue_index;
-					goto search_for_present_queue;
-				}
-			// gpu was not suitable
-			continue;
-
 		search_for_present_queue:
 			{
 				VkBool32 supported = false;
 				// A Device may not be plugged into a monitor or not have any graphcal output
 				// which could make direct interactions with displayable images difficult or impossible.
 				// ie: it can render but result image must be copied to another Device that can render to display.
-				checkError(vkGetPhysicalDeviceSurfaceSupportKHR(pd, graphic_queue_index, this->surface, &supported));
+				checkError(vkGetPhysicalDeviceSurfaceSupportKHR(pd, queue_index, this->surface, &supported));
 				if (supported)
 					goto exit_loop;
 				// gpu was not suitable
@@ -195,8 +182,7 @@ VkResult VulkanApp::autoSelectDevice()
 			}
 		exit_loop:
 			this->pdevice = pd;
-			this->graphic.index = graphic_queue_index;
-			this->transfer.index = transfer_queue_index;
+			this->gqueue.index = queue_index;
 			return VK_SUCCESS;
 		}
 	}
@@ -212,15 +198,12 @@ VkResult VulkanApp::initDevice(){
 
 	float priority[1] = {1.0f};
 
-	VkDeviceQueueCreateInfo queue_info[2] = {
+	VkDeviceQueueCreateInfo queue_info[1] = {
 		{
 			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = this->graphic.index,
-			.queueCount = 1,
-			.pQueuePriorities = priority,
-		},{
-			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = this->transfer.index,
+			.pNext = nullptr,
+			.flags = 0,
+			.queueFamilyIndex = this->gqueue.index,
 			.queueCount = 1,
 			.pQueuePriorities = priority,
 		}
@@ -237,10 +220,6 @@ VkResult VulkanApp::initDevice(){
 		.ppEnabledExtensionNames = exts,
 		.pEnabledFeatures = NULL,
 	};
-	if(this->transfer.index == this->graphic.index){
-		queue_info[0].queueCount = 2;
-		device_info.queueCreateInfoCount = 1;
-	}
 
 	checkError(vkCreateDevice(this->pdevice, &device_info, NULL, &this->ldevice));
 	return VK_SUCCESS;
@@ -257,19 +236,9 @@ VkResult VulkanApp::initQueue(){
 		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 	};
 
-	vkGetDeviceQueue(
-		this->ldevice,
-		this->graphic.index,
-		0,
-		&this->graphic.queue);
-	vkGetDeviceQueue(
-		this->ldevice,
-		this->transfer.index,
-		this->transfer.index == this->graphic.index ? 1 : 0,
-		&this->transfer.queue);
+	vkGetDeviceQueue(this->ldevice,this->gqueue.index,0,&this->gqueue.queue);
 
-	checkError(vkCreateFence(this->ldevice, &fence_info, 0, &this->graphic.fence));
-	checkError(vkCreateFence(this->ldevice, &fence_info, 0, &this->transfer.fence));
+	checkError(vkCreateFence(this->ldevice, &fence_info, 0, &this->gqueue.fence));
 	return VK_SUCCESS;
 err:
     printf("%s:%d %s:%i\n",__FILE__,line,fname,res);
