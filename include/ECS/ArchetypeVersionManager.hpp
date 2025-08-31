@@ -16,23 +16,26 @@ namespace ECS
     class ArchetypeVersionManager final
     {
         // SOA for chunks in a archetype : index, shared component index, version, count
-        uint8_t *data=nullptr;
+        align_ptr<uint8_t[]> buck;
+
         // maximum number of chunks information that can be stored, before grow
         uint32_t _capacity=0;
+        
         // number of chunks allocated
         uint32_t _count=0;
         uint32_t componentCount=0;
 
         // version value: (suitable for single type iteration)
         // note all type are same in archetype structure
-        //    [ type[0]: [chunk[0] ... chunk[_capacity]]
-        //      type[...]:
-        //      type[componentCount]: [chunk[0] ... chunk[_capacity]]
+        //    [ comp[0]:                  [chunk[0] ... chunk[_capacity - 1]]
+        //      comp[...]:                ...
+        //      comp[componentCount - 1]: [chunk[0] ... chunk[_capacity - 1]]
 
         friend class Archetype;
 
     public:
-        ArchetypeVersionManager(){}
+         ArchetypeVersionManager() = default;
+        ~ArchetypeVersionManager() = default;
 
         ArchetypeVersionManager(const ArchetypeVersionManager&)= delete;
         ArchetypeVersionManager& operator = (const ArchetypeVersionManager&)= delete;
@@ -46,13 +49,9 @@ namespace ECS
     protected:
 
         version_t& _ChangeVersion(uint32_t index=0){
-            return ((version_t*)(this->data))[index];
+            return ((version_t*)(this->buck.get()))[index];
         }
     public:
-        ~ArchetypeVersionManager(){
-            allocator().deallocate(this->data);
-        }
-
         inline bool empty() const {
             return this->_count < 1;
         }

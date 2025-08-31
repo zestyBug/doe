@@ -27,13 +27,13 @@ struct Test {
     static ECS::EntityComponentManager reg;
     static ECS::ResourceGC rgc;
 
-    static void iterateChunks(ECS::Archetype const * const archetype,
+    static void iterateChunks(const ECS::Archetype& archetype,
             uint32_t numBuffers,
             const uint16_t* sizeBuffer,
             const uint32_t* offsetBuffer) {
-        const_span<ECS::Chunk> archetypeChunks   = archetype->chunksData;
-        const uint32_t lastChunkEntityCount = archetype->lastChunkEntityCount;
-        const uint32_t chunkCapacity        = archetype->chunkCapacity;
+        const_span<align_ptr<ECS::Chunk>> archetypeChunks   = archetype.chunksData;
+        const uint32_t lastChunkEntityCount = archetype.lastChunkEntityCount;
+        const uint32_t chunkCapacity        = archetype.chunkCapacity;
         // may underflow!
         const uint32_t lastChunkIndex       = archetypeChunks.size() - 1;
 

@@ -247,9 +247,12 @@ namespace ECS
         /// @brief between-archetype move operation
         /// @note dst.~T(); src.T(); memcpy(dst,src);
         /// @param entity value of srcIndex to be updated
-        Entity moveComponentValues(Archetype *__restrict__ srcArchetype, uint32_t dstIndex, uint32_t srcIndex);
+        Entity moveComponentValues(Archetype &srcArchetype, uint32_t dstIndex, uint32_t srcIndex);
 
+        // over chunk copy
         void inArchetypeCopy(void *__restrict__ srcChunk, void *__restrict__ dstChunk ,const uint32_t srcInChunkIndex, const uint32_t dstInChunkIndex);
+
+        // in chunk copy
         void inArchetypeCopy(void *chunk, const uint32_t srcInChunkIndex, const uint32_t dstInChunkIndex);
 
         /// @brief call destructor function of components

@@ -49,36 +49,36 @@ namespace ECS
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithAddedComponents(Archetype *archetype,const_span<TypeID> componentTypeSet) noexcept;
+        Archetype* getArchetypeWithAddedComponents(Archetype& archetype,const_span<TypeID> componentTypeSet) noexcept;
 
         /// @brief add component to an entity or in other word, move entity to another archetype, exception handled
         /// @note not type flag sensitive
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithRemovedComponents(Archetype *archetype,const_span<TypeID> typeSetToRemove) noexcept;
+        Archetype* getArchetypeWithRemovedComponents(Archetype& archetype,const_span<TypeID> typeSetToRemove) noexcept;
 
         /// @ref getArchetypeWithAddedComponents
         /// @note type flag sensitive
-        Archetype* getArchetypeWithAddedComponent(Archetype* archetype,TypeID addedComponentType,uint32_t *indexInTypeArray = nullptr) noexcept;
+        Archetype* getArchetypeWithAddedComponent(Archetype& archetype,TypeID addedComponentType,uint32_t *indexInTypeArray = nullptr) noexcept;
 
         /// @ref getArchetypeWithAddedComponents
         /// @note not type flag sensitive
         /// @attention an exception will be thrown by getOrCreateArchetype if Entity is passed as argument for removedComponentType
-        Archetype* getArchetypeWithRemovedComponent(Archetype* archetype,TypeID removedComponentType,uint32_t *indexInOldTypeArray = nullptr) noexcept;
+        Archetype* getArchetypeWithRemovedComponent(Archetype& archetype,TypeID removedComponentType,uint32_t *indexInOldTypeArray = nullptr) noexcept;
 
         /// @brief add Entity component to the array and calls getOrCreateArchetype
         /// @attention input validity is not checked! 
         void Helper_allocateInArchetype(const_span<TypeID> componentTypeSet,entity_t *srcValue, Entity entity) noexcept;
         /// @brief simple wrapper for boiler plate code
-        void Helper_allocateInArchetype(Archetype *newArchetype,entity_t *srcValue, Entity entity) noexcept;
+        void Helper_allocateInArchetype(Archetype& newArchetype,entity_t& srcValue, Entity entity) noexcept;
         /// @brief simple wrapper for boiler plate code
         /// @attention input validity is not checked!
-        void Helper_removeFromArchetype(Archetype *srcArchetype,entity_t *srcValue) noexcept;
+        void Helper_removeFromArchetype(Archetype& srcArchetype,entity_t& srcValue) noexcept;
         /// @brief manages move to new archetype
         /// @attention input validity is not checked!
         /// @return index in new archetype
-        void Helper_moveEntityToNewArchetype(Archetype *__restrict__ newArchetype,Archetype *__restrict__srcArchetype,entity_t *srcValue) noexcept;
+        void Helper_moveEntityToNewArchetype(Archetype& newArchetype,Archetype& srcArchetype,entity_t& srcValue) noexcept;
 
 
         void updateVersion() { ECS::updateVersion(this->globalVersion); }

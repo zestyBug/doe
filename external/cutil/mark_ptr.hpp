@@ -70,12 +70,34 @@ class mark_ptr
 
     // Observers.
 
+    Type& operator*() noexcept
+    {
+        if(unlikely(_M_t == nullptr || ((intptr_t)_M_t&1) == 1))
+            throw std::runtime_error("operator*(): cant observe invalid pointer");
+        return *_M_t;
+    }
+    
+    const Type& operator*() const noexcept
+    {
+        if(unlikely(_M_t == nullptr || ((intptr_t)_M_t&1) == 1))
+            throw std::runtime_error("operator*(): cant observe invalid pointer");
+        return *_M_t;
+    }
+
     /// @brief Return the stored pointer. safe but slow
-    Type* get() const {
+    Type* get() {
         if(_M_t == nullptr || ((intptr_t)_M_t&1) == 1)
             return nullptr;
         return _M_t;
     }
+
+    /// @brief Return the stored pointer. safe but slow
+    const Type* get() const {
+        if(_M_t == nullptr || ((intptr_t)_M_t&1) == 1)
+            return nullptr;
+        return _M_t;
+    }
+
     /// @brief Return the stored pointer. unsafe
     Type* get_raw() const {
         return _M_t;

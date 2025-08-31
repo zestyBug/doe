@@ -40,24 +40,23 @@ void ArchetypeVersionManager::grow(uint32_t new_capacity){
         throw std::invalid_argument("grow(): smaller new size");
     
     static_assert(sizeof(version_t) == 4);
-    /* WARN: DO NOT TOUCH THIS new_capacity * sizeof(version_t) must be align 64
+    /* WARN: DO NOT TOUCH THIS new_capacity * sizeof(version_t) must be aligned by 64
      * to prevent false sharing, assuming sizeof(version_t) == 4, new_capacity multiply of 16
      */
     new_capacity = (new_capacity+0xF)&0xFFFFFFF0;
 
     const size_t new_v_size = new_capacity * sizeof(version_t) * this->componentCount;
 
-    uint8_t *new_data = allocator().allocate(new_v_size);
+    align_ptr<uint8_t[]> new_data{allocator<uint8_t>().allocate(new_v_size)};
 
-    if(this->data != nullptr && this->_count > 0){
+    if(this->buck){
         for(uint32_t i = 0; i < componentCount; ++i) {
-            memcpy((version_t*)(new_data) + i * new_capacity,
-                   (version_t*)(this->data) + i * this->_capacity,
+            memcpy((version_t*)(new_data.get()) + i * new_capacity,
+                   (version_t*)(this->buck.get()) + i * this->_capacity,
                    this->_count * sizeof(version_t));
         }
-        allocator().deallocate(this->data);
     }
 
-    this->data = new_data;
+    this->buck = std::move(new_data);
     this->_capacity = new_capacity;
 }

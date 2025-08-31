@@ -107,14 +107,14 @@ public:
 		}
 	}
 
-	inline span<element_type> operator+(uint32_t step) {
+	inline span<element_type> operator+(uint32_t step) const {
 		if(_M_count > step)
 			return span<element_type>{_M_ptr+step,_M_count-step};
 		else
 			return span<element_type>{nullptr,0};
 	}
 
-	bool operator == (span<element_type> v) {
+	bool operator == (const span<element_type> &v) const {
 		if(v.size_bytes() == this->size_bytes()){
 			if(0 == this->size_bytes())
 				return true;
@@ -251,7 +251,7 @@ public:
 			return const_span<element_type>{nullptr,0};
 	}
 
-	bool operator == (const const_span<element_type> v) const {
+	bool operator == (const const_span<element_type> &v) const {
 		if(v.size_bytes() == this->size_bytes()){
 			if(0 == this->size_bytes())
 				return true;

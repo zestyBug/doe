@@ -159,7 +159,7 @@ struct deleter<_Tp[]>
 {
 public:
     /// Default constructor
-    constexpr default_delete() noexcept = default;
+    constexpr deleter() noexcept = default;
 
     /** @brief Converting constructor.
      *
@@ -171,7 +171,7 @@ public:
      * pointer to the base type.
      */
     template<typename _Up, typename = std::_Require<std::is_convertible<_Up(*)[], _Tp(*)[]>>>
-    default_delete(const default_delete<_Up[]>&) noexcept { }
+    deleter(const deleter<_Up[]>&) noexcept { }
 
     /// Calls `delete[] __ptr`
     template<typename _Up>
