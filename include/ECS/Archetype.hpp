@@ -63,27 +63,33 @@ namespace ECS
 
         // optimal for 16 component per archtype or less
         // Entity are istored as first type
-        const_span<TypeID> types{};
+        TypeID* __types = nullptr;
         // faster access to TypeID::realIndecies() for iteration
-        const_span<uint16_t> realIndecies{};
-        const_span<uint32_t> offsets{};
-        const_span<uint16_t> sizeOfs{};
+        uint16_t* __realIndecies = nullptr;
+        uint32_t* __offsets = nullptr;
+        uint16_t* __sizeOfs = nullptr;
+        const uint32_t __type_count;
         // any index above/equal this is a tag and it size is equal to 0
-        // firstTagIndex == 1 all tag, firstTagIndex == types.size() no tag
+        // firstTagIndex == 1 all tag, firstTagIndex == type_count no tag
         uint16_t firstTagIndex = 0;
         uint16_t flags=0;
         /// @brief archetype index in ECS archetype list, used for backward access.
         uint32_t archetypeIndex=0;
-        Archetype(/* args */) = default;
+        Archetype(uint32_t typeCount):__type_count{typeCount} {};
     public:
+        inline const_span<TypeID>   getType()   const {return {this->__types,  this->__type_count};}
+        inline const_span<uint32_t> getOffset() const {return {this->__offsets,this->__type_count};}
+        inline const_span<uint16_t> getSize()   const {return {this->__sizeOfs,this->__type_count};}
+        inline const_span<uint16_t> getIndex()  const {return {this->__realIndecies,this->__type_count};}
 
         static mark_ptr<Archetype> createArchetype(const_span<TypeID> types);
 
         ~Archetype(/* args */) noexcept {
-            const_span<uint16_t> archSizes = this->sizeOfs;
-            const_span<align_ptr<ECS::Chunk>> archChunks = this->chunksData;
-            const_span<uint32_t> archOffsets = this->offsets;
-            const_span<TypeID> archTypes = this->types;
+            auto archSizes {this->getSize().data()};
+            const_span<align_ptr<ECS::Chunk>> archChunks {this->chunksData};
+            auto archOffsets {this->getOffset().data()};
+            auto archTypes {this->getType().data()};
+
             for (uint32_t typeIndex = 0; typeIndex < this->nonZeroSizedTypesCount(); typeIndex++)
                 if(auto destructor =  getTypeInfo(archTypes[typeIndex]).destructor;destructor)
                     for (uint32_t chunkIndex = 0; chunkIndex < archChunks.size(); chunkIndex++)
@@ -155,7 +161,7 @@ namespace ECS
 
         void* getChunkComponent(uint16_t componentIndex,size_t chunkIndex){
             uint8_t * const mem = this->chunksData.at(chunkIndex)->memory;
-            return mem + offsets.at(componentIndex);
+            return mem + getOffset().at(componentIndex);
         }
 
         /// TODO: binary search?
@@ -172,10 +178,10 @@ namespace ECS
 
         /// @brief check if this archetype matches exact the same with param _types
         /// @note flag sensitive
-        /// @param _types sorted array of types
+        /// @param types sorted array of types
         /// @return true uf matches
-        inline bool operator ==(const_span<TypeID> _types) const noexcept {
-            return (this->types) == _types;
+        inline bool operator ==(const_span<TypeID> types) const noexcept {
+            return this->getType() == types;
         }
     protected:
         // the entity chunk index
@@ -262,7 +268,7 @@ namespace ECS
 namespace HashHelper
 {
     inline uint32_t FNV1A32(const ECS::Archetype *ptr){
-        return HashHelper::FNV1A32(ptr->types);
+        return HashHelper::FNV1A32(ptr->getType());
     }
 }
 

@@ -55,7 +55,7 @@ void EntityComponentManager::destroyEmptyArchetype(const uint32_t archetypeIndex
     }
 }
 Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *archetype,const_span<TypeID> componentTypeSet) noexcept {
-    const_span<TypeID> srcTypes = archetype->types;
+    auto srcTypes {archetype->getType()};
     uint32_t dstTypesCount = srcTypes.size() + componentTypeSet.size();
 
     TypeID dstTypes[dstTypesCount];
@@ -104,7 +104,7 @@ Archetype *EntityComponentManager::getArchetypeWithAddedComponents(Archetype *ar
     return this->getOrCreateArchetype({dstTypes,dstTypesCount});
 }
 Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* archetype, TypeID componentType,uint32_t *indexInTypeArray) noexcept {
-    const_span<TypeID> srcTypes = archetype->types;
+    auto srcTypes {archetype->getType()};
     uint32_t dstTypesCount = (uint32_t)srcTypes.size() + 1;
 
     TypeID newTypes[dstTypesCount];
@@ -134,13 +134,13 @@ Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype* arc
     return getOrCreateArchetype({newTypes,dstTypesCount});
 }
 Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *archetype,const_span<TypeID> typeSetToRemove) noexcept {
-    const uint32_t typesCount = archetype->types.size();
-    TypeID newTypes[typesCount];
+    auto types = archetype->getType();
+    TypeID newTypes[types.size()];
 
     uint32_t numRemovedTypes = 0;
-    for (uint32_t t = 0; t < typesCount; ++t)
+    for (uint32_t t = 0; t < types.size(); ++t)
     {
-        const uint16_t existingTypeIndex = archetype->types[t].value;
+        const uint16_t existingTypeIndex = types[t].value;
 
         bool removed = false;
         for(const TypeID typeMember : typeSetToRemove){
@@ -154,13 +154,13 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *
         }
 
         if (!removed)
-            newTypes[t - numRemovedTypes] = archetype->types[t];
+            newTypes[t - numRemovedTypes] = types[t];
     }
 
     if (numRemovedTypes == 0)
         return archetype;
     /// TODO: will behave unexpected if 'Entity' is removed!
-    const_span<TypeID> args{newTypes, typesCount - numRemovedTypes};
+    const_span<TypeID> args{newTypes, types.size() - numRemovedTypes};
     // if anything other than Entity is ramaind
     if(args.size() > 1)
         return getOrCreateArchetype(args);
@@ -168,22 +168,22 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype *
         return nullptr;
 }
 Archetype* EntityComponentManager::getArchetypeWithRemovedComponent(Archetype* archetype,TypeID removedComponentType,uint32_t *indexInOldTypeArray) noexcept {
-    const uint32_t typesCount = archetype->types.size();
-    TypeID newTypes[typesCount];
+    auto types = archetype->getType();
+    TypeID newTypes[types.size()];
 
     uint32_t removedTypes = 0;
-    for (uint32_t t = 0; t < typesCount; ++t)
-        if (archetype->types[t].value == removedComponentType.value)
+    for (uint32_t t = 0; t < types.size(); ++t)
+        if (types[t].value == removedComponentType.value)
         {
             if (indexInOldTypeArray != nullptr)
                 *indexInOldTypeArray = t;
             ++removedTypes;
         }
         else
-            newTypes[t - removedTypes] = archetype->types[t];
+            newTypes[t - removedTypes] = types[t];
 
     /// TODO: will behave unexpected if 'Entity' is removed!
-    const_span<TypeID> args{newTypes, typesCount - removedTypes};
+    const_span<TypeID> args{newTypes, types.size() - removedTypes};
     if(args.size() > 1)
         return getOrCreateArchetype(args);
     else

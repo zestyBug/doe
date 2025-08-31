@@ -220,8 +220,8 @@ namespace ECS
                     if(arch->hasComponents(types))
                     {
                         {
-                            const_span<uint32_t> archOffsets{arch->offsets};
-                            const_span<TypeID> archTypes{arch->types};
+                            const_span<uint32_t> archOffsets{arch->getOffset()};
+                            const_span<TypeID> archTypes{arch->getType()};
                             // fill offset_buffer
                             for(uint32_t typePosition=0;typePosition<types.size();typePosition++)
                             {

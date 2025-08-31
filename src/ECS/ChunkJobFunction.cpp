@@ -147,7 +147,7 @@ void ECS::ChunkJobFunction::callExecution(
         }
     
     for (i = 0; i < argCount; i++)
-        argsOffsets[i] = archetype->offsets.at(indecies[i]);
+        argsOffsets[i] = archetype->getOffset().at(indecies[i]);
 
     for(uint32_t chunkIndex=0;chunkIndex<chunkCount;chunkIndex++){
         // check for type version one by one

@@ -61,7 +61,7 @@ class allocator
     template<typename _Tp1> allocator(const allocator<_Tp1>&) { }
     ~allocator() { }
 
-    _GLIBCXX_NODISCARD
+    [[nodiscard]]
     _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) {
         _Tp* ret = nullptr;
         __n = alignTo64(sizeof(_Tp),(uint32_t)__n);
@@ -105,10 +105,10 @@ class allocator
 
 
     _Tp* address(_Tp& __x) const _GLIBCXX_NOEXCEPT
-    { return std::__addressof(__x); }
+    { return std::addressof(__x); }
 
     const _Tp* address(const _Tp& __x) const _GLIBCXX_NOEXCEPT
-    { return std::__addressof(__x); }
+    { return std::addressof(__x); }
 
     size_t max_size() const
     { return _M_max_size(); }
@@ -148,6 +148,38 @@ struct deleter
         static_assert(!std::is_void<_Tp>::value, "can't delete pointer to incomplete type");
         static_assert(sizeof(_Tp)>0, "can't delete pointer to incomplete type");
         __ptr->~_Tp();
+        allocator().deallocate(__ptr);
+    }
+};
+
+/** Specialization of default_delete for arrays, used by `unique_ptr<T[]>`
+ */
+template<typename _Tp>
+struct deleter<_Tp[]>
+{
+public:
+    /// Default constructor
+    constexpr default_delete() noexcept = default;
+
+    /** @brief Converting constructor.
+     *
+     * Allows conversion from a deleter for arrays of another type, such as
+     * a const-qualified version of `_Tp`.
+     *
+     * Conversions from types derived from `_Tp` are not allowed because
+     * it is undefined to `delete[]` an array of derived types through a
+     * pointer to the base type.
+     */
+    template<typename _Up, typename = std::_Require<std::is_convertible<_Up(*)[], _Tp(*)[]>>>
+    default_delete(const default_delete<_Up[]>&) noexcept { }
+
+    /// Calls `delete[] __ptr`
+    template<typename _Up>
+    typename std::enable_if<std::is_convertible<_Up(*)[], _Tp(*)[]>::value>::type
+    operator()(_Up* __ptr) const
+    {
+        static_assert(sizeof(_Tp)>0,"can't delete pointer to incomplete type");
+        // WARN! not calling destructor
         allocator().deallocate(__ptr);
     }
 };
