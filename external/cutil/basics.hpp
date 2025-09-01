@@ -65,7 +65,8 @@ class allocator
     _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) {
         _Tp* ret = nullptr;
         __n = alignTo64(sizeof(_Tp),(uint32_t)__n);
-        if(__n>0x10000 || __n<1)  throw std::bad_alloc();
+        if(__n < 1)      return nullptr;
+        if(__n>0x10000)  throw std::bad_alloc();
         #if DOE_WIN32
             ret = (_Tp*) _aligned_malloc(__n,64);
         #else
@@ -173,18 +174,61 @@ public:
     template<typename _Up, typename = std::_Require<std::is_convertible<_Up(*)[], _Tp(*)[]>>>
     deleter(const deleter<_Up[]>&) noexcept { }
 
-    /// Calls `delete[] __ptr`
+    // WARN! not calling destructor
     template<typename _Up>
     typename std::enable_if<std::is_convertible<_Up(*)[], _Tp(*)[]>::value>::type
     operator()(_Up* __ptr) const
     {
         static_assert(sizeof(_Tp)>0,"can't delete pointer to incomplete type");
-        // WARN! not calling destructor
         allocator().deallocate(__ptr);
     }
 };
 
 template<typename T>
 using align_ptr = std::unique_ptr<T,deleter<T>>;
+
+namespace detail
+{
+    template<class>
+    constexpr bool is_unbounded_array_v = false;
+    template<class T>
+    constexpr bool is_unbounded_array_v<T[]> = true;
+ 
+    template<class>
+    constexpr bool is_bounded_array_v = false;
+    template<class T, std::size_t N>
+    constexpr bool is_bounded_array_v<T[N]> = true;
+}
+
+template<class T, class... Args>
+std::enable_if_t<!std::is_array<T>::value, align_ptr<T>>
+make_align(Args&&... args)
+{
+    T* ptr = allocator<T>().allocate(1);
+    try {
+        new (ptr) T(std::forward<Args>(args)...);
+    } catch(...) {
+        allocator<T>().deallocate(ptr);
+        throw;
+    }
+    return align_ptr<T>(ptr);
+}
+
+template<class T>
+std::enable_if_t<detail::is_unbounded_array_v<T>, align_ptr<T>>
+make_align(size_t num)
+{
+    std::remove_extent_t<T> * __p = allocator<std::remove_extent_t<T>>().allocate(num);
+    try {
+        for (;num;) new (__p + (--num)) T();
+    } catch(...) {
+        allocator<std::remove_extent_t<T>>().deallocate(__p);
+        throw;
+    }
+    return align_ptr<T>(__p);
+}
+
+template<class T, class... Args>
+std::enable_if_t<detail::is_bounded_array_v<T>> make_align(Args&&...) = delete;
 
 #endif // BASICS_HPP

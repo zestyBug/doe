@@ -87,7 +87,7 @@ uint32_t Archetype::createEntity(version_t globalVersion) {
 #endif
     if(unlikely(this->chunksData.empty() || lastChunkEntityCount >= this->chunkCapacity)){
         lastChunkEntityCount=1;
-        this->chunksData.emplace_back(allocator<Chunk>().allocate(1));
+        this->chunksData.emplace_back(make_align<Chunk>());
         if(this->chunksData.size() > Archetype::MaxChunkIndex)
             throw std::runtime_error("createEntity(): reached max chunk count");
         chunksVersion.add(globalVersion);

@@ -47,7 +47,7 @@ void ArchetypeVersionManager::grow(uint32_t new_capacity){
 
     const size_t new_v_size = new_capacity * sizeof(version_t) * this->componentCount;
 
-    align_ptr<uint8_t[]> new_data{allocator<uint8_t>().allocate(new_v_size)};
+    align_ptr<uint8_t[]> new_data = make_align<uint8_t[]>(new_v_size);
 
     if(this->buck){
         for(uint32_t i = 0; i < componentCount; ++i) {

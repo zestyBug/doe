@@ -146,20 +146,20 @@ ResourceGC::ResourceGC(uint32_t count) {
     if (count < minimumSize())
         count = minimumSize();
 
-    uint32_t offsets[5];
-    offsets[0] = 0;
-    offsets[1] = offsets[0] + alignTo64(sizeof(Type),count);
-    offsets[2] = offsets[1] + alignTo64(sizeof(uint32_t),count);
-    offsets[3] = offsets[2] + alignTo64(sizeof(dtor_fn*),count);
-    offsets[4] = offsets[3] + alignTo64(sizeof(internal::GCFlag),count);
+    uint32_t offsets[4];
+    offsets[0] =              alignTo64(sizeof(Type),count);
+    offsets[1] = offsets[0] + alignTo64(sizeof(uint32_t),count);
+    offsets[2] = offsets[1] + alignTo64(sizeof(dtor_fn*),count);
+    offsets[3] = offsets[2] + alignTo64(sizeof(internal::GCFlag),count);
 
-    uint8_t * const ptr = offsets[4] ? allocator<uint8_t>().allocate(offsets[4]) : nullptr;
+    align_ptr<uint8_t[]> ptr = make_align<uint8_t[]>(offsets[3]);
 
     // must be: ptr + 0
-    values.reset((Type*)        (ptr+offsets[0]));
-    hashes = (uint32_t*)        (ptr+offsets[1]);
-    dtors  = (dtor_fn**)        (ptr+offsets[2]);
-    flags  = (internal::GCFlag*)(ptr+offsets[3]);
+    values.reset((Type*)        (ptr.get()));
+    hashes = (uint32_t*)        (ptr.get()+offsets[0]);
+    dtors  = (dtor_fn**)        (ptr.get()+offsets[1]);
+    flags  = (internal::GCFlag*)(ptr.get()+offsets[2]);
+    ptr.release();
     _size = unoccupied = count;
 
     memset(this->hashes,0,alignTo64(sizeof(uint32_t),count));

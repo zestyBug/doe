@@ -10,7 +10,7 @@ template<typename T>
 class mrsw_ring_buffer {
 public:
     mrsw_ring_buffer(uint32_t _SIZE) : 
-        buffer{allocator<T>().allocate(_SIZE)},
+        buffer{make_align<T[]>(_SIZE)},
         write_index(0), read_index(0), SIZE{_SIZE} {}
 
     // Writer-only thread calls this
@@ -53,7 +53,7 @@ class mrmw_buffer
 {
 public:
     mrmw_buffer(int32_t _SIZE):
-        buffer{allocator<T>().allocate(_SIZE)},
+        buffer{make_align<T[]>(_SIZE)},
         size{_SIZE},
         write_index(0),
         read_index(0)
