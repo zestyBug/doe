@@ -23,7 +23,7 @@ namespace ECS
         
         // number of chunks allocated
         uint32_t _count=0;
-        uint32_t componentCount=0;
+        const uint32_t componentCount=0;
 
         // version value: (suitable for single type iteration)
         // note all type are same in archetype structure
@@ -34,18 +34,15 @@ namespace ECS
         friend class Archetype;
 
     public:
-         ArchetypeVersionManager() = default;
+        ArchetypeVersionManager(uint32_t _component_count): componentCount{_component_count} {
+            if(_component_count < 1)
+                throw std::invalid_argument("ArchetypeVersionManager(): zero component archetype chunk data");
+        }
         ~ArchetypeVersionManager() = default;
 
         ArchetypeVersionManager(const ArchetypeVersionManager&)= delete;
         ArchetypeVersionManager& operator = (const ArchetypeVersionManager&)= delete;
         ArchetypeVersionManager(ArchetypeVersionManager&&)= default;
-
-        void initialize(uint32_t _component_count) {
-            componentCount=_component_count;
-            if(_component_count < 1)
-                throw std::invalid_argument("ArchetypeVersionManager(): zero component archetype chunk data");
-        }
     protected:
 
         version_t& _ChangeVersion(uint32_t index=0){

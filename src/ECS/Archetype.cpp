@@ -36,7 +36,6 @@ mark_ptr<Archetype> Archetype::createArchetype(const_span<TypeID> types) {
     }
 
     arch->chunksData.reserve(16);
-    arch->chunksVersion.initialize(arch->__type_count);
 
 
     {

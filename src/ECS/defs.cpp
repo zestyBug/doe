@@ -19,6 +19,7 @@ comp_info internal::_new_id(uint32_t size, rttiFP destructor, rttiFP constructor
     if(unlikely(ti.value > (TypeID::MaxTypeCount-1)))
         throw std::bad_typeid();
     if(size < 1)
+        // MAGIC NUMBER
         ti.value |= (1 << 13);
     const comp_info info{ti, size, destructor, constructor};
     rtti[rtti_count++] = info;

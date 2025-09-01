@@ -24,7 +24,7 @@ static_assert(sizeof(thread_info)==64);
 align_ptr<uint8_t[]> ECS::ChunkJobFunction::createContext(
     span<ECS::ChunkJobContext> jobs,
     span<mark_ptr<Archetype>> archs, 
-    ECS::version_t globalVersion) noexcept
+    ECS::version_t globalVersion)
 {
     size_t size = alignTo64(sizeof(std::atomic<uint32_t>),jobs.size());
     align_ptr<thread_info> context{(thread_info *) allocator().allocate(sizeof(thread_info) + size * 2)};
@@ -51,7 +51,7 @@ align_ptr<uint8_t[]> ECS::ChunkJobFunction::createContext(
     return std::move(align_ptr<uint8_t[]>{(uint8_t*)context.release()});
 }
 
-size_t ECS::ChunkJobFunction::function(void* _context, size_t i) noexcept{
+size_t ECS::ChunkJobFunction::function(void* _context, size_t i) {
     if(!_context)
         return ThreadPool::STOP_SIGNAL;
     thread_info &context = *(thread_info*)_context;
@@ -94,7 +94,7 @@ void ECS::ChunkJobFunction::proccess(
     ECS::version_t sv,
     ECS::version_t gv,
     uint32_t archetypeCount
-) noexcept {
+) {
     for (uint32_t archetypeIndex = 0; archetypeIndex < archetypeCount; archetypeIndex++)
     {
         Archetype *arch = archetypes[archetypeIndex].get();
@@ -121,7 +121,7 @@ void ECS::ChunkJobFunction::callExecution(
     ECS::Archetype* archetype,
     ECS::version_t sv,
     ECS::version_t gv
-) noexcept {
+) {
     JobFilter filter = job->context->getFilter();
     const uint32_t argCount = filter.counts[0]+filter.counts[1];
     const uint32_t totalCount = argCount + filter.counts[2];

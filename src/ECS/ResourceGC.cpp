@@ -170,7 +170,7 @@ ResourceGC& ResourceGC::operator=(ResourceGC&& v) {
         this->~ResourceGC();
         memcpy(this,&v,sizeof(v));
         v.values.release();
-        v.mitems = v._size = v.unoccupied = 0;uint32_t _size = 0;
+        v.mitems = v._size = v.unoccupied = 0;
         v.minValue=std::numeric_limits<Type>::max();
         v.maxValue=std::numeric_limits<Type>::min();
     }

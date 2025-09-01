@@ -61,7 +61,7 @@ namespace ECS
         // last entity on last chunk will be
         // filled in it place so iterating more efficiently.
         std::vector<align_ptr<Chunk>> chunksData{};
-        ArchetypeVersionManager chunksVersion{};
+        ArchetypeVersionManager chunksVersion;
 
 
         // optimal for 16 component per archtype or less
@@ -78,7 +78,7 @@ namespace ECS
         uint16_t flags=0;
         /// @brief archetype index in ECS archetype list, used for backward access.
         uint32_t archetypeIndex=0;
-        Archetype(uint32_t typeCount):__type_count{typeCount} {};
+        Archetype(uint32_t typeCount):chunksVersion{typeCount},__type_count{typeCount} {};
     public:
         inline const_span<TypeID>   getType()   const {return {this->__types,  this->__type_count};}
         inline const_span<uint32_t> getOffset() const {return {this->__offsets,this->__type_count};}

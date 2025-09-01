@@ -70,7 +70,7 @@ class mark_ptr
 
     // Observers.
 
-    Type& operator*() noexcept
+    Type& operator*()
     {
         if(unlikely(_M_t == nullptr || ((intptr_t)_M_t&1) == 1))
             throw std::runtime_error("operator*(): cant obtain invalid pointer");
