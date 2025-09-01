@@ -64,6 +64,7 @@ mark_ptr<Archetype> Archetype::createArchetype(const_span<TypeID> types) {
         Chunk::maximumEntitiesPerChunk
     );
 
+    // MAGIC NUMBER, DO NOT TOUCH
     if(unlikely(arch->chunkCapacity < 2))
         throw std::length_error("createArchetype(): LARGE COMPONENTS! X(");
 

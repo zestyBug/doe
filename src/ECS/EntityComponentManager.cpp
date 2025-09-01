@@ -4,7 +4,7 @@ using namespace ECS;
 
 
 
-Archetype* EntityComponentManager::getOrCreateArchetype(const_span<TypeID> types){
+Archetype& EntityComponentManager::getOrCreateArchetype(const_span<TypeID> types){
     if(types.size() < 2)
         throw std::invalid_argument("getOrCreateArchetype(): Archetype must contain atleast 2 component");
     if(types[0].value != 0)
@@ -13,31 +13,30 @@ Archetype* EntityComponentManager::getOrCreateArchetype(const_span<TypeID> types
         Archetype* archetype = archetypeTypeMap.tryGet(types);
         if(archetype != nullptr)
             // assume archetype is already initialized and we dont store destroyed archtypes here.
-            return archetype;
+            return *archetype;
     }
     {
         // unique_ptr manages deallocation on exceptions
         mark_ptr<Archetype> archetype_ptr{Archetype::createArchetype(types)};
-        Archetype * const archetype = archetype_ptr.get();
-
-        if(!archetype)
+        if(!archetype_ptr)
             throw std::runtime_error("getOrCreateArchetype(): createArchetype() failed");
+        Archetype& archetype = *archetype_ptr;
 
-        archetypeTypeMap.add(archetype);
+        archetypeTypeMap.add(&archetype);
 
         if(FreeArchetypeIndex >= NullArchetypeIndex){
             uint32_t archetypeIndex = (uint32_t) archetypes.size();
             if((archetypeIndex+1) >= NullArchetypeIndex)
                 throw std::out_of_range("archtype index full");
-            archetype->archetypeIndex = archetypeIndex;
+            archetype.archetypeIndex = archetypeIndex;
             archetypes.push_back(std::move(archetype_ptr));
         }else{
             mark_ptr<Archetype>& ptr = archetypes.at(FreeArchetypeIndex);
             /// TODO: may a invalid index check be good
-            if(( (intptr_t)ptr.get_raw() & 0x1) != 1)
+            if(ptr)
                 throw std::runtime_error("getOrCreateArchetype(): unexpected free archetype");
-            archetype->archetypeIndex = FreeArchetypeIndex;
-            FreeArchetypeIndex = (uint32_t)((intptr_t)ptr.get_raw() >> 1);
+            archetype.archetypeIndex = FreeArchetypeIndex;
+            FreeArchetypeIndex = (uint32_t)((intptr_t)(ptr.get_raw()) >> 1);
             ptr = std::move(archetype_ptr);
         }
         return archetype;
@@ -52,7 +51,7 @@ void EntityComponentManager::destroyEmptyArchetype(const uint32_t archetypeIndex
         FreeArchetypeIndex = archetypeIndex;
     }
 }
-Archetype* EntityComponentManager::getArchetypeWithAddedComponents(Archetype& archetype,const_span<TypeID> componentTypeSet) noexcept {
+Archetype& EntityComponentManager::getArchetypeWithAddedComponents(Archetype& archetype,const_span<TypeID> componentTypeSet) noexcept {
     auto srcTypes {archetype.getType()};
     uint32_t dstTypesCount = srcTypes.size() + componentTypeSet.size();
 
@@ -97,11 +96,11 @@ Archetype* EntityComponentManager::getArchetypeWithAddedComponents(Archetype& ar
 
     // if it is here means:
     if (unusedIndices == componentTypeSet.size())
-        return &archetype;
+        return archetype;
 
     return this->getOrCreateArchetype({dstTypes,dstTypesCount});
 }
-Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype& archetype, TypeID componentType,uint32_t *indexInTypeArray) noexcept {
+Archetype& EntityComponentManager::getArchetypeWithAddedComponent(Archetype& archetype, TypeID componentType,uint32_t *indexInTypeArray) noexcept {
     auto srcTypes {archetype.getType()};
     uint32_t dstTypesCount = (uint32_t)srcTypes.size() + 1;
 
@@ -119,7 +118,7 @@ Archetype* EntityComponentManager::getArchetypeWithAddedComponent(Archetype& arc
 
     if (t != srcTypes.size() && srcTypes[t].exactSame(componentType)) {
         // Tag component type is already there, no new archetype required.
-        return &archetype;
+        return archetype;
     }
     newTypes[t] = componentType;
 
@@ -161,7 +160,7 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponents(Archetype& 
     const_span<TypeID> args{newTypes, types.size() - numRemovedTypes};
     // if anything other than Entity is ramaind
     if(args.size() > 1)
-        return getOrCreateArchetype(args);
+        return &getOrCreateArchetype(args);
     else
         return nullptr;
 }
@@ -183,7 +182,7 @@ Archetype* EntityComponentManager::getArchetypeWithRemovedComponent(Archetype& a
     /// TODO: will behave unexpected if 'Entity' is removed!
     const_span<TypeID> args{newTypes, types.size() - removedTypes};
     if(args.size() > 1)
-        return getOrCreateArchetype(args);
+        return &getOrCreateArchetype(args);
     else
         return nullptr;
 }

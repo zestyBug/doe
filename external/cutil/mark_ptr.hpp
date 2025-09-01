@@ -62,7 +62,7 @@ class mark_ptr
     }
 
     /// @brief Reset the %mark_ptr to empty, invoking the deleter if necessary.
-    mark_ptr& operator=(nullptr_t) noexcept
+    inline mark_ptr& operator=(nullptr_t) noexcept
     {
         reset();
         return *this;
@@ -73,14 +73,14 @@ class mark_ptr
     Type& operator*() noexcept
     {
         if(unlikely(_M_t == nullptr || ((intptr_t)_M_t&1) == 1))
-            throw std::runtime_error("operator*(): cant observe invalid pointer");
+            throw std::runtime_error("operator*(): cant obtain invalid pointer");
         return *_M_t;
     }
     
     const Type& operator*() const
     {
         if(unlikely(_M_t == nullptr || ((intptr_t)_M_t&1) == 1))
-            throw std::runtime_error("operator*(): cant observe invalid pointer");
+            throw std::runtime_error("operator*(): cant obtain invalid pointer");
         return *_M_t;
     }
 
@@ -99,12 +99,12 @@ class mark_ptr
     }
 
     /// @brief Return the stored pointer. unsafe
-    Type* get_raw() const {
+    inline Type* get_raw() const {
         return _M_t;
     }
 
     /// Return @c true if the stored pointer is not null.
-    explicit operator bool() const noexcept { return get() == nullptr ? false : true; }
+    explicit inline operator bool() const noexcept { return get() == nullptr ? false : true; }
 
     // Modifiers.
 
@@ -124,7 +124,7 @@ class mark_ptr
     void reset(Type *__p = nullptr) noexcept
     {
         if (_M_t != nullptr && ((intptr_t)_M_t&1) == 0){
-            Allocator().destroy(_M_t);
+            _M_t->~Type();
             Allocator().deallocate(_M_t);
         }
         _M_t = __p;

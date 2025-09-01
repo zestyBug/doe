@@ -23,11 +23,14 @@ namespace HashHelper
 namespace ECS
 {
     struct Chunk final {
+        // MAGIC NUMBER, DO NOT TOUCH
         static constexpr uint32_t memoryOffset = 64; // (must be cache line aligned)
+        // MAGIC NUMBER, DO NOT TOUCH
         static constexpr uint32_t memorySize = 16 * 1024; /// any number larger than 0xFFFF may cause overflow in offset array!
         static constexpr uint32_t bufferSize = memorySize - memoryOffset;
         // lower the number, the better component version-ing perform
-        static constexpr uint32_t maximumEntitiesPerChunk = 512;
+        // MIN: 2 MAX: 0X4096 = (16*1024/4)
+        static constexpr uint32_t maximumEntitiesPerChunk = 256;
 
         uint8_t memory[Chunk::memorySize];
     };

@@ -38,8 +38,8 @@ namespace ECS
         /// @note type flag sensitive
         /// @attention types argument must include Entity component at index 0!
         /// @param types list of types, throws invalid_argument exception on empty list
-        /// @return nullptr if types.size is less than 2
-        Archetype* getOrCreateArchetype(const_span<TypeID> types);
+        /// @return archtype, or throws exception
+        Archetype& getOrCreateArchetype(const_span<TypeID> types);
 
         // destroys Archetype if empty otherwise nothing
         void destroyEmptyArchetype(const uint32_t archetypeIndex);
@@ -49,18 +49,18 @@ namespace ECS
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
         /// @return return another archtype or itself if nochange detected
-        Archetype* getArchetypeWithAddedComponents(Archetype& archetype,const_span<TypeID> componentTypeSet) noexcept;
+        Archetype& getArchetypeWithAddedComponents(Archetype& archetype,const_span<TypeID> componentTypeSet) noexcept;
 
         /// @brief add component to an entity or in other word, move entity to another archetype, exception handled
         /// @note not type flag sensitive
         /// @param srcArchetype contains src types
         /// @param componentTypeSet dont feed empty list, there is no quick size check for branch optimization!
-        /// @return return another archtype or itself if nochange detected
+        /// @return returns nullptr, archtype, itself if nochange detected or throws exception
         Archetype* getArchetypeWithRemovedComponents(Archetype& archetype,const_span<TypeID> typeSetToRemove) noexcept;
 
         /// @ref getArchetypeWithAddedComponents
         /// @note type flag sensitive
-        Archetype* getArchetypeWithAddedComponent(Archetype& archetype,TypeID addedComponentType,uint32_t *indexInTypeArray = nullptr) noexcept;
+        Archetype& getArchetypeWithAddedComponent(Archetype& archetype,TypeID addedComponentType,uint32_t *indexInTypeArray = nullptr) noexcept;
 
         /// @ref getArchetypeWithAddedComponents
         /// @note not type flag sensitive

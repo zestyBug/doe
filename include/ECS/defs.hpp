@@ -24,6 +24,7 @@ namespace ECS
 
 
     // the value 1 on the first bit is important for determining value from pointer.
+    // DO NOT INCREASE THIS NUMBER, OR THE ENGINE MAY MALFUNCTION!
     constexpr uint32_t NullArchetypeIndex = 0xfffffff;
 
 
@@ -72,6 +73,7 @@ namespace ECS
             return this->value == v.value;
         }
         // can be 1,2,3,...
+        // DO NOT INCREASE THIS NUMBER, OR THE ENGINE MAY MALFUNCTION!
         static constexpr uint16_t MaxTypeCount = 0x2000;
     };
 
@@ -159,6 +161,7 @@ namespace ECS
         template<typename T>
         uint16_t __type_id__()
         {
+            // DO NOT INCREASE THIS NUMBER, OR THE ENGINE MAY MALFUNCTION!
             static_assert(sizeof(T) <= 0x7000);
             static const comp_info value = _new_id(
                 sizeof(T),
