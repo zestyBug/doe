@@ -136,23 +136,11 @@ void ResourceGC::rehash(uint32_t size) {
     if(size < this->occupiedNodes())
         throw std::out_of_range("rehash(): size smaller than needed, causing infinite loop.");
 #endif
-    union tmp {
-        ResourceGC GC;
-        bool _;
-        tmp(): _{false}{}
-        ~tmp(){_=false;}
-    } temp;
-    new (&temp.GC) ResourceGC(size);
+    ResourceGC GC{size};
     for (uint32_t offset = 0; offset < this->size(); ++offset)
         if (this->hashes[offset] != 0)
-            temp.GC.addValue(this->dtors[offset],this->values[offset],this->flags[offset]);
-    allocator<uint8_t>().deallocate(this->values);
-    this->values =     temp.GC.values;
-    this->hashes =     temp.GC.hashes;
-    this->dtors =      temp.GC.dtors;
-    this->flags =      temp.GC.flags;
-    this->unoccupied = temp.GC.unoccupied;
-    this->_size =      temp.GC._size;
+            GC.addValue(this->dtors[offset],this->values[offset],this->flags[offset]);
+    *this = std::move(GC);
 }
 ResourceGC::ResourceGC(uint32_t count) {
     if (count < minimumSize())
@@ -168,7 +156,7 @@ ResourceGC::ResourceGC(uint32_t count) {
     uint8_t * const ptr = offsets[4] ? allocator<uint8_t>().allocate(offsets[4]) : nullptr;
 
     // must be: ptr + 0
-    values = (Type*)            (ptr+offsets[0]);
+    values.reset((Type*)        (ptr+offsets[0]));
     hashes = (uint32_t*)        (ptr+offsets[1]);
     dtors  = (dtor_fn**)        (ptr+offsets[2]);
     flags  = (internal::GCFlag*)(ptr+offsets[3]);
@@ -177,11 +165,21 @@ ResourceGC::ResourceGC(uint32_t count) {
     memset(this->hashes,0,alignTo64(sizeof(uint32_t),count));
     memset(flags,       0,alignTo64(sizeof(internal::GCFlag),count));
 }
+ResourceGC& ResourceGC::operator=(ResourceGC&& v) {
+    if(this != &v) {
+        this->~ResourceGC();
+        memcpy(this,&v,sizeof(v));
+        v.values.release();
+        v.mitems = v._size = v.unoccupied = 0;uint32_t _size = 0;
+        v.minValue=std::numeric_limits<Type>::max();
+        v.maxValue=std::numeric_limits<Type>::min();
+    }
+    return *this;
+}
 ResourceGC::~ResourceGC() {
     for(uint32_t index=0;index<_size;++index)
         if(hashes[index] != 0)
             this->dtors[index](values[index]);
-    allocator<uint8_t>().deallocate(values);
 }
 void ResourceGC::markValue(const Type value) {
     if (value < this->minValue || this->maxValue < value)

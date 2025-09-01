@@ -33,8 +33,6 @@ int main(int argc, char const *argv[])
     arch = h_arch.get();
 
     mtest::run_all();
-    
-    allocator<ECS::Archetype>().destroy(arch);
-    allocator<ECS::Archetype>().deallocate(arch);
+
     return 0;
 }

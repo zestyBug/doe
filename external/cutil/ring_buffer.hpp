@@ -9,9 +9,9 @@
 template<typename T>
 class mrsw_ring_buffer {
 public:
-    mrsw_ring_buffer(uint32_t _SIZE) : write_index(0), read_index(0), SIZE{_SIZE} {
-        buffer.resize(_SIZE);
-    }
+    mrsw_ring_buffer(uint32_t _SIZE) : 
+        buffer{allocator<T>().allocate(_SIZE)},
+        write_index(0), read_index(0), SIZE{_SIZE} {}
 
     // Writer-only thread calls this
     bool push(const T& item) {
@@ -41,7 +41,7 @@ public:
     }
 
 private:
-    std::vector<T> buffer;
+    const align_ptr<T[]> buffer;
     const uint32_t SIZE;
     std::atomic<uint32_t> write_index;
     std::atomic<uint32_t> read_index;
@@ -52,25 +52,19 @@ template<typename T>
 class mrmw_buffer
 {
 public:
-    mrmw_buffer():
-        size{0},
-        buffer{nullptr},
+    mrmw_buffer(int32_t _SIZE):
+        buffer{allocator<T>().allocate(_SIZE)},
+        size{_SIZE},
         write_index(0),
         read_index(0)
         {}
-    void init(int32_t _SIZE){
-        size=_SIZE;
-        buffer=allocator<T>().allocate(_SIZE);
-    }
-    ~mrmw_buffer(){
-        allocator<T>().deallocate(buffer);
-    }
+    ~mrmw_buffer() = default;
 
     bool push(const T& item) noexcept {
         int32_t w = write_index.load(std::memory_order_relaxed);
         int32_t r = read_index.load(std::memory_order_acquire);
 
-        if (w >= buffer.size())
+        if (w >= size)
             return false; // buffer full
 
         new (buffer + w) T(item);
@@ -103,8 +97,8 @@ public:
     }
 
 private:
-    T* buffer;
-    uint32_t size;
+    const align_ptr<T[]> buffer;
+    const uint32_t size;
     std::atomic<uint32_t> write_index;
     std::atomic<uint32_t> read_index;
 };

@@ -79,16 +79,15 @@ CLASS_TEST(Test,Test1) {
     dm.ScheduleJob(&j1);
     dm.ScheduleJob(&j2);
     dm.ScheduleJob(&j3);
-    void* ctx = ECS::ChunkJobFunction::createContext(dm.registeredJobs,ecm_ptr->archetypes,0);
+    align_ptr<uint8_t []> ctx = ECS::ChunkJobFunction::createContext(dm.registeredJobs,ecm_ptr->archetypes,0);
     {
         ECS::ThreadPool tp{8};
-        tp.submit(ECS::ChunkJobFunction::function,ctx);
+        tp.submit(ECS::ChunkJobFunction::function,ctx.get());
         tp.waitInloop();
     }
     EXPECT_EQ(counters[0].load(),6u);
     EXPECT_EQ(counters[1].load(),4u);
     EXPECT_EQ(counters[2].load(),2u);
-    ECS::ChunkJobFunction::destroyContext(ctx);
 }
 int main()
 {

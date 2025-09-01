@@ -21,17 +21,17 @@ struct thread_info {
 };
 static_assert(sizeof(thread_info)==64);
 
-void* ECS::ChunkJobFunction::createContext(
+align_ptr<uint8_t[]> ECS::ChunkJobFunction::createContext(
     span<ECS::ChunkJobContext> jobs,
     span<mark_ptr<Archetype>> archs, 
     ECS::version_t globalVersion) noexcept
 {
     size_t size = alignTo64(sizeof(std::atomic<uint32_t>),jobs.size());
-    thread_info* context = (thread_info *) allocator().allocate(sizeof(thread_info) + size * 2);
+    align_ptr<thread_info> context{(thread_info *) allocator().allocate(sizeof(thread_info) + size * 2)};
     context->job = jobs.data();
     context->archetypes = archs.data();
-    context->jobDependencyCounterBuffer = (std::atomic<uint32_t>*)((uint8_t*)context + sizeof(thread_info));
-    context->jobIndexQueue = (std::atomic<uint32_t>*)((uint8_t*)context + size + sizeof(thread_info));
+    context->jobDependencyCounterBuffer = (std::atomic<uint32_t>*)((uint8_t*)context.get() + sizeof(thread_info));
+    context->jobIndexQueue = (std::atomic<uint32_t>*)((uint8_t*)context.get() + size + sizeof(thread_info));
     context->jobCount = jobs.size();
     context->archetypeCount = archs.size();
     context->globalSystemVersion = globalVersion;
@@ -48,7 +48,7 @@ void* ECS::ChunkJobFunction::createContext(
             context->jobIndexQueue[counter++].store(i,std::memory_order_relaxed);
     context->jobQueueWrite.store(counter,std::memory_order_relaxed);
 
-    return context;
+    return std::move(align_ptr<uint8_t[]>{(uint8_t*)context.release()});
 }
 
 size_t ECS::ChunkJobFunction::function(void* _context, size_t i) noexcept{
@@ -86,10 +86,6 @@ size_t ECS::ChunkJobFunction::function(void* _context, size_t i) noexcept{
         return context.jobQueueRead.fetch_add(1, std::memory_order_relaxed);
     }else
         return ThreadPool::STOP_SIGNAL;
-}
-
-void ECS::ChunkJobFunction::destroyContext(void* context) noexcept {
-    allocator().deallocate(context);
 }
 
 void ECS::ChunkJobFunction::proccess(

@@ -45,7 +45,7 @@ struct Test {
 
         for(uint32_t chunckIndex = 0; chunckIndex < archetypeChunks.size(); chunckIndex++)
         {
-            const uint8_t *chunkMemory = (const uint8_t *)archetypeChunks[chunckIndex].memory;
+            const uint8_t *chunkMemory = (const uint8_t *)archetypeChunks[chunckIndex]->memory;
             const uint32_t entityCount = chunckIndex == lastChunkIndex ? lastChunkEntityCount : chunkCapacity ;
         #ifdef DEBUG
             if(unlikely(chunkMemory == nullptr))
@@ -55,15 +55,15 @@ struct Test {
                 rgc.searchMemory(chunkMemory + offsetBuffer[index], entityCount * sizeBuffer[index]);
         }
     }
-    static void searchArchetype(ECS::Archetype const * const archetype)
+    static void searchArchetype(const ECS::Archetype& archetype)
     {
         uint32_t number_of_found = 0;
         uint16_t size_buffer[components.size()];
         uint32_t offset_buffer[components.size()];
         {
-            const const_span<uint32_t> archetypeOffsets = archetype->offsets;
-            const const_span<uint16_t> archetypeSizes = archetype->sizeOfs;
-            const const_span<ECS::TypeID> archetypeTypes = archetype->types;
+            auto archetypeOffsets = archetype.getOffset();
+            auto archetypeSizes = archetype.getSize();
+            auto archetypeTypes = archetype.getType();
             uint32_t archetypeTypeIndex = 0;
             uint32_t componentIndex = 0;
             // fill offset_buffer
@@ -87,11 +87,10 @@ struct Test {
             iterateChunks(archetype,number_of_found,size_buffer,offset_buffer);
     }
     static void mark() {
-        const ECS::Archetype *arch;
         uint32_t archetypeIndex;
         for (archetypeIndex = 0; archetypeIndex < reg.archetypes.size(); archetypeIndex++)
-            if((arch = reg.archetypes[archetypeIndex].get()))
-                searchArchetype(arch);
+            if(const ECS::Archetype *arch = reg.archetypes[archetypeIndex].get();arch)
+                searchArchetype(*arch);
     }
     // Test0: when value wasnt here at all
     static void Test0();

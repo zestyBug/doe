@@ -41,7 +41,7 @@ public:
     static const uint32_t INVALID_INDEX = 0xFFFFFFFF;
     typedef void (dtor_fn)(Type);
 protected:
-    Type* values = nullptr;
+    align_ptr<Type[]> values{};
     uint32_t* hashes = nullptr;
     dtor_fn** dtors = nullptr;
     internal::GCFlag* flags = nullptr;
@@ -79,21 +79,11 @@ protected:
 public:
     ResourceGC(uint32_t count = 0);
     ResourceGC(const ResourceGC&) = delete;
-    ResourceGC(ResourceGC&& v) {
-        this->values = nullptr;
-        this->_size = this->unoccupied = 0;
+    ResourceGC(ResourceGC&& v) : values{nullptr},_size{0},unoccupied{0} {
         *this = std::move(v);
     }
     ResourceGC& operator=(const ResourceGC&) = delete;
-    ResourceGC& operator=(ResourceGC&& v) {
-        if(this != &v){
-            this->~ResourceGC();
-            memcpy(this,&v,sizeof(v));
-            v.values = nullptr;
-            v._size = v.unoccupied = 0;
-        }
-        return *this;
-    }
+    ResourceGC& operator=(ResourceGC&& v);
     ~ResourceGC();
 
     inline uint32_t size() const { return this->_size; }

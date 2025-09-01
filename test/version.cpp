@@ -37,10 +37,9 @@ class Test{
         ECS::DependencyManager dm{};
         dm.ScheduleJob(j,{},reg->getVersion());
         reg->updateVersion();
-        void* ctx = ECS::ChunkJobFunction::createContext(dm.registeredJobs,reg->archetypes,reg->getVersion());
+        align_ptr<uint8_t[]>  ctx = ECS::ChunkJobFunction::createContext(dm.registeredJobs,reg->archetypes,reg->getVersion());
         size_t buffer = SIZE_MAX;
-        while(SIZE_MAX != (buffer=ECS::ChunkJobFunction::function(ctx,buffer)));
-        ECS::ChunkJobFunction::destroyContext(ctx);
+        while(SIZE_MAX != (buffer=ECS::ChunkJobFunction::function(ctx.get(),buffer)));
     }
 public:
     /**
