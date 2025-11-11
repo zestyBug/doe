@@ -1959,10 +1959,10 @@ void _glfwCreateInputContext(_GLFWwindow* window)
 GLFWbool _glfwCreateWindowOS(_GLFWwindow* window,
                               const _GLFWwndconfig* wndconfig)
 {
-    Visual* visual = NULL;
-    int depth;
+    Visual* visual = _glfw.x11.glxVisual->visual;
+    int depth = _glfw.x11.glxVisual->depth;
 
-    if (!visual)
+    if (!visual || !depth)
     {
         visual = DefaultVisual(_glfw.x11.display, _glfw.x11.screen);
         depth = DefaultDepth(_glfw.x11.display, _glfw.x11.screen);
@@ -3039,6 +3039,19 @@ const char* _glfwGetClipboardStringOS(void)
 //////////////////////////////////////////////////////////////////////////
 //////                        GLFW native API                       //////
 //////////////////////////////////////////////////////////////////////////
+
+GLFWAPI void glfwSwapBuffer(GLFWwindow* window)
+{
+    _GLFW_REQUIRE_INIT();
+    glXSwapBuffers(_glfw.x11.display, ((_GLFWwindow*)window)->x11.handle);
+}
+GLFWAPI int glfwMakeContextCurrent(GLFWwindow* window)
+{
+    _GLFW_REQUIRE_INIT_OR_RETURN(0);
+    if (!glXMakeContextCurrent(_glfw.x11.display, ((_GLFWwindow*)window)->x11.handle, ((_GLFWwindow*)window)->x11.handle, _glfw.x11.glxContext))
+        return GLFW_FALSE;
+    return GLFW_TRUE;
+}
 
 GLFWAPI Display* glfwGetX11Display(void)
 {

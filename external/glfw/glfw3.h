@@ -1899,6 +1899,9 @@ typedef struct GLFWgamepadstate
  */
 GLFWAPI int glfwInit(void);
 
+GLFWAPI void glfwSwapBuffer(GLFWwindow* window);
+GLFWAPI int glfwMakeContextCurrent(GLFWwindow*);
+
 /*! @brief Terminates the GLFW library.
  *
  *  This function destroys all remaining windows and cursors, restores any

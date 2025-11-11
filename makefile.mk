@@ -73,7 +73,7 @@ headerInclude= \
 	$(srcDir)/ECS/ChunkJobFunction.hpp \
 	$(includeDir)/ECS/DependencyManager.hpp \
 	$(includeDir)/ECS/ResourceGC.hpp \
-	$(includeDir)/VulkanApp.hpp
+	$(includeDir)/glcorearb.h
 
 OBJ_ECS=$(OBJ)/src/ECS/Archetype.o \
 		$(OBJ)/src/ECS/ArchetypeVersionManager.o \
@@ -86,8 +86,7 @@ OBJ_ECS=$(OBJ)/src/ECS/Archetype.o \
 		$(OBJ)/src/ECS/ResourceGC.o \
 		$(OBJ)/$(cutilDir)/HashHelper.o
 
-OBJ_DOE=$(OBJ)/external/vulkan_wrapper.o \
-		$(OBJ)/src/VulkanApp.o
+OBJ_DOE=$(OBJ)/src/glcorearb.o
 
 
 
@@ -102,7 +101,7 @@ ifeq ($(OS),Windows_NT)
 		$(OBJ)/src/glfw/win32_monitor.o \
 		$(OBJ)/src/glfw/win32_time.o \
 		$(OBJ)/src/glfw/win32_window.o
-	CPPFLAGS+=-D_GLFW_WIN32 -DVK_USE_PLATFORM_WIN32_KHR
+	CPPFLAGS+=-D_GLFW_WIN32 -DIS_WINDOWS_OS
 	LDLIBS+=-lgdi32
 else
 	headerGLFW+= \
@@ -120,7 +119,8 @@ else
 		$(OBJ)/src/glfw/x11_monitor.o \
 		$(OBJ)/src/glfw/x11_window.o \
 		$(OBJ)/src/glfw/xkb_unicode.o
-	CPPFLAGS+=-D_GLFW_X11 -DVK_USE_PLATFORM_XLIB_KHR
+	CPPFLAGS+=-D_GLFW_X11
+	LDLIBS+=-lGL
 # libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev 
 endif
 
@@ -147,7 +147,7 @@ $(OBJ)/$(cutilDir)/%.o: $(cutilDir)/%.cpp $(headerCutil)
 	mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
-$(OBJ)/external/vulkan_wrapper.o: external/vulkan_wrapper.c external/vulkan_wrapper.h
+$(OBJ)/src/glcorearb.o: src/glcorearb.c include/glcorearb.h
 	mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 

@@ -1,27 +1,29 @@
 #include "ECS/SystemManager.hpp"
 #include "system/example.hpp"
-#include "VulkanApp.hpp"
+#include "glcorearb.h"
+#define _GLFW_X11 1
+#include "glfw/glfw3.h"
+#include "glfw/glfw3native.h"
 
 int main(){
-	VulkanApp app;
-	if(VKInitialize()) return 1;
-	if(app.initInstance()) return 1;
-	if(VKInitializeWInstance(app.instance)) return 1;
     if (!glfwInit()) return 1;
-	app.window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
-	if (!app.window) return 1;
-	if(app.initSurface()) return 1;
-	if(app.autoSelectDevice()) return 1;
-	if(app.initDevice()) return 1;
-	if(VKInitializeWDevice(app.ldevice)) return 1;
-	if(app.initQueue()) return 1;
-    glfwSetWindowSizeLimits(app.window, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    GLFWwindow* window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
+	if (!window) return 1;
+        
+    glfwMakeContextCurrent(window);
+    glwInitialize(0x304);
+
+    glfwSetWindowSizeLimits(window, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
     {
         ECS::SystemState engine;
-        engine.context = &app;
+        engine.context = window;
 
-        while (!glfwWindowShouldClose(app.window))
+        while (!glfwWindowShouldClose(window))
         {
+            glClearColor(0.4f,0.1f,0,0.5);
+            glClearDepth(0.0);
+            glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+            glfwSwapBuffer(window);
             //glfwPollEvents();
             //glfwWaitEventsTimeout(0.7);
             glfwWaitEvents();
@@ -38,7 +40,7 @@ int main(){
                     s.onDestroy(s.ctx,engine);
         }
     }
-    glfwDestroyWindow(app.window);
+    glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }

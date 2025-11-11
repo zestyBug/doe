@@ -52,6 +52,9 @@
 // The Shape extension provides custom window shapes
 #include <X11/extensions/shape.h>
 
+#include <GL/glx.h>
+#include <GL/glxext.h>
+
 typedef XClassHint* (* PFN_XAllocClassHint)(void);
 typedef XSizeHints* (* PFN_XAllocSizeHints)(void);
 typedef XWMHints* (* PFN_XAllocWMHints)(void);
@@ -710,6 +713,9 @@ typedef struct _GLFWlibraryX11
         PFN_XShapeQueryVersion QueryVersion;
         PFN_XShapeCombineMask ShapeCombineMask;
     } xshape;
+
+    XVisualInfo* glxVisual;
+    GLXContext  glxContext;
 } _GLFWlibraryX11;
 
 // X11-specific per-monitor data

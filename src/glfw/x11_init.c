@@ -1226,6 +1226,42 @@ GLFWbool _glfwConnect()
     return GLFW_TRUE;
 }
 
+
+static const int VisData[] = {
+    GLX_RENDER_TYPE, GLX_RGBA_BIT,
+    GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
+    GLX_DOUBLEBUFFER, True,
+    GLX_RED_SIZE, 8,
+    GLX_GREEN_SIZE, 8,
+    GLX_BLUE_SIZE, 8,
+    GLX_ALPHA_SIZE, 8,
+    GLX_DEPTH_SIZE, 16,
+    //
+    GLX_X_RENDERABLE    , True,
+    GLX_X_VISUAL_TYPE   , GLX_TRUE_COLOR,
+    GLX_SAMPLE_BUFFERS  , 1,
+    GLX_SAMPLES         , 4,
+    //
+    None
+};
+
+#define GLX_CONTEXT_MAJOR_VERSION_ARB       0x2091
+#define GLX_CONTEXT_MINOR_VERSION_ARB       0x2092
+static const int context_attribs[] =
+{
+	GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
+	GLX_CONTEXT_MINOR_VERSION_ARB, 2,
+	//GLX_CONTEXT_FLAGS_ARB        , GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+	None
+};
+
+static int ctxErrorHandler( Display *dpy, XErrorEvent *ev )
+{
+    (void)dpy;(void)ev;
+    fputs("Error at context creation\n", stderr);
+    return 0;
+}
+
 int _glfwInitOS(void)
 {
     _glfw.x11.xlib.AllocClassHint = (PFN_XAllocClassHint)
@@ -1457,11 +1493,59 @@ int _glfwInitOS(void)
     }
 
     _glfwPollMonitors();
+
+
+    GLXFBConfig glxConfig;
+    int numfbconfigs;
+    GLXFBConfig *fbconfigs = glXChooseFBConfig(
+        _glfw.x11.display, 
+        _glfw.x11.screen, 
+        VisData, 
+        &numfbconfigs
+    );
+    for(int i = 0; i<numfbconfigs; i++) {
+        XRenderPictFormat *pict_format;
+        _glfw.x11.glxVisual = (XVisualInfo*) glXGetVisualFromFBConfig(_glfw.x11.display, fbconfigs[i]);
+        if(!_glfw.x11.glxVisual)
+            continue;
+
+        pict_format = XRenderFindVisualFormat(_glfw.x11.display, _glfw.x11.glxVisual->visual);
+        if(!pict_format)
+            goto jumpFree;
+
+        glxConfig = fbconfigs[i];
+        // if(pict_format->direct.alphaMask > 0)
+            break;
+        jumpFree:
+        XFree(_glfw.x11.glxVisual);
+        _glfw.x11.glxVisual = NULL;
+    }
+    XFree( fbconfigs );
+    if(!glxConfig || !_glfw.x11.glxVisual)
+        return GLFW_FALSE;
+    //XFree(_glfw.x11.glxVisual);_glfw.x11.glxVisual=NULL;
+
+    //in the case you might ask: 
+    // glXGetFBConfigAttrib(_glfw.x11.display, _glfw.x11.glxConfig, GLX_DOUBLEBUFFER, &);
+
+    typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
+    glXCreateContextAttribsARBProc glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)glXGetProcAddressARB((unsigned char*)"glXCreateContextAttribsARB" );
+    if( glXCreateContextAttribsARB ) {
+        int (*oldHandler)(Display*, XErrorEvent*) = XSetErrorHandler(&ctxErrorHandler);
+        _glfw.x11.glxContext = glXCreateContextAttribsARB( _glfw.x11.display, glxConfig, 0, True, context_attribs );
+        XSync( _glfw.x11.display, False );
+        XSetErrorHandler( oldHandler );
+    } else
+        return GLFW_FALSE;// glXCreateContextAttribsARB could not be retrieved
+    if(!_glfw.x11.glxContext)
+        return GLFW_FALSE;
     return GLFW_TRUE;
 }
 
 void _glfwTerminateOS(void)
 {
+    glXDestroyContext( _glfw.x11.display, _glfw.x11.glxContext );
+
     if (_glfw.x11.helperWindowHandle)
     {
         if (XGetSelectionOwner(_glfw.x11.display, _glfw.x11.CLIPBOARD) ==
