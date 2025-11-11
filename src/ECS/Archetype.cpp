@@ -3,7 +3,8 @@ using namespace ECS;
 
 
 mark_ptr<Archetype> Archetype::createArchetype(const_span<TypeID> types) {
-    if(unlikely(types.size() < 1 || types.size() > MaxTypePerArchetype))
+    // MAGIC NUMBER
+    if(unlikely(types.size() < 2 || types.size() > MaxTypePerArchetype))
         throw std::invalid_argument("createArchetype(): archetype with unexpected component count");
 
     uint32_t additional = 0;
@@ -24,10 +25,8 @@ mark_ptr<Archetype> Archetype::createArchetype(const_span<TypeID> types) {
     arch->__offsets      = (uint32_t*)((uint8_t*)(arch) + offsets[2]);
     arch->__sizeOfs      = (uint16_t*)((uint8_t*)(arch) + offsets[3]);
 
-#ifdef DEBUG
     if(unlikely(types[0].value != 0))
         throw std::runtime_error("createArchetype(): getTypeInfo<Entity>().value.realIndex() must be always 0!");
-#endif
 
 
     for (uint32_t i = 0;i < arch->__type_count; i++) {
@@ -36,7 +35,6 @@ mark_ptr<Archetype> Archetype::createArchetype(const_span<TypeID> types) {
     }
 
     arch->chunksData.reserve(16);
-
 
     {
         uint16_t i = (uint16_t) arch->__type_count;
@@ -63,7 +61,7 @@ mark_ptr<Archetype> Archetype::createArchetype(const_span<TypeID> types) {
         Chunk::maximumEntitiesPerChunk
     );
 
-    // MAGIC NUMBER, DO NOT TOUCH
+    // MAGIC NUMBER
     if(unlikely(arch->chunkCapacity < 2))
         throw std::length_error("createArchetype(): LARGE COMPONENTS! X(");
 

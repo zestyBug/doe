@@ -17,7 +17,7 @@ namespace ECS
 }
 namespace HashHelper
 {
-    inline uint32_t FNV1A32(const ECS::Archetype *ptr);
+    inline uint32_t FNV1A32(const ECS::Archetype& ptr);
 }
 
 namespace ECS
@@ -51,7 +51,7 @@ namespace ECS
         friend class ChunkJobFunction;
         friend class EntityComponentManager;
         friend class ::Test;
-        friend uint32_t HashHelper::FNV1A32(const ECS::Archetype*);
+        friend uint32_t HashHelper::FNV1A32(const ECS::Archetype&);
 
         // maximum number of entities that can be fit into a single chunk
         uint32_t chunkCapacity = 0;
@@ -108,13 +108,15 @@ namespace ECS
                     }
         }
 
-        /// @brief maximum number of entities an archetype can hold any value equal higther that this can be used as invalid value
+        /// @brief MAGIC NUMBER maximum number of entities an archetype can hold any value equal higther that this can be used as invalid value
         static constexpr uint32_t MaxEntityIndex =  INT32_MAX;
+        // MAGIC NUMBER
         static constexpr uint32_t NullEntityIndex =0x80000000;
-        /// @brief maximum number of chunks an archetype can hold any value equal higther that this can be used as invalid value
+        /// @brief MAGIC NUMBER maximum number of chunks an archetype can hold any value equal higther that this can be used as invalid value
         static constexpr uint32_t MaxChunkIndex =  INT32_MAX;
+        // MAGIC NUMBER
         static constexpr uint32_t NullChunkIndex =0x80000000;
-        /// @brief maximum number of type an archetype can manage, any number higher than this may lead to overflow
+        /// @brief MAGIC NUMBER maximum number of type an archetype can manage, any number higher than this may lead to overflow
         static constexpr uint32_t MaxTypePerArchetype = 0xff;
 
 
@@ -273,8 +275,8 @@ namespace ECS
 
 namespace HashHelper
 {
-    inline uint32_t FNV1A32(const ECS::Archetype *ptr){
-        return HashHelper::FNV1A32(ptr->getType());
+    inline uint32_t FNV1A32(const ECS::Archetype& ptr){
+        return HashHelper::FNV1A32(ptr.getType());
     }
 }
 

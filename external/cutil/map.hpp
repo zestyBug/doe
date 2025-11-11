@@ -120,7 +120,7 @@ public:
         void add(_Tp* ptr) {
             if(ptr == nullptr)
                 throw std::invalid_argument("add(): null pointer");
-            uint32_t desiredHash = HashHelper::FNV1A32((const _Tp*)ptr);
+            uint32_t desiredHash = HashHelper::FNV1A32((const _Tp&)*ptr);
             if (desiredHash == 0 || desiredHash == _SkipCode)
                 desiredHash = _AValidHashCode;
             uint32_t offset = (int)(desiredHash & hashMask());

@@ -38,6 +38,7 @@ class ResourceGC
 {
 public:
     using Type = intptr_t;
+    // MAGIC NUMBER
     static const uint32_t INVALID_INDEX = 0xFFFFFFFF;
     typedef void (dtor_fn)(Type);
 protected:
@@ -50,8 +51,8 @@ protected:
     uint32_t unoccupied = 0;
     Type minValue=std::numeric_limits<Type>::max();
     Type maxValue=std::numeric_limits<Type>::min();
-    float loadFactor = 0.9;
-    float sweepFactor = 0.5;
+    float loadFactor = 0.9f;
+    float sweepFactor = 0.5f;
 
     /// @brief probes index of the hash in the array for sorting hashes
     /// @return original offset from the desired hash location

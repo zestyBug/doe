@@ -24,7 +24,7 @@ namespace ECS
 
 
     // the value 1 on the first bit is important for determining value from pointer.
-    // DO NOT INCREASE THIS NUMBER, OR THE ENGINE MAY MALFUNCTION!
+    // MAGIC NUMBER 
     constexpr uint32_t NullArchetypeIndex = 0xfffffff;
 
 
@@ -64,6 +64,7 @@ namespace ECS
             return this->flag & disabled;
         }
         uint16_t realIndex() const {
+            // MAGIC NUMBER 
             return this->value & 0x1FFF;
         }
         bool exactSame(const TypeID v) const {
@@ -72,8 +73,7 @@ namespace ECS
         bool same(const TypeID v) const {
             return this->value == v.value;
         }
-        // can be 1,2,3,...
-        // DO NOT INCREASE THIS NUMBER, OR THE ENGINE MAY MALFUNCTION!
+        // MAGIC NUMBER 
         static constexpr uint16_t MaxTypeCount = 0x2000;
     };
 
@@ -134,11 +134,11 @@ namespace ECS
 
     namespace internal
     {
-        // this value is hard coded means
+        // this MAGIC NUMBER is hard coded means
         // modification in binary file is much harder
         // so new component needs new version of compiled engine
         // also the more component, the more memory is allocated exponentially
-        constexpr uint32_t COMPOMEN_COUNT = 32;
+        constexpr uint32_t COMPOMEN_COUNT = 2048;
         // contains runtime typeinfo,
         // technically array can be erased to reassign type ids
         // unless values are stored somewhere and spreaded
@@ -161,7 +161,7 @@ namespace ECS
         template<typename T>
         uint16_t __type_id__()
         {
-            // DO NOT INCREASE THIS NUMBER, OR THE ENGINE MAY MALFUNCTION!
+            // MAGIC NUMBER
             static_assert(sizeof(T) <= 0x7000);
             static const comp_info value = _new_id(
                 sizeof(T),

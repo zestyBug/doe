@@ -103,7 +103,7 @@ ifeq ($(OS),Windows_NT)
 		$(OBJ)/src/glfw/win32_time.o \
 		$(OBJ)/src/glfw/win32_window.o
 	CPPFLAGS+=-D_GLFW_WIN32 -DVK_USE_PLATFORM_WIN32_KHR
-	LDLIBS+=-lgdi32 -lrt
+	LDLIBS+=-lgdi32
 else
 	headerGLFW+= \
 		$(srcDir)/glfw/xkb_unicode.h \
@@ -121,6 +121,7 @@ else
 		$(OBJ)/src/glfw/x11_window.o \
 		$(OBJ)/src/glfw/xkb_unicode.o
 	CPPFLAGS+=-D_GLFW_X11 -DVK_USE_PLATFORM_XLIB_KHR
+# libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev 
 endif
 
 
