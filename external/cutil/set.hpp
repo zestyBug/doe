@@ -91,8 +91,7 @@ public:
                 size = minimumSize();
             if (size == this->size())
                 return;
-            set temp;
-            temp.init(size);
+            set temp{size};
             temp.appendFrom(*this);
             *this = std::move(temp);
         }
