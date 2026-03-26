@@ -55,7 +55,7 @@ class mark_ptr
      */
     mark_ptr& operator=(mark_ptr &&v){
         if(this != &v){
-            _M_t = v._M_t;
+            this->reset(v._M_t);
             v._M_t = nullptr;
         }
         return *this;

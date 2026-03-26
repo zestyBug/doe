@@ -9,9 +9,11 @@ int main(){
     if (!glfwInit()) return 1;
     GLFWwindow* window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
 	if (!window) return 1;
-        
     glfwMakeContextCurrent(window);
     glwInitialize(0x304);
+    puts((char*)glGetString(GL_VENDOR));
+    puts((char*)glGetString(GL_RENDERER));
+    puts((char*)glGetString(GL_VERSION));
 
     glfwSetWindowSizeLimits(window, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
     {

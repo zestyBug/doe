@@ -4,7 +4,7 @@
 #include "cutil/basics.hpp"
 #include "cutil/span.hpp"
 #include "cutil/HashHelper.hpp"
-#include "defs.hpp"
+#include "Base/TypeID.hpp"
 #include <limits>
 
 namespace ECS

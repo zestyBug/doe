@@ -2,9 +2,8 @@
 #define SYSTEM_MANAGER_HPP
 
 #include "cutil/basics.hpp"
-#include "ECS/defs.hpp"
-#include "ECS/DependencyManager.hpp"
-#include "ECS/EntityComponentManager.hpp"
+#include "DependencyManager.hpp"
+#include "EntityComponentManager.hpp"
 #include "entt/advanced_array.hpp"
 
 namespace ECS

@@ -1,7 +1,7 @@
 #include "example.hpp"
 
 struct example_system {
-    ECS::version_t systemVersion = 0;
+    ECS::Version systemVersion = 0;
 };
 
 int32_t onUpdate(example_system *ctx,ECS::SystemState&);

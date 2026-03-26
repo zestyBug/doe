@@ -31,7 +31,7 @@
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
 
-/// @brief alignes array size to 64 byte for cache, perfermance and false sharing issues
+/// @brief alignes array size to 64 byte for cache, perfermance and resolving false sharing issues
 /// @param typeSize sizeof single entity
 /// @param count number of entities
 /// @return new array size
@@ -62,7 +62,7 @@ class allocator
     ~allocator() { }
 
     [[nodiscard]]
-    _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) {
+    _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) noexcept {
         _Tp* ret = nullptr;
         __n = alignTo64(sizeof(_Tp),(uint32_t)__n);
         if(__n < 1)      return nullptr;
@@ -130,62 +130,282 @@ private:
     size_t _M_max_size() const {return std::size_t(-1) / sizeof(_Tp);}
 };
 
-template<typename _Tp>
-struct deleter
+/// @brief smart pointer to hold ownership of an aligned pointer.
+/// @warning this class is not responsible for calling constructor/destructor, anyhow.
+template <typename Type>
+class align_ptr
 {
-    /// Default constructor
-    constexpr deleter() noexcept = default;
+    Type *_M_t = nullptr;
 
-    /** @brief Converting constructor.
+    public:
+    using pointer	= Type*;
+    using element_type = Type;
+
+    public:
+    // Constructors.
+
+    /// @brief Default constructor, creates a align_ptr that owns nothing.
+    constexpr align_ptr() noexcept : _M_t(nullptr){ }
+    
+    /** Takes ownership of a pointer.
      *
-     * Allows conversion from a deleter for objects of another type, `_Up`,
-     * only if `_Up*` is convertible to `_Tp*`.
+     * @param __p  A pointer to an object of @c element_type
      */
-    template<typename _Up, typename = std::_Require<std::is_convertible<_Up*, _Tp*>>>
-    deleter(const deleter<_Up>&) noexcept { }
-    /// Calls `delete __ptr`
-    void operator()(_Tp* __ptr) const
-    {
-        static_assert(!std::is_void<_Tp>::value, "can't delete pointer to incomplete type");
-        static_assert(sizeof(_Tp)>0, "can't delete pointer to incomplete type");
-        __ptr->~_Tp();
-        allocator().deallocate(__ptr);
-    }
-};
+    explicit align_ptr(Type* __p) noexcept : _M_t(__p){ }
 
-/** Specialization of default_delete for arrays, used by `unique_ptr<T[]>`
- */
-template<typename _Tp>
-struct deleter<_Tp[]>
+    /// @brief Creates a align_ptr that owns nothing.
+    constexpr align_ptr(nullptr_t) noexcept : _M_t(nullptr) { }
+
+    /// @brief Move constructor.
+    align_ptr(align_ptr&&v){
+        reset(v._M_t);
+        v._M_t = nullptr;
+    }
+
+    /// @brief Destructor, invokes the deleter if the stored pointer is not null.
+    ~align_ptr() noexcept
+    {
+        if(_M_t != nullptr)
+            allocator().deallocate(_M_t);
+        _M_t = nullptr;
+    }
+
+    // Assignment.
+
+    /** @brief Move assignment operator.
+     *
+     * Invokes the deleter if this object owns a pointer.
+     */
+    align_ptr& operator=(align_ptr &&v){
+        if(this != &v){
+            this->reset(v._M_t);
+            v._M_t = nullptr;
+        }
+        return *this;
+    }
+
+    /// @brief Reset the %align_ptr to empty, invoking the deleter if necessary.
+    inline align_ptr& operator=(nullptr_t) noexcept
+    {
+        reset();
+        return *this;
+    }
+
+    // Observers.
+
+    Type& operator*()
+    {
+        if(unlikely(_M_t == nullptr))
+            throw std::runtime_error("operator*(): cant obtain invalid pointer");
+        return *_M_t;
+    }
+    
+    const Type& operator*() const
+    {
+        if(unlikely(_M_t == nullptr))
+            throw std::runtime_error("operator*(): cant obtain invalid pointer");
+        return *_M_t;
+    }
+
+    /// @brief Return the stored pointer. safe but slow
+    Type* get() {
+        if(_M_t == nullptr)
+            return nullptr;
+        return _M_t;
+    }
+
+    /// @brief Return the stored pointer. safe but slow
+    const Type* get() const {
+        if(_M_t == nullptr)
+            return nullptr;
+        return _M_t;
+    }
+
+    /// Return @c true if the stored pointer is not null.
+    explicit inline operator bool() const noexcept { return get() == nullptr ? false : true; }
+
+    // Modifiers.
+
+    /// @brief Release ownership of any stored pointer.
+    Type* release() noexcept {
+        Type * const val = _M_t;
+        _M_t = nullptr;
+        return val;
+    }
+
+    /** @brief Replace the stored pointer.
+     *
+     * @param __p  The new pointer to store.
+     *
+     * The deleter will be invoked if a pointer is already owned.
+     */
+    void reset(Type *__p = nullptr) noexcept
+    {
+        if (_M_t != nullptr){
+            allocator().deallocate(_M_t);
+        }
+        _M_t = __p;
+    }
+
+    /// @brief Exchange the pointer and deleter with another object.
+    void swap(align_ptr& __u) noexcept
+    {
+        Type * const buffer = __u._M_t;
+        __u._M_t = this->_M_t;
+        this->_M_t = buffer;
+    }
+
+    /// @brief Disable copy from lvalue.
+    align_ptr(const align_ptr&) = delete;
+    align_ptr& operator=(const align_ptr&) = delete;
+};
+/// @brief smart pointer to hold ownership of an aligned pointer.
+/// @warning this class is not responsible for calling constructor/destructor, anyhow.
+template <typename Type>
+class align_ptr<Type[]>
 {
-public:
-    /// Default constructor
-    constexpr deleter() noexcept = default;
+    Type *_M_t = nullptr;
 
-    /** @brief Converting constructor.
+    public:
+    using pointer	= Type*;
+    using element_type = Type;
+
+    public:
+    // Constructors.
+
+    /// @brief Default constructor, creates an align_ptr that owns nothing.
+    constexpr align_ptr() noexcept : _M_t(nullptr){ }
+
+    /** Takes ownership of a pointer.
      *
-     * Allows conversion from a deleter for arrays of another type, such as
-     * a const-qualified version of `_Tp`.
-     *
-     * Conversions from types derived from `_Tp` are not allowed because
-     * it is undefined to `delete[]` an array of derived types through a
-     * pointer to the base type.
+     * @param __p  A pointer to an object of @c element_type
      */
-    template<typename _Up, typename = std::_Require<std::is_convertible<_Up(*)[], _Tp(*)[]>>>
-    deleter(const deleter<_Up[]>&) noexcept { }
+    explicit align_ptr(Type* __p) noexcept : _M_t(__p){ }
 
-    // WARN! not calling destructor
-    template<typename _Up>
-    typename std::enable_if<std::is_convertible<_Up(*)[], _Tp(*)[]>::value>::type
-    operator()(_Up* __ptr) const
-    {
-        static_assert(sizeof(_Tp)>0,"can't delete pointer to incomplete type");
-        allocator().deallocate(__ptr);
+    /// @brief Creates a align_ptr that owns nothing.
+    constexpr align_ptr(nullptr_t) noexcept : _M_t(nullptr) { }
+
+    /// @brief Move constructor.
+    align_ptr(align_ptr&&v){
+        reset(v._M_t);
+        v._M_t = nullptr;
     }
-};
 
-template<typename T>
-using align_ptr = std::unique_ptr<T,deleter<T>>;
+    /// @brief Destructor, invokes the deleter if the stored pointer is not null.
+    ~align_ptr() noexcept
+    {
+        if(_M_t != nullptr)
+            allocator().deallocate(_M_t);
+        _M_t = nullptr;
+    }
+
+    // Assignment.
+
+    /** @brief Move assignment operator.
+     *
+     * Invokes the deleter if this object owns a pointer.
+     */
+    align_ptr& operator=(align_ptr &&v){
+        if(this != &v){
+            this->reset(v._M_t);
+            v._M_t = nullptr;
+        }
+        return *this;
+    }
+
+    /// @brief Reset the %align_ptr to empty, invoking the deleter if necessary.
+    inline align_ptr& operator=(nullptr_t) noexcept
+    {
+        reset();
+        return *this;
+    }
+
+    // Observers.
+
+    Type& operator*()
+    {
+        if(unlikely(_M_t == nullptr))
+            throw std::runtime_error("operator*(): cant obtain invalid pointer");
+        return *_M_t;
+    }
+    
+    const Type& operator*() const
+    {
+        if(unlikely(_M_t == nullptr))
+            throw std::runtime_error("operator*(): cant obtain invalid pointer");
+        return *_M_t;
+    }
+
+    /// Access an element of owned array.
+    _GLIBCXX23_CONSTEXPR
+    const Type& operator[](size_t __i) const
+    {
+        if(unlikely(_M_t == nullptr))
+            throw std::runtime_error("operator[](): cant obtain invalid pointer");
+        return get()[__i];
+    }
+
+    /// Access an element of owned array.
+    _GLIBCXX23_CONSTEXPR
+    Type& operator[](size_t __i)
+    {
+        if(unlikely(_M_t == nullptr))
+            throw std::runtime_error("operator[](): cant obtain invalid pointer");
+        return get()[__i];
+    }
+
+    /// @brief Return the stored pointer. safe but slow
+    Type* get() {
+        if(_M_t == nullptr)
+            return nullptr;
+        return _M_t;
+    }
+
+    /// @brief Return the stored pointer. safe but slow
+    const Type* get() const {
+        if(_M_t == nullptr)
+            return nullptr;
+        return _M_t;
+    }
+
+    /// Return @c true if the stored pointer is not null.
+    explicit inline operator bool() const noexcept { return get() == nullptr ? false : true; }
+
+    // Modifiers.
+
+    /// @brief Release ownership of any stored pointer.
+    Type* release() noexcept {
+        Type * const val = _M_t;
+        _M_t = nullptr;
+        return val;
+    }
+
+    /** @brief Replace the stored pointer.
+     *
+     * @param __p  The new pointer to store.
+     *
+     * The deleter will be invoked if a pointer is already owned.
+     */
+    void reset(Type *__p = nullptr) noexcept
+    {
+        if (_M_t != nullptr){
+            allocator().deallocate(_M_t);
+        }
+        _M_t = __p;
+    }
+
+    /// @brief Exchange the pointer and deleter with another object.
+    void swap(align_ptr& __u) noexcept
+    {
+        Type * const buffer = __u._M_t;
+        __u._M_t = this->_M_t;
+        this->_M_t = buffer;
+    }
+
+    /// @brief Disable copy from lvalue.
+    align_ptr(const align_ptr&) = delete;
+    align_ptr& operator=(const align_ptr&) = delete;
+};
 
 namespace detail
 {
@@ -200,17 +420,11 @@ namespace detail
     constexpr bool is_bounded_array_v<T[N]> = true;
 }
 
-template<class T, class... Args>
+template<class T>
 std::enable_if_t<!std::is_array<T>::value, align_ptr<T>>
-make_align(Args&&... args)
+make_align()
 {
     T* ptr = allocator<T>().allocate(1);
-    try {
-        new (ptr) T(std::forward<Args>(args)...);
-    } catch(...) {
-        allocator<T>().deallocate(ptr);
-        throw;
-    }
     return align_ptr<T>(ptr);
 }
 
@@ -219,16 +433,11 @@ std::enable_if_t<detail::is_unbounded_array_v<T>, align_ptr<T>>
 make_align(size_t num)
 {
     std::remove_extent_t<T> * __p = allocator<std::remove_extent_t<T>>().allocate(num);
-    try {
-        for (;num;) new (__p + (--num)) T();
-    } catch(...) {
-        allocator<std::remove_extent_t<T>>().deallocate(__p);
-        throw;
-    }
     return align_ptr<T>(__p);
 }
 
-template<class T, class... Args>
-std::enable_if_t<detail::is_bounded_array_v<T>> make_align(Args&&...) = delete;
+template<class T>
+std::enable_if_t<detail::is_bounded_array_v<T>>
+make_align() = delete;
 
 #endif // BASICS_HPP

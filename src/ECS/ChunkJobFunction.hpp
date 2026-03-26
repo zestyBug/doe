@@ -13,14 +13,14 @@ namespace ECS
         static align_ptr<uint8_t[]> createContext(
             span<ChunkJobContext> jobs,
             span<mark_ptr<Archetype>> archs,
-            version_t globalVersion);
+            Version globalVersion);
         /// @brief a job function to be submitted to thread pool, alongside a context
         /// @param context context that was created by createJobContext
         static size_t function(void* context, size_t);
         /// @brief filter archtypes
-        static void proccess(ChunkJobContext*,mark_ptr<Archetype>*,version_t,version_t,uint32_t);
+        static void proccess(ChunkJobContext*,mark_ptr<Archetype>*,Version,Version,uint32_t);
         /// @brief filter and proccess chunks 
-        static void callExecution(ChunkJobContext*,Archetype*,version_t,version_t);
+        static void callExecution(ChunkJobContext*,Archetype*,Version,Version);
     };
 } // namespace ECS
 

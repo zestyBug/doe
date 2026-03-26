@@ -32,7 +32,7 @@ public:
         do {
             r = read_index.load(std::memory_order_acquire);
             uint32_t w = write_index.load(std::memory_order_acquire);
-            if (r == w) {
+            if (r >= w) {
                 return std::nullopt; // buffer empty
             }
         } while (!read_index.compare_exchange_weak(r, r + 1, std::memory_order_acq_rel));

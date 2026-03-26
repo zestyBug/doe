@@ -2,7 +2,8 @@
 #define DEPENDENCYMANAGER_HPP
 
 #include "cutil/basics.hpp"
-#include "ECS/defs.hpp"
+#include "Base/TypeID.hpp"
+#include "Base/Version.hpp"
 #include <vector>
 
 namespace ECS
@@ -31,7 +32,7 @@ struct ChunkJobContext {
     ChunkJob *context = nullptr;
     uint32_t dependencyCount = 0;
     // system that pulled this job, usually must be globalSystemVersion-1
-    version_t lastVersion = 0;
+    Version lastVersion = 0;
     //char padding[24];
 
     ChunkJobContext() = default;
@@ -68,7 +69,7 @@ struct DependencyManager {
     ChunkJobHandle ScheduleJob(
         ChunkJob *context,
         const_span<ChunkJobHandle> jobDependency = {},
-        version_t lastSystemVersion = 0
+        Version lastSystemVersion = 0
     );
 };
 }

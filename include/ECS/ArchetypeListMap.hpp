@@ -1,32 +1,39 @@
-#if !defined(MAP_HPP)
-#define MAP_HPP
+#if !defined(ARCHETYPELISTMAP_HPP)
+#define ARCHETYPELISTMAP_HPP
 
-#include "basics.hpp"
-#include "HashHelper.hpp"
+#include "cutil/basics.hpp"
+#include "cutil/HashHelper.hpp"
+#include "Archetype.hpp"
 #include <vector>
 
-// TODO: add custome allocator like:  std::pair<std::allocator<uint32_t>,std::allocator<_Tp*>>
-
-template <typename _Key, typename _Tp>
-class map
+namespace ECS
 {
-protected:
-    static const uint32_t _AValidHashCode = 0x00000001;
-    static const uint32_t _SkipCode = 0xFFFFFFFF;
-    /// @brief generates hash code for a pointer
-    /// @param types note that type flags are also included, like disable-ness, prefab-being
-    /// @return (may-modified) hash value
+    class ArchetypeListMap
+    {
+    protected:
+        static const uint32_t _AValidHashCode = 0x00000001;
+        static const uint32_t _SkipCode = 0xFFFFFFFF;
+        /// @brief generates hash code for a pointer
+        /// @param types note that type flags are also included, like disable-ness, prefab-being
+        /// @return (may-modified) hash value
 
-    std::vector<uint32_t,allocator<uint32_t>> hashes{};
-    std::vector<_Tp*,allocator<_Tp*>> pointers{};
-    uint32_t emptyNodes=0;
-    uint32_t skipNodes=0;
+        std::vector<uint32_t,allocator<uint32_t>> hashes{};
+        std::vector<Archetype*,allocator<Archetype*>> pointers{};
+        uint32_t emptyNodes=0;
+        uint32_t skipNodes=0;
 
-public:
+    public:
+        static uint32_t getHashCode(const_span<ECS::TypeID> type)
+        {
+            uint32_t result = HashHelper::FNV1A32(type);
+            if (result == 0 || result == _SkipCode)
+                result = _AValidHashCode;
+            return result;
+        }
 
-        map() = default;
-        map(const map&) = delete;
-        map(map&& v)
+        ArchetypeListMap() = default;
+        ArchetypeListMap(const ArchetypeListMap&) = delete;
+        ArchetypeListMap(ArchetypeListMap&& v)
             :hashes{std::move(v.hashes)},pointers{std::move(v.pointers)}
         {
             this->emptyNodes = v.emptyNodes;
@@ -34,8 +41,8 @@ public:
             v.emptyNodes=0;
             v.skipNodes=0;
         }
-        map& operator=(const map&) = delete;
-        map& operator=(map&& v){
+        ArchetypeListMap& operator=(const ArchetypeListMap&) = delete;
+        ArchetypeListMap& operator=(ArchetypeListMap&& v){
             if(this != &v){
                 this->hashes     = std::move(v.hashes);
                 this->pointers = std::move(v.pointers);
@@ -91,7 +98,7 @@ public:
             emptyNodes = count;
             skipNodes = 0;
         }
-        void appendFrom(map& src){
+        void appendFrom(ArchetypeListMap& src){
             for (uint32_t offset = 0; offset < src.size(); ++offset)
             {
                 uint32_t hash = src.hashes[offset];
@@ -105,7 +112,7 @@ public:
                 size = minimumSize();
             if (size == this->size())
                 return;
-            map temp;
+            ArchetypeListMap temp;
             temp.init(size);
             temp.appendFrom(*this);
             *this = std::move(temp);
@@ -117,12 +124,10 @@ public:
             hashes.resize(capacity);
             pointers.resize(capacity);
         }
-        void add(_Tp* ptr) {
+        void add(Archetype* ptr) {
             if(ptr == nullptr)
                 throw std::invalid_argument("add(): null pointer");
-            uint32_t desiredHash = HashHelper::FNV1A32((const _Tp&)*ptr);
-            if (desiredHash == 0 || desiredHash == _SkipCode)
-                desiredHash = _AValidHashCode;
+            uint32_t desiredHash = getHashCode(ptr->getType());
             uint32_t offset = (int)(desiredHash & hashMask());
             uint32_t attempts = 0;
             while (true)
@@ -158,7 +163,7 @@ public:
                     throw std::runtime_error("add(): something wet wrong");
             }
         }
-        void remove(_Tp* ptr){
+        void remove(Archetype* ptr){
             int32_t offset = indexOf(ptr);
             if(offset < 0)
                 throw std::runtime_error("remove(): pointer not found");
@@ -168,10 +173,8 @@ public:
         }
         /// @brief find a pointer with a key using hash list
         /// @return value or nullptr
-        _Tp* tryGet(_Key key) const {
-            uint32_t desiredHash = HashHelper::FNV1A32(key);
-            if (desiredHash == 0 || desiredHash == _SkipCode)
-                desiredHash = _AValidHashCode;
+        Archetype* tryGet(const_span<ECS::TypeID> key) const {
+            uint32_t desiredHash = getHashCode(key);
             uint32_t offset = desiredHash & hashMask();
             uint32_t attempts = 0;
             while (true)
@@ -181,8 +184,8 @@ public:
                     return nullptr;
                 if (hash == desiredHash)
                 {
-                    _Tp *ptr = pointers[offset];
-                    if (*ptr == key)
+                    Archetype *ptr = pointers[offset];
+                    if (ptr->getType() == key)
                         return ptr;
                 }
                 offset = (offset + 1) & hashMask();
@@ -191,12 +194,10 @@ public:
                     return nullptr;
             }
         }
-        int indexOf(_Tp* ptr) const {
+        int indexOf(Archetype* ptr) const {
             if(ptr == nullptr)
                 return -1;
-            uint32_t desiredHash = HashHelper::FNV1A32((const _Tp*)ptr);
-            if (desiredHash == 0 || desiredHash == _SkipCode)
-                desiredHash = _AValidHashCode;
+            uint32_t desiredHash = getHashCode(ptr->getType());
             uint32_t offset = (desiredHash & hashMask());
             uint32_t attempts = 0;
             while (true)
@@ -215,16 +216,16 @@ public:
                     return -1;
             }
         }
-        bool contains(_Tp* ptr) const {
+        bool contains(Archetype* ptr) const {
             return indexOf(ptr) != -1;
         }
         // the whole popuse is to free space when object is unused but still in memory
         void reset(){
             hashes = std::vector<uint32_t,allocator<uint32_t>>();
-            pointers = std::vector<_Tp*,allocator<_Tp*>>();
+            pointers = std::vector<Archetype*,allocator<Archetype*>>();
             emptyNodes=0;
             skipNodes=0;
         }
-};
-
-#endif // MAP_HPP
+    };
+}
+#endif

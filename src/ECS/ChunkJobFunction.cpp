@@ -14,7 +14,7 @@ struct thread_info {
     uint32_t archetypeCount=0;
     std::atomic<uint32_t> *jobDependencyCounterBuffer=nullptr;
     std::atomic<uint32_t> *jobIndexQueue=nullptr;
-    ECS::version_t globalSystemVersion=0;
+    ECS::Version globalSystemVersion=0;
     std::atomic<uint32_t> jobQueueRead = 0;
     std::atomic<uint32_t> jobQueueWrite = 0;
     char padding[12];
@@ -24,7 +24,7 @@ static_assert(sizeof(thread_info)==64);
 align_ptr<uint8_t[]> ECS::ChunkJobFunction::createContext(
     span<ECS::ChunkJobContext> jobs,
     span<mark_ptr<Archetype>> archs, 
-    ECS::version_t globalVersion)
+    ECS::Version globalVersion)
 {
     size_t size = alignTo64(sizeof(std::atomic<uint32_t>),jobs.size());
     align_ptr<thread_info> context{(thread_info *) allocator().allocate(sizeof(thread_info) + size * 2)};
@@ -91,8 +91,8 @@ size_t ECS::ChunkJobFunction::function(void* _context, size_t i) {
 void ECS::ChunkJobFunction::proccess(
     ECS::ChunkJobContext* job,
     mark_ptr<ECS::Archetype>* archetypes, 
-    ECS::version_t sv,
-    ECS::version_t gv,
+    ECS::Version sv,
+    ECS::Version gv,
     uint32_t archetypeCount
 ) {
     for (uint32_t archetypeIndex = 0; archetypeIndex < archetypeCount; archetypeIndex++)
@@ -119,15 +119,15 @@ void ECS::ChunkJobFunction::proccess(
 void ECS::ChunkJobFunction::callExecution(
     ECS::ChunkJobContext* job,
     ECS::Archetype* archetype,
-    ECS::version_t sv,
-    ECS::version_t gv
+    ECS::Version sv,
+    ECS::Version gv
 ) {
     JobFilter filter = job->context->getFilter();
     const uint32_t argCount = filter.counts[0]+filter.counts[1];
     const uint32_t totalCount = argCount + filter.counts[2];
     const uint32_t chunkCount=(uint32_t) archetype->chunksData.size();
     uint32_t i;
-    version_t v;
+    Version v;
     uint8_t* buffer;
     const uint32_t countBuffer[2] = {archetype->chunkCapacity,archetype->lastChunkEntityCount};
     void* argsBuffer[argCount];

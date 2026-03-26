@@ -19,6 +19,10 @@ dmain:
 main:
 	$(MAKE) -f ./makefile.mk $@
 
+
+test-1:
+	$(MAKE) -f ./test-v2/test-1.mk test
+
 clean:
 	@echo "Cleaning up..."
 	@$(RM) -rf obj bin

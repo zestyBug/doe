@@ -15,7 +15,7 @@ void DependencyManager::dummyExecute(){
 ChunkJobHandle DependencyManager::ScheduleJob(
     ChunkJob *context,
     const_span<ChunkJobHandle> jobDependency,
-    version_t lastSystemVersion
+    Version lastSystemVersion
 ){
     auto& job = registeredJobs.emplace_back();
     
