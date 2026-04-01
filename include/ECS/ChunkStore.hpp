@@ -34,10 +34,10 @@ namespace ECS
                     }
             }
         };
-        Chunk* getChunkPointer(ChunkIndex chunk) {
-            if((uint32_t)chunk > MaximumChunkCount)
+        Chunk* getChunkPointer(const ChunkIndex chunk) {
+            if(chunk > MaximumChunkCount)
                 return nullptr;
-            return chunks[(uint32_t)chunk].load();
+            return chunks[chunk].load();
         }
         ChunkIndex allocateChunk() {
             uint32_t bitmask;
@@ -46,7 +46,7 @@ namespace ECS
             uint32_t b_index = 0;
             for(;b_index < BitmaskSize;){
                 bitmask = bitmasks[b_index].load(std::memory_order_acquire);
-                if(bitmask == ~0) {
+                if(bitmask == ~(uint32_t)0) {
                     b_index++;
                     continue;
                 }
@@ -64,14 +64,14 @@ namespace ECS
             v->index = ChunkIndex(buffer);
             return ChunkIndex(buffer);
         }
-        void freeChunk(ChunkIndex chunk) {
-            if((uint32_t)chunk > MaximumChunkCount)
+        void freeChunk(const ChunkIndex chunk) {
+            if(chunk > MaximumChunkCount)
                 return;
-            uint32_t s_index = (uint32_t)chunk % 32;
-            uint32_t b_index = (uint32_t)chunk / 32;
+            uint32_t s_index = chunk % 32;
+            uint32_t b_index = chunk / 32;
             uint32_t bitmask = ~(1 << s_index);
             bitmasks[b_index] &= bitmask;
-            Chunk* v = chunks[(uint32_t)chunk].exchange(nullptr);
+            Chunk* v = chunks[chunk].exchange(nullptr);
             if(v)
                 allocator<Chunk>().deallocate(v,1);
         }

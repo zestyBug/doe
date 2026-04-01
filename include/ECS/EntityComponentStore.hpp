@@ -12,6 +12,7 @@
 #include "ArchetypeListMap.hpp"
 #include "EntityStore.hpp"
 #include "ChunkStore.hpp"
+//#include "ResourceMap.hpp"
 
 class Test;
 
@@ -34,6 +35,22 @@ namespace ECS
         int32_t FreeArchetypeIndex = -1;
         // global version buffer, used for any entity create/modify command
         Version globalVersion = 1;
+
+
+        //int m_UnmanagedSharedComponentCount;
+        //std::vector<ComponentTypeList> m_UnmanagedSharedComponentsByType;
+        // struct SharedComponentInfo
+        // {
+        //     int RefCount;
+        //     int ComponentType;
+        //     int Version;
+        //     int HashCode;
+        // };
+        //std::vector<TypeID> m_UnmanagedSharedComponentTypes;
+        //std::vector<std::vector<SharedComponentInfo>> m_UnmanagedSharedComponentInfo;
+
+        //ResourceMap hashLookup;
+
         static mark_ptr<Archetype> createArchetype(const_span<TypeID> types);
     public:
         void freeAllEntities(bool resetVersion);
@@ -48,6 +65,7 @@ namespace ECS
         Archetype* getExistingArchetype(const_span<TypeID> types);
         Archetype* CreateArchetype(const_span<TypeID> types);
         uint32_t CountEntities();
+        void incrementComponentOrderVersion(Archetype* archetype, SharedComponentValues sharedComponentValues);
 
         bool addComponent(Entity entity, TypeID type);
         /// @param componentTypeSet sorted
@@ -77,7 +95,6 @@ namespace ECS
             return capacity;
         }
     };
-    extern EntityComponentStore *_EntityComponentStore;
 } // namespace ECS
 
 

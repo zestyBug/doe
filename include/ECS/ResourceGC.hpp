@@ -39,7 +39,7 @@ class ResourceGC
 public:
     using Type = intptr_t;
     // MAGIC NUMBER
-    static const uint32_t INVALID_INDEX = 0xFFFFFFFF;
+    static constexpr uint32_t INVALID_INDEX = 0xFFFFFFFF;
     typedef void (dtor_fn)(Type);
 protected:
     align_ptr<Type[]> values{};
@@ -100,8 +100,8 @@ protected:
     void markValue(const Type value);
 public:
     void searchMemory(const uint8_t *region,const uint32_t regionSizeInByte) {
-        for (uint32_t k = 0; k < regionSizeInByte/sizeof(Type); k++)
-            markValue(((const Type*)region)[k]);
+        for (uint32_t k = 0; k < regionSizeInByte; k+=sizeof(Type))
+            markValue(*(const Type*)(region + k));
     }
     void sweep();
     void remove(Type value) {

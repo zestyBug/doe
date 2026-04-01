@@ -5,7 +5,7 @@
 #include <cstdint>
 
 
-template<typename CT>
+template<typename CT = size_t>
 struct range final
 {
     using value = CT;

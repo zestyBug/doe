@@ -27,6 +27,8 @@ namespace ECS
         static constexpr int32_t Null = -1;
         // simply checks entity index validity
         inline bool valid() const {return this->index() >= 0;}
+        /// @details Considerations: 1 bit flag for invalid entities.
+        static constexpr uint32_t Maximum = INT32_MAX;
     protected:
         int32_t _value;
         uint32_t _version=0;

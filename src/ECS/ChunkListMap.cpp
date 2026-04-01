@@ -9,8 +9,6 @@ void ChunkListMap::add(Chunk* chunk) {
     uint32_t attempts = 0;
     while (true)
     {
-        if(offset >= _capacity)
-            throw std::runtime_error("add(): invalid hash offset");
         uint32_t hash = hashes[offset];
         if (hash == 0)
         {
@@ -39,7 +37,7 @@ void ChunkListMap::add(Chunk* chunk) {
 
         offset = (offset + 1) & hashMask();
         ++attempts;
-        if(attempts >= size())
+        if(attempts >= capacity())
             // we should nor reach here, a possiblyGrow() call must prevent it
             throw std::runtime_error("add(): something wet wrong");
     }
@@ -59,8 +57,6 @@ Chunk* ChunkListMap::tryGet(const SharedComponentValues sharedComponentValues, u
     uint32_t attempts = 0;
     while (true)
     {
-        if(offset >= _capacity)
-            throw std::runtime_error("add(): invalid hash offset");
         uint32_t hash = hashes[offset];
         if (hash == 0)
             return nullptr;
@@ -75,7 +71,7 @@ Chunk* ChunkListMap::tryGet(const SharedComponentValues sharedComponentValues, u
         }
         offset = (offset + 1) & hashMask();
         ++attempts;
-        if (attempts == size())
+        if (attempts == capacity())
             return nullptr;
     }
 }

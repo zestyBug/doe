@@ -22,6 +22,7 @@ namespace ECS
             EntityInChunk entityInChunk[EntitiesInBlock];
             uint32_t versions[EntitiesInBlock];
             EntityName names[EntitiesInBlock];
+            DataBlock() = default;
         };
         static constexpr uint32_t BlockSize = sizeof(DataBlock);
         static constexpr uint32_t BlockBusy = ~0;
@@ -76,7 +77,7 @@ namespace ECS
             ExistsOrThrow(block, indexInBlock);
             ((EntityInChunk*)block->entityInChunk)[indexInBlock] = entityInChunk;
         }
-        void SetEntityVersion(Entity entity, uint32_t version)
+        void setEntityVersion(Entity entity, uint32_t version)
         {
             uint32_t blockIndex   = entity.index() / EntitiesInBlock;
             uint32_t indexInBlock = entity.index() % EntitiesInBlock;
@@ -84,7 +85,7 @@ namespace ECS
             ExistsOrThrow(block, indexInBlock);
             block->versions[indexInBlock] = version;
         }
-        EntityInChunk GetEntityInChunk(Entity entity)
+        EntityInChunk getEntityInChunk(Entity entity)
         {
             uint32_t blockIndex   = entity.index() / EntitiesInBlock;
             uint32_t indexInBlock = entity.index() % EntitiesInBlock;
@@ -95,7 +96,7 @@ namespace ECS
             if ((bitfield & mask) == 0) return EntityInChunk();
             return block->entityInChunk[indexInBlock];
         }
-        void AllocateEntities(Entity* entities, uint32_t totalCount, ChunkIndex chunkIndex = ChunkIndex(), uint32_t firstEntityInChunkIndex = 0)
+        void allocateEntities(Entity* entities, uint32_t totalCount, const ChunkIndex chunkIndex = ChunkIndex(), uint32_t firstEntityInChunkIndex = 0)
         {
             uint32_t entityInChunkIndex = firstEntityInChunkIndex;
             /// @brief the current chunk index we are searching for empty slots
@@ -120,7 +121,7 @@ namespace ECS
                 if (block == nullptr) {
                     dataBlocks[i] = make_align<DataBlock>();
                     block = dataBlocks[i].get();
-                    memset(block,0,BlockSize);
+                    new (block) DataBlock();
                 }
                 // a buffer variable
                 uint32_t remainingCount = std::min(blockAvailable, count);
@@ -141,7 +142,10 @@ namespace ECS
                                 {
                                     uint32_t indexInBlock = maskIndex * 32 + entity;
                                     allocated[maskIndex] |= mask;
-                                    *entities = Entity{baseEntityIndex+indexInBlock, versions[indexInBlock]++};
+                                    uint32_t index = baseEntityIndex + indexInBlock;
+                                    if(index > Entity::Maximum)
+                                        throw std::runtime_error("allocateEntities(): out of entity index");
+                                    *entities = Entity{(int32_t)index, versions[indexInBlock]++};
                                     if (chunkIndex != ChunkIndex())
                                         entityInChunk[indexInBlock] = EntityInChunk{chunkIndex,entityInChunkIndex};
                                     else
@@ -167,7 +171,7 @@ namespace ECS
             }
             throw std::runtime_error("AllocateEntities(): could not find a data block for entity allocation.");
         }
-        void DeallocateEntities(Entity* entities, uint32_t count)
+        void deallocateEntities(Entity* entities, uint32_t count)
         {
             for (uint32_t i = 0; i < count;)
             {
@@ -262,7 +266,7 @@ namespace ECS
             if ((bitfield & mask) == 0) return EntityName::Null();
             return &block->names[indexInBlock];
         }
-        void SetEntityName(Entity entity, EntityName* name)
+        void setEntityName(Entity entity, EntityName* name)
         {
             uint32_t blockIndex   = entity.index() / EntitiesInBlock;
             uint32_t indexInBlock = entity.index() % EntitiesInBlock;

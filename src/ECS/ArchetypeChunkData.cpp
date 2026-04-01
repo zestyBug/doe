@@ -29,12 +29,12 @@ void ArchetypeChunkData::setAllChangeVersion(uint32_t index, Version version)
         this->_ChangeVersion[(i * this->_capacity) + index] = version;
 }
 
-const_span<void*> ArchetypeChunkData::getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archtype){
+const_span<SharedComponentIndex> ArchetypeChunkData::getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archtype){
     if(shared_component_index_in_archtype >= this->sharedComponentCount)
         throw std::out_of_range("getSharedComponentValueArrayForType()");
     return {_SharedComponentValue + (shared_component_index_in_archtype * _capacity), _capacity};
 }
-void* ArchetypeChunkData::getSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index) {
+SharedComponentIndex ArchetypeChunkData::getSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index) {
     if(index >= this->_count || shared_component_index_in_archtype >= this->sharedComponentCount)
         throw std::out_of_range("getSharedComponentValue()");
     return _SharedComponentValue[shared_component_index_in_archtype * _capacity + index];
@@ -43,9 +43,9 @@ SharedComponentValues ArchetypeChunkData::getSharedComponentValues(uint32_t inde
 {
     if(index >= this->_count)
         throw std::out_of_range("getSharedComponentValues()");
-    return {_SharedComponentValue + index, _capacity * sizeof(void*)};
+    return {_SharedComponentValue + index, _capacity * sizeof(SharedComponentIndex)};
 }
-void ArchetypeChunkData::setSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index, void* value)
+void ArchetypeChunkData::setSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index, SharedComponentIndex value)
 {
     if(index >= this->_count || shared_component_index_in_archtype >= this->sharedComponentCount)
         throw std::out_of_range("setSharedComponentValue()");
@@ -61,7 +61,6 @@ void ArchetypeChunkData::add(Chunk* chunk, SharedComponentValues sharedComponent
     if(this->_count >= this->_capacity)
         this->grow(this->_capacity < 1 ? 4 : this->_capacity*2);
     uint32_t index = this->_count++;
-    
     _Chunk[index] = chunk;
     // New chunk, so all versions are reset.
     for (uint32_t i = 0; i < this->componentCount; i++)
@@ -82,20 +81,20 @@ void ArchetypeChunkData::grow(uint32_t new_capacity) {
 
     const uint32_t nextChunkIndexSize            = new_capacity * sizeof(Chunk*);
     const uint32_t nextChangeVersionSize         = new_capacity * sizeof(Version) * this->componentCount;
-    const uint32_t nextSharedComponentValuesSize = new_capacity * sizeof(void*) * this->sharedComponentCount;
+    const uint32_t nextSharedComponentValuesSize = new_capacity * sizeof(SharedComponentIndex) * this->sharedComponentCount;
     const uint32_t new_v_size = nextChunkIndexSize + nextChangeVersionSize + nextSharedComponentValuesSize;
 
     align_ptr<uint8_t[]> new_data = make_align<uint8_t[]>(new_v_size);
     Chunk**    nextChunk;
     Version* nextChangeVersion;
-    void**     nextSharedComponentValue;
+    SharedComponentIndex*     nextSharedComponentValue;
     {
         uint8_t* nextBufferPtr   = new_data.get();
         nextChunk                = (Chunk**)nextBufferPtr;
         nextBufferPtr += nextChunkIndexSize;
         nextChangeVersion        = (Version*)nextBufferPtr;
         nextBufferPtr += nextChangeVersionSize;
-        nextSharedComponentValue = (void**)nextBufferPtr;
+        nextSharedComponentValue = (SharedComponentIndex*)nextBufferPtr;
     }
 
     if(this->buck) {
@@ -111,7 +110,7 @@ void ArchetypeChunkData::grow(uint32_t new_capacity) {
         for(uint32_t i = 0; i < sharedComponentCount; ++i)
             memcpy(nextSharedComponentValue + i * new_capacity,
                 this->_SharedComponentValue + i * this->_capacity,
-                this->_count * sizeof(void*)
+                this->_count * sizeof(SharedComponentIndex)
             );
     }
 
@@ -133,8 +132,8 @@ void ArchetypeChunkData::removeAtSwapBack(uint32_t index) {
 
     _Chunk[index] = _Chunk[_count];
     // On *chunk order* change, no versions changed, just moved to new location.
-    for (int i = 0; i < componentCount; i++)
+    for (uint32_t i = 0; i < componentCount; i++)
         _ChangeVersion[(i * _capacity) + index] = _ChangeVersion[(i * _capacity) + _count];
-    for (int i = 0; i < sharedComponentCount; i++)
+    for (uint32_t i = 0; i < sharedComponentCount; i++)
         _SharedComponentValue[(i * _capacity) + index] = _SharedComponentValue[(i * _capacity) + _count];
 }

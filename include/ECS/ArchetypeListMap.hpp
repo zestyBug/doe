@@ -4,21 +4,21 @@
 #include "cutil/basics.hpp"
 #include "cutil/HashHelper.hpp"
 #include "Archetype.hpp"
-#include <vector>
 
 namespace ECS
 {
     class ArchetypeListMap
     {
     protected:
-        static const uint32_t _AValidHashCode = 0x00000001;
-        static const uint32_t _SkipCode = 0xFFFFFFFF;
+        static constexpr uint32_t _AValidHashCode = 0x00000001;
+        static constexpr uint32_t _SkipCode = 0xFFFFFFFF;
         /// @brief generates hash code for a pointer
         /// @param types note that type flags are also included, like disable-ness, prefab-being
         /// @return (may-modified) hash value
 
-        std::vector<uint32_t,allocator<uint32_t>> hashes{};
-        std::vector<Archetype*,allocator<Archetype*>> pointers{};
+        align_ptr<Archetype*[]> pointers{};
+        uint32_t* hashes = nullptr;
+        uint32_t _capacity = 0;
         uint32_t emptyNodes=0;
         uint32_t skipNodes=0;
 
@@ -34,27 +34,34 @@ namespace ECS
         ArchetypeListMap() = default;
         ArchetypeListMap(const ArchetypeListMap&) = delete;
         ArchetypeListMap(ArchetypeListMap&& v)
-            :hashes{std::move(v.hashes)},pointers{std::move(v.pointers)}
+            :pointers{std::move(v.pointers)}
         {
+            this->hashes = v.hashes;
+            this->_capacity = v._capacity;
             this->emptyNodes = v.emptyNodes;
             this->skipNodes = v.skipNodes;
+            v.hashes=nullptr;
+            v._capacity=0;
             v.emptyNodes=0;
             v.skipNodes=0;
         }
         ArchetypeListMap& operator=(const ArchetypeListMap&) = delete;
         ArchetypeListMap& operator=(ArchetypeListMap&& v){
             if(this != &v){
-                this->hashes     = std::move(v.hashes);
                 this->pointers = std::move(v.pointers);
+                this->hashes = v.hashes;
+                this->_capacity = v._capacity;
                 this->emptyNodes = v.emptyNodes;
                 this->skipNodes = v.skipNodes;
+                v.hashes=nullptr;
+                v._capacity=0;
                 v.emptyNodes=0;
                 v.skipNodes=0;
             }
             return *this;
         }
         inline uint32_t size() const {
-            return (uint32_t) hashes.size();
+            return _capacity;
         }
         inline uint32_t unoccupiedNodes() const {
             return emptyNodes + skipNodes;
@@ -92,9 +99,13 @@ namespace ECS
             if(0 != (count & (count - 1)))
                 throw std::invalid_argument("Init(): count must be power of 2");
 
-            hashes.resize(count);
-            pointers.resize(count);
-
+            const uint32_t size1 = alignTo64(sizeof(uint32_t),count);
+            const uint32_t size2 = alignTo64(sizeof(Archetype*),count);
+            uint8_t* ptr = allocator<>().allocate(size1+size2);
+            pointers.reset((Archetype**)ptr);
+            hashes = (uint32_t *)(ptr+size2);
+            memset(hashes,0,size1);
+            _capacity = count;
             emptyNodes = count;
             skipNodes = 0;
         }
@@ -117,13 +128,6 @@ namespace ECS
             temp.appendFrom(*this);
             *this = std::move(temp);
         }
-        
-        void setCapacity(uint32_t capacity){
-            if (capacity < minimumSize())
-                capacity = minimumSize();
-            hashes.resize(capacity);
-            pointers.resize(capacity);
-        }
         void add(Archetype* ptr) {
             if(ptr == nullptr)
                 throw std::invalid_argument("add(): null pointer");
@@ -132,7 +136,7 @@ namespace ECS
             uint32_t attempts = 0;
             while (true)
             {
-                uint32_t hash = hashes.at(offset);
+                uint32_t hash = hashes[offset];
                 if (hash == 0)
                 {
                     hashes[offset] = desiredHash;
@@ -179,7 +183,7 @@ namespace ECS
             uint32_t attempts = 0;
             while (true)
             {
-                uint32_t hash = hashes.at(offset);
+                uint32_t hash = hashes[offset];
                 if (hash == 0)
                     return nullptr;
                 if (hash == desiredHash)
@@ -221,8 +225,8 @@ namespace ECS
         }
         // the whole popuse is to free space when object is unused but still in memory
         void reset(){
-            hashes = std::vector<uint32_t,allocator<uint32_t>>();
-            pointers = std::vector<Archetype*,allocator<Archetype*>>();
+            pointers.reset();
+            hashes = nullptr;
             emptyNodes=0;
             skipNodes=0;
         }

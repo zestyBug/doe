@@ -46,8 +46,8 @@ static_assert(sizeof(ChunkJobContext)==40);
 struct DependencyManager {
     // if these numbers goes any higher, use std::map<TypeID,...> and std::set<JobHandle> instead
     std::vector<ChunkJobContext,allocator<ChunkJobContext>> registeredJobs{};
-    std::array<ChunkJobHandle,TypeID::MaxTypeCount> lastWriteJob{};
-    std::vector<ChunkJobHandle,allocator<ChunkJobHandle>> lastReadJobs[TypeID::MaxTypeCount];
+    std::array<ChunkJobHandle,TypeID::MaximumTypesCount> lastWriteJob{};
+    std::vector<ChunkJobHandle,allocator<ChunkJobHandle>> lastReadJobs[TypeID::MaximumTypesCount];
 
     DependencyManager(){
         //

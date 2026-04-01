@@ -71,10 +71,8 @@ namespace ECS
         void emptySlotTrackingAddChunk(Chunk* chunk);
         Chunk* getExistingChunkWithEmptySlots(SharedComponentValues sharedComponentValues);
     public:
-        /// @brief MAGIC NUMBER, maximum number of entities an archetype can hold any value equal higther that this can be used as invalid value
-        static constexpr uint32_t MaxCapacity =  INT32_MAX;
         /// @brief MAGIC NUMBER, maximum number of type an archetype can manage, any number higher than this may lead to overflow
-        static constexpr uint32_t MaxComponentCount = 0x6f;
+        static constexpr uint32_t MaximumComponentCount = 0x6f;
         uint32_t numNativeComponentData() {return firstTagComponent - 1;}
         uint32_t numTagComponents() {return firstSharedComponent - firstTagComponent;}
         uint32_t numSharedComponents() {return __type_count - firstSharedComponent;}

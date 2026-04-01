@@ -1,9 +1,7 @@
-#include <stdint.h>
-#include <stdexcept>
-#include "span.hpp"
-
 #if !defined(HashHelper_HPP)
 #define HashHelper_HPP
+
+#include "span.hpp"
 
 namespace HashHelper
 {

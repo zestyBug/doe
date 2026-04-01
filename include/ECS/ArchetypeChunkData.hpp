@@ -4,7 +4,7 @@
 #include "cutil/span.hpp"
 #include "cutil/basics.hpp"
 #include "Base/Chunk.hpp"
-#include "SharedComponent.hpp"
+#include "Base/SharedComponent.hpp"
 #include "Base/Version.hpp"
 namespace ECS
 {
@@ -22,7 +22,7 @@ namespace ECS
         align_ptr<uint8_t[]> buck;
         Chunk** _Chunk = nullptr;
         Version* _ChangeVersion = nullptr;
-        void** _SharedComponentValue = nullptr;
+        SharedComponentIndex* _SharedComponentValue = nullptr;
 
         // maximum number of chunks information that can be stored, before grow
         uint32_t _capacity=0;
@@ -33,11 +33,10 @@ namespace ECS
         // total number (tags and shared components included)
         const uint32_t componentCount;
 
-        // version value: (suitable for single type iteration)
-        // note all type are same in archetype structure
-        //    [ compType[0]:                  [chunk[0] ... chunk[_capacity - 1]]
-        //      compType[...]:                ...
-        //      compType[componentCount - 1]: [chunk[0] ... chunk[_capacity - 1]]
+        // ChangeVersions and SharedComponentValues stored like:
+        //  Type[        0         ]: [chunk[0] ... chunk[capacity - 1]]
+        //  Type[       ...        ]: [         ...                    ]
+        //  Type[componentCount - 1]: [chunk[0] ... chunk[capacity - 1]]
 
     public:
         ArchetypeChunkData(uint32_t _component_count, uint32_t _shared_component_count): sharedComponentCount{_shared_component_count}, componentCount{_component_count} {
@@ -45,7 +44,6 @@ namespace ECS
                 throw std::invalid_argument("ArchetypeChunkData(): zero component archetype chunk data");
         }
         ~ArchetypeChunkData() = default;
-
         ArchetypeChunkData(const ArchetypeChunkData&)= delete;
         ArchetypeChunkData& operator    = (const ArchetypeChunkData&)= delete;
         ArchetypeChunkData(ArchetypeChunkData&&)= default;
@@ -70,9 +68,9 @@ namespace ECS
         // set version of all components in a chunk
         void setAllChangeVersion(uint32_t index, Version version);
         void setChangeVersion(uint32_t component_index_in_archtype, uint32_t index, Version version);
-        const_span<void*> getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archtype);
-        void setSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index, void* value);
-        void* getSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index);
+        const_span<SharedComponentIndex> getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archtype);
+        void setSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index, SharedComponentIndex value);
+        SharedComponentIndex getSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index);
         SharedComponentValues getSharedComponentValues(uint32_t index);
     private:
         void popBack();

@@ -38,6 +38,9 @@
 inline uint32_t alignTo64(uint32_t typeSize, uint32_t count){
     return (typeSize*count+0x3F)&0xFFFFFFC0;
 }
+inline uint32_t alignTo64(uint32_t size){
+    return (size+0x3F)&0xFFFFFFC0;
+}
 
 
 /// @brief alignes array size to 8 byte for performance in SoA and AoS
@@ -62,7 +65,7 @@ class allocator
     ~allocator() { }
 
     [[nodiscard]]
-    _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) noexcept {
+    _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) {
         _Tp* ret = nullptr;
         __n = alignTo64(sizeof(_Tp),(uint32_t)__n);
         if(__n < 1)      return nullptr;
@@ -86,13 +89,13 @@ class allocator
     void deallocate(void* __p, uint32_t __n=0) {
         (void)__n;
         if(likely(__p != nullptr)){
+        #ifdef VERBOSE
+            printf("allocator::deallocate(): %p\n",__p);
+        #endif
         #if DOE_WIN32
             _aligned_free(__p);
         #else
             free(__p);
-        #endif
-        #ifdef VERBOSE
-            printf("allocator::deallocate(): %p\n",__p);
         #endif
         #ifdef DEBUG
             allocator_counter--;

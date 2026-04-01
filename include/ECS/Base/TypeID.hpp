@@ -27,8 +27,10 @@ namespace ECS {
         inline bool isSharedComponent() const;
         inline bool isZeroSized() const;
         inline bool isManaged() const ;
-        // MAGIC NUMBER 
-        static constexpr uint16_t MaxTypeCount = 0x2000;
+        /// @brief MAGIC NUMBER, Maximum number of unique component types supported by the TypeManager
+        /// @details Considerations: SharedComponentIndex can only use up to 19 bit for the sharead component type
+        /// TypeManager::ClearFlagsMask this number must be power of 2 because of bit
+        static constexpr uint16_t MaximumTypesCount = 1 << 11;
         static bool compare(const_span<TypeID> v1,const_span<TypeID> v2)
         {
             if (v1.size() != v2.size())
@@ -46,12 +48,14 @@ namespace ECS {
     class TypeManager
     {
     public:
+        /// @brief MAGIC NUMBER
+        /// @details Considerations: SharedComponent must comes before ZeroSized components
         static constexpr uint32_t SharedComponentTypeFlag  = 1 << 29;
+        /// @brief MAGIC NUMBER, destruction is managed by the engine
+        /// @details Considerations: SharedComponent must comes before ZeroSized components
         static constexpr uint32_t ManagedComponentTypeFlag = 1 << 17;
         static constexpr uint32_t ZeroSizeInChunkTypeFlag  = 1 << 28;
-        /// @brief MAGIC NUMBER, Maximum number of unique component types supported by the TypeManager
-        static constexpr uint32_t MaximumTypesCount = 1 << 10;
-        static constexpr uint32_t ClearFlagsMask = MaximumTypesCount-1;
+        static constexpr uint32_t ClearFlagsMask = TypeID::MaximumTypesCount-1;
         enum class TypeCategory : uint16_t {
             /// Implements IComponentData (can be either a struct or a class)
             IComponentData,
@@ -60,21 +64,32 @@ namespace ECS {
             /// Is an Entity
             Entity,
         };
+        typedef void(*DefaultFunction)(void*);
         struct TypeInfo {
             TypeID       TypeIndex;
-            /// The alignment requirement for the component.
             /// @brief Blittable size of the component type.
             uint16_t     TypeSize = 0;
+            /// @brief The number of bytes used in a Chunk to store an instance of this component.
+            /// @note this includes internal capacity and header overhead for buffers. Also, note
+            /// that components with no member variables will have a SizeInChunk of 0, but will have a
+            /// TypeSize of GREATER than 0 (since C++ does not allow for zero-sized types).
+            uint16_t     SizeInChunk = 0;
+            /// @brief The alignment requirement for the component.
             uint16_t     AlignmentInBytes;
             TypeCategory Category;
+            DefaultFunction defaultConstruct;
+            DefaultFunction defaultDestruct;
             /// @brief Returns true if the component does not require space in Chunk memory
-            bool         IsZeroSized() {return TypeSize==0;}
+            bool         IsZeroSized() {return SizeInChunk==0;}
         };
     private:
         static uint32_t    typeCount;
-        static TypeInfo    sharedTypeInfos[MaximumTypesCount];
-        static const char *sharedTypeNames[MaximumTypesCount];
+        static TypeInfo    sharedTypeInfos[TypeID::MaximumTypesCount];
+        static const char *sharedTypeNames[TypeID::MaximumTypesCount];
     public:
+        static inline const_span<TypeInfo> GetTypeInfoPointer(){
+            return {sharedTypeInfos, typeCount};
+        }
         static uint32_t GetTypeCount() {
             return typeCount;
         }
@@ -86,33 +101,22 @@ namespace ECS {
             if(typeIndex.index() >= typeCount) throw std::bad_typeid();
             return sharedTypeNames[typeIndex.index()];
         }
-        static TypeID registerNull() {
-            // MAGIC NUMBER
-            sharedTypeInfos[0].TypeIndex = TypeID(ZeroSizeInChunkTypeFlag);
-            sharedTypeInfos[0].AlignmentInBytes = alignof(nullptr_t);
-            sharedTypeInfos[0].Category = TypeCategory::IComponentData;
-            sharedTypeInfos[0].TypeSize = sizeof(nullptr_t);
-            sharedTypeNames[0]="nullptr_t";
-            return TypeID(ZeroSizeInChunkTypeFlag);
-        }
-        static TypeID registerEntity() {
-            // MAGIC NUMBER
-            static_assert(sizeof(Entity) == 8);
-            sharedTypeInfos[1].TypeIndex = TypeID(1);
-            sharedTypeInfos[1].AlignmentInBytes = alignof(Entity);
-            sharedTypeInfos[1].Category = TypeCategory::Entity;
-            sharedTypeInfos[1].TypeSize = sizeof(Entity);
-            sharedTypeNames[1]="Entity";
-            return TypeID(1);
-        }
+        static TypeID registerNull();
+        static TypeID registerEntity();
         template<typename T>
         static TypeID registerType(const char* name) {
             // MAGIC NUMBER
-            static_assert(sizeof(T) <= 0x1000 && alignof(T) <= 0x1000);
-            static_assert(std::is_same_v<T,Entity> || std::is_base_of_v<IComponentData,T> || (std::is_base_of_v<ISharedComponentData,T> && sizeof(T) > 0x0));
+            static_assert(sizeof(T) <= 0x800 && alignof(T) <= 0x1000);
+            static_assert(
+                std::is_class_v<T> && std::is_default_constructible_v<T> && (
+                std::is_same_v<T,Entity> || 
+                std::is_base_of_v<IComponentData,T> || 
+                (std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>)
+                )
+            );
             static_assert(!(std::is_base_of_v<IComponentData,T> && std::is_base_of_v<ISharedComponentData,T>));
-            if(unlikely(typeCount >= TypeID::MaxTypeCount))
-                throw std::runtime_error("MaxTypeCount");
+            if(unlikely(typeCount >= TypeID::MaximumTypesCount))
+                throw std::runtime_error("TypeID::MaximumTypesCount");
 
             uint32_t index = typeCount++;
 
@@ -121,11 +125,12 @@ namespace ECS {
                 value |= SharedComponentTypeFlag;
             if(std::is_base_of_v<IManagedComponentData,T>)
                 value |= ManagedComponentTypeFlag;
-            if(sizeof(T) < 1)
+            if(std::is_empty_v<T>)
                 value |= ZeroSizeInChunkTypeFlag;
             sharedTypeInfos[index].TypeIndex = TypeID(value);
 
             sharedTypeInfos[index].TypeSize = sizeof(T);
+            sharedTypeInfos[index].SizeInChunk = std::is_empty_v<T> ? 0 : sizeof(T);
             sharedTypeInfos[index].AlignmentInBytes = alignof(T);
 
             if(std::is_same_v<T,Entity>)
@@ -136,6 +141,8 @@ namespace ECS {
                 sharedTypeInfos[index].Category = TypeCategory::ISharedComponentData;
             else
                 throw std::bad_typeid();
+            sharedTypeInfos[index].defaultDestruct  = [](void* x){static_cast<T*>(x)->~T();};
+            sharedTypeInfos[index].defaultConstruct = [](void* x){new (static_cast<T*>(x)) T();};
             sharedTypeNames[index]=name;
             return sharedTypeInfos[index].TypeIndex;
         }

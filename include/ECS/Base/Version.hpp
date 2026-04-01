@@ -9,8 +9,6 @@ namespace ECS
     // unless it is specified.
 
     struct Version {
-        uint32_t value;
-
         constexpr Version():value{0}{}
         constexpr Version(const uint32_t v):value{v}{}
         constexpr Version(const Version&) = default;
@@ -36,12 +34,15 @@ namespace ECS
             // overflow detection for longer run
             return (value - last.value) < (1u << 31);
         }
+        /// @brief a simple version++
         void updateVersion() {
             value++;
             // 0 is reserved
             if(value==0)
                 value=1;
         }
+    private:
+        uint32_t value;
     };
 }
 

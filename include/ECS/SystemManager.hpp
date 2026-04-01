@@ -3,7 +3,7 @@
 
 #include "cutil/basics.hpp"
 #include "DependencyManager.hpp"
-#include "EntityComponentManager.hpp"
+#include "EntityComponentStore.hpp"
 #include "entt/advanced_array.hpp"
 
 namespace ECS
