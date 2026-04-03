@@ -19,12 +19,12 @@ void Archetype::removeFromChunkList(Chunk* chunk) {
     chunkThatMoved->listIndex = chunkListIndex;
 }
 void Archetype::addToChunkListWithEmptySlots(Chunk* chunk){
-    chunk->listWithEmptySlotsIndex = chunksWithEmptySlots.size();
+    chunk->listWithEmptySlotsIndex = (uint32_t)chunksWithEmptySlots.size();
     chunksWithEmptySlots.push_back(chunk);
 }
 void Archetype::removeFromChunkListWithEmptySlots(Chunk* chunk){
     int32_t index = chunk->listWithEmptySlotsIndex;
-    if(index >= chunksWithEmptySlots.size() || 0 > index)
+    if((uint32_t)index >= chunksWithEmptySlots.size() || 0 > index)
         throw std::invalid_argument("removeFromChunkListWithEmptySlots(): invalid chunk");
     if(chunk != chunksWithEmptySlots[index])
         throw std::invalid_argument("removeFromChunkListWithEmptySlots(): invalid chunk");

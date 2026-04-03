@@ -171,15 +171,15 @@ namespace ECS
             }
             throw std::runtime_error("AllocateEntities(): could not find a data block for entity allocation.");
         }
-        void deallocateEntities(Entity* entities, uint32_t count)
+        void deallocateEntities(span<Entity> entities)
         {
-            for (uint32_t i = 0; i < count;)
+            for (uint32_t i = 0; i < entities.size();)
             {
                 uint32_t rangeStart = i;
                 uint32_t startIndex = entities[i].index();
                 uint32_t blockIndex = startIndex / EntitiesInBlock;
                 uint32_t prevIndexInBlock = startIndex % EntitiesInBlock;
-                for (i++; i < count; i++)
+                for (i++; i < entities.size(); i++)
                 {
                     if (entities[i].index() / EntitiesInBlock != blockIndex)
                         // Different data block
@@ -211,7 +211,7 @@ namespace ECS
                         blockCount = buffer;
                     }
                     else
-                        blockCount = entityCount[blockIndex].load();
+                        blockCount = entityCount[blockIndex].fetch_add(0);
                 }
 
                 if (blockCount == 0)

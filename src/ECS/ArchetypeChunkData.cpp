@@ -43,7 +43,7 @@ SharedComponentValues ArchetypeChunkData::getSharedComponentValues(uint32_t inde
 {
     if(index >= this->_count)
         throw std::out_of_range("getSharedComponentValues()");
-    return {_SharedComponentValue + index, _capacity * sizeof(SharedComponentIndex)};
+    return {_SharedComponentValue + index, _capacity * (uint32_t)sizeof(SharedComponentIndex)};
 }
 void ArchetypeChunkData::setSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index, SharedComponentIndex value)
 {
@@ -54,7 +54,7 @@ void ArchetypeChunkData::setSharedComponentValue(uint32_t shared_component_index
 
 void ArchetypeChunkData::popBack() {
     if(this->_count < 1)
-        throw std::out_of_range("removeAtSwapBack(): empty array");
+        throw std::out_of_range("popBack(): empty array");
     this->_count--;
 }
 void ArchetypeChunkData::add(Chunk* chunk, SharedComponentValues sharedComponentIndices, Version version) {
@@ -65,7 +65,7 @@ void ArchetypeChunkData::add(Chunk* chunk, SharedComponentValues sharedComponent
     // New chunk, so all versions are reset.
     for (uint32_t i = 0; i < this->componentCount; i++)
         this->_ChangeVersion[(i * this->_capacity) + index] = version;
-    for (int i = 0; i < sharedComponentCount; i++)
+    for (uint32_t i = 0; i < sharedComponentCount; i++)
         _SharedComponentValue[(i * _capacity) + index] = sharedComponentIndices[i];
 }
 void ArchetypeChunkData::grow(uint32_t new_capacity) {
@@ -79,9 +79,9 @@ void ArchetypeChunkData::grow(uint32_t new_capacity) {
      */
     new_capacity = (new_capacity+0xF)&0xFFFFFFF0;
 
-    const uint32_t nextChunkIndexSize            = new_capacity * sizeof(Chunk*);
-    const uint32_t nextChangeVersionSize         = new_capacity * sizeof(Version) * this->componentCount;
-    const uint32_t nextSharedComponentValuesSize = new_capacity * sizeof(SharedComponentIndex) * this->sharedComponentCount;
+    const uint32_t nextChunkIndexSize            = new_capacity * (uint32_t)sizeof(Chunk*);
+    const uint32_t nextChangeVersionSize         = new_capacity * (uint32_t)sizeof(Version) * this->componentCount;
+    const uint32_t nextSharedComponentValuesSize = new_capacity * (uint32_t)sizeof(SharedComponentIndex) * this->sharedComponentCount;
     const uint32_t new_v_size = nextChunkIndexSize + nextChangeVersionSize + nextSharedComponentValuesSize;
 
     align_ptr<uint8_t[]> new_data = make_align<uint8_t[]>(new_v_size);
