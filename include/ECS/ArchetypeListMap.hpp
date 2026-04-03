@@ -20,7 +20,6 @@ namespace ECS
         uint32_t* hashes = nullptr;
         uint32_t _capacity = 0;
         uint32_t emptyNodes=0;
-        uint32_t skipNodes=0;
 
     public:
         static uint32_t getHashCode(const_span<ECS::TypeID> type)
@@ -39,11 +38,9 @@ namespace ECS
             this->hashes = v.hashes;
             this->_capacity = v._capacity;
             this->emptyNodes = v.emptyNodes;
-            this->skipNodes = v.skipNodes;
             v.hashes=nullptr;
             v._capacity=0;
             v.emptyNodes=0;
-            v.skipNodes=0;
         }
         ArchetypeListMap& operator=(const ArchetypeListMap&) = delete;
         ArchetypeListMap& operator=(ArchetypeListMap&& v){
@@ -52,11 +49,9 @@ namespace ECS
                 this->hashes = v.hashes;
                 this->_capacity = v._capacity;
                 this->emptyNodes = v.emptyNodes;
-                this->skipNodes = v.skipNodes;
                 v.hashes=nullptr;
                 v._capacity=0;
                 v.emptyNodes=0;
-                v.skipNodes=0;
             }
             return *this;
         }
@@ -64,7 +59,7 @@ namespace ECS
             return _capacity;
         }
         inline uint32_t unoccupiedNodes() const {
-            return emptyNodes + skipNodes;
+            return emptyNodes;
         }
         inline uint32_t occupiedNodes() const {
             return size() - unoccupiedNodes();
@@ -107,7 +102,6 @@ namespace ECS
             memset(hashes,0,size1);
             _capacity = count;
             emptyNodes = count;
-            skipNodes = 0;
         }
         void appendFrom(ArchetypeListMap& src){
             for (uint32_t offset = 0; offset < src.size(); ++offset)
@@ -132,7 +126,7 @@ namespace ECS
             if(ptr == nullptr)
                 throw std::invalid_argument("add(): null pointer");
             uint32_t desiredHash = getHashCode(ptr->getType());
-            uint32_t offset = (int)(desiredHash & hashMask());
+            uint32_t offset = desiredHash & hashMask();
             uint32_t attempts = 0;
             while (true)
             {
@@ -150,7 +144,7 @@ namespace ECS
                 {
                     hashes[offset] = desiredHash;
                     pointers[offset] = ptr;
-                    --skipNodes;
+                    --emptyNodes;
                     possiblyGrow();
                     return;
                 }
@@ -164,7 +158,7 @@ namespace ECS
                 ++attempts;
                 if(attempts >= size())
                     // we should nor reach here, a possiblyGrow() call must prevent it
-                    throw std::runtime_error("add(): something wet wrong");
+                    throw std::runtime_error("add(): something went wrong");
             }
         }
         void remove(Archetype* ptr){
@@ -172,7 +166,7 @@ namespace ECS
             if(offset < 0)
                 throw std::runtime_error("remove(): pointer not found");
             hashes[offset] = _SkipCode;
-            ++skipNodes;
+            ++emptyNodes;
             possiblyShrink();
         }
         /// @brief find a pointer with a key using hash list
@@ -202,7 +196,7 @@ namespace ECS
             if(ptr == nullptr)
                 return -1;
             uint32_t desiredHash = getHashCode(ptr->getType());
-            uint32_t offset = (desiredHash & hashMask());
+            uint32_t offset = desiredHash & hashMask();
             uint32_t attempts = 0;
             while (true)
             {
@@ -228,7 +222,6 @@ namespace ECS
             pointers.reset();
             hashes = nullptr;
             emptyNodes=0;
-            skipNodes=0;
         }
     };
 }

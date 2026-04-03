@@ -149,7 +149,7 @@ namespace ECS
                 ++attempts;
                 if(attempts >= capacity())
                     // we should nor reach here, a possiblyGrow() call must prevent it
-                    throw std::runtime_error("add(): something wet wrong");
+                    throw std::runtime_error("add(): something went wrong");
             }
         }
         void remove(uint32_t key)

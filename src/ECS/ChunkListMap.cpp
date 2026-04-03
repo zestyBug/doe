@@ -25,7 +25,7 @@ void ChunkListMap::add(Chunk* chunk) {
             hashes[offset] = desiredHash;
             chunks[offset] = chunk;
             chunk->listWithEmptySlotsIndex = offset;
-            --skipNodes;
+            --emptyNodes;
             possiblyGrow();
             return;
         }
@@ -39,7 +39,7 @@ void ChunkListMap::add(Chunk* chunk) {
         ++attempts;
         if(attempts >= capacity())
             // we should nor reach here, a possiblyGrow() call must prevent it
-            throw std::runtime_error("add(): something wet wrong");
+            throw std::runtime_error("add(): something went wrong");
     }
 }
 void ChunkListMap::remove(Chunk* chunk){
@@ -48,7 +48,7 @@ void ChunkListMap::remove(Chunk* chunk){
     if(offset >= this->_capacity || 0 > offset || chunks[offset] != chunk)
         throw std::invalid_argument("remove(): invalid chunk");
     hashes[offset] = _SkipCode;
-    ++skipNodes;
+    ++emptyNodes;
     possiblyShrink();
 }
 Chunk* ChunkListMap::tryGet(const SharedComponentValues sharedComponentValues, uint32_t numSharedComponents) const {
@@ -77,5 +77,5 @@ Chunk* ChunkListMap::tryGet(const SharedComponentValues sharedComponentValues, u
 }
 bool ChunkListMap::contains(Chunk* chunk) const {
     int32_t offset = chunk->listWithEmptySlotsIndex;
-    return 0 <= offset && offset < _capacity && chunks[offset] == chunk;
+    return 0 <= offset && (uint32_t)offset < _capacity && chunks[offset] == chunk;
 }

@@ -24,7 +24,6 @@ namespace ECS
         Archetype* archetype;
         uint32_t _capacity = 0;
         uint32_t emptyNodes=0;
-        uint32_t skipNodes=0;
 
         void resize(uint32_t size){
             if (size < minimumSize())
@@ -68,10 +67,8 @@ namespace ECS
             this->archetype = v.archetype;
             this->_capacity = v._capacity;
             this->emptyNodes = v.emptyNodes;
-            this->skipNodes = v.skipNodes;
             v._capacity=0;
             v.emptyNodes=0;
-            v.skipNodes=0;
         }
         ChunkListMap& operator=(const ChunkListMap&) = delete;
         ChunkListMap& operator=(ChunkListMap&& v){
@@ -81,10 +78,8 @@ namespace ECS
                 this->archetype = v.archetype;
                 this->_capacity = v._capacity;
                 this->emptyNodes = v.emptyNodes;
-                this->skipNodes  = v.skipNodes;
                 v._capacity=0;
                 v.emptyNodes=0;
-                v.skipNodes=0;
             }
             return *this;
         }
@@ -92,7 +87,7 @@ namespace ECS
             return _capacity;
         }
         inline uint32_t unoccupiedNodes() const {
-            return emptyNodes + skipNodes;
+            return emptyNodes;
         }
         inline uint32_t occupiedNodes() const {
             return capacity() - unoccupiedNodes();
@@ -136,7 +131,6 @@ namespace ECS
             this->archetype = _archetype;
             _capacity = count;
             emptyNodes = count;
-            skipNodes = 0;
         }
         void appendFrom(ChunkListMap& src) {
             for (uint32_t offset = 0; offset < src.capacity(); ++offset)
@@ -151,7 +145,6 @@ namespace ECS
             hashes.reset();
             chunks = nullptr;
             emptyNodes=0;
-            skipNodes=0;
         }
         void add(Chunk*);
         void remove(Chunk*);

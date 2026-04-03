@@ -127,7 +127,7 @@ public:
                 ++attempts;
                 if(attempts >= size())
                     // we should nor reach here, a possiblyGrow() call must prevent it
-                    throw std::runtime_error("add(): something wet wrong");
+                    throw std::runtime_error("add(): something went wrong");
             }
         }
         void remove(Type value){
@@ -285,7 +285,7 @@ public:
             ++attempts;
             if(attempts >= size())
                 // we should nor reach here, a possiblyGrow() call must prevent it
-                throw std::runtime_error("add(): something wet wrong");
+                throw std::runtime_error("add(): something went wrong");
         }
     }
     int indexOf(Type value) const {
