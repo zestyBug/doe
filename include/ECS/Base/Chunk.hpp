@@ -8,6 +8,8 @@ namespace ECS
     class ChunkListMap;
     class ArchetypeChunkData;
     class Archetype;
+    class ChunkStore;
+    class EntityComponentStore;
 
     struct ChunkIndex {
         constexpr ChunkIndex() = default;
@@ -32,6 +34,7 @@ namespace ECS
         friend class ArchetypeChunkData;
         friend class Archetype;
         friend class ChunkStore;
+        friend class EntityComponentStore;
         // MAGIC NUMBER. Header size. DO NOT TOUCH.
         /// @details Considerations: must be cache line aligned
         static constexpr uint32_t MemoryOffset = 64;
@@ -41,15 +44,18 @@ namespace ECS
         /// @brief Maximum usable memory size
         static constexpr uint32_t BufferSize = MemorySize - MemoryOffset;
         // lower the number, the better component version-ing performs,
-        /// @details Considerations: ArchetypeChunkData may uses 128 bit bitset for enabling bit per type for entities in a chunk
-        static constexpr uint32_t MaximumEntitiesPerChunk = 128;
+        /// @details Considerations: ArchetypeChunkData uses bitset as enabling bit per type for entities in a chunk so it must be multiply of 64.
+        static constexpr uint32_t MaximumEntitiesPerChunk = 192;
     protected:
-        ChunkIndex index = ChunkIndex();
         Archetype *archetype = nullptr;
         uint32_t entityCount = 0;
+        // index in chunksWithEmptySlots or freeChunksBySharedComponents
          int32_t listWithEmptySlotsIndex = -1;
+        // index in ArchetypeChunkData
          int32_t listIndex = -1;
-        alignas(MemoryOffset) uint8_t memory[BufferSize];
+        /// @brief actual buffer
+        ChunkIndex index = ChunkIndex();
+        alignas(MemoryOffset) uint8_t buffer[BufferSize];
     };
     static_assert(sizeof(Chunk) == Chunk::MemorySize);
 }

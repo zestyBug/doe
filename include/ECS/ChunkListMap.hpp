@@ -8,7 +8,7 @@
 
 namespace ECS
 {
-    class Archtype;
+    class Archetype;
     /**
      * @brief A map to find chunks with free some slots and a given specific shared component values.
      */
@@ -40,6 +40,8 @@ namespace ECS
         /// @return (may-modified) hash value
         static uint32_t getHashCode(const SharedComponentValues sharedComponents, uint32_t numSharedComponents)
         {
+            if(sharedComponents.firstIndex == nullptr)
+                throw std::invalid_argument("getHashCode(): nullptr");
             uint32_t result;
             if (sharedComponents.stride == sizeof(SharedComponentIndex))
             {

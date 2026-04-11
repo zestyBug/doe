@@ -1,13 +1,15 @@
-#if !defined(ARCHTYPECHUNKDATA_HPP)
-#define ARCHTYPECHUNKDATA_HPP
+#if !defined(ARCHETYPECHUNKDATA_HPP)
+#define ARCHETYPECHUNKDATA_HPP
 
 #include "cutil/span.hpp"
 #include "cutil/basics.hpp"
 #include "Base/Chunk.hpp"
 #include "Base/SharedComponent.hpp"
 #include "Base/Version.hpp"
+#include <bitset>
 namespace ECS
 {
+    using EnabledBitset = std::bitset<Chunk::MaximumEntitiesPerChunk>;
     class Archetype;
     /** @brief there is a component version for each compopnent. 
      * any write access, whitout check for real value change, causes to update version to lastest version.
@@ -23,6 +25,7 @@ namespace ECS
         Chunk** _Chunk = nullptr;
         Version* _ChangeVersion = nullptr;
         SharedComponentIndex* _SharedComponentValue = nullptr;
+        EnabledBitset* _ComponentEnabledBit;
 
         // maximum number of chunks information that can be stored, before grow
         uint32_t _capacity=0;
@@ -37,6 +40,11 @@ namespace ECS
         //  Type[        0         ]: [chunk[0] ... chunk[capacity - 1]]
         //  Type[       ...        ]: [         ...                    ]
         //  Type[componentCount - 1]: [chunk[0] ... chunk[capacity - 1]]
+
+        // ComponentEnabledBits stored like:
+        //  chunk[      0     ]: [Type[0] ... Type[componentCount - 1]]
+        //  chunk[     ...    ]: [        ...                         ]
+        //  chunk[capacity - 1]: [Type[0] ... Type[componentCount - 1]]
 
     public:
         ArchetypeChunkData(uint32_t _component_count, uint32_t _shared_component_count): sharedComponentCount{_shared_component_count}, componentCount{_component_count} {
@@ -63,14 +71,17 @@ namespace ECS
             return _Chunk[i];
         }
         inline const_span<Chunk*> getChunkIndexArray() { return {_Chunk, this->_count}; }
-        span<Version> getChangeVersionArrayForType(uint32_t component_index_in_archtype);
-        Version getChangeVersion(uint32_t component_index_in_archtype, uint32_t index);
+        span<Version> getChangeVersionArrayForType(uint32_t component_index_in_archetype);
+        Version getChangeVersion(uint32_t component_index_in_archetype, uint32_t index);
         // set version of all components in a chunk
         void setAllChangeVersion(uint32_t index, Version version);
-        void setChangeVersion(uint32_t component_index_in_archtype, uint32_t index, Version version);
-        const_span<SharedComponentIndex> getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archtype);
-        void setSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index, SharedComponentIndex value);
-        SharedComponentIndex getSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index);
+        // set Entity version of a given chunk
+        void setOrderVersion(uint32_t index, Version version);
+        // set a component version of a given chunk
+        void setChangeVersion(uint32_t component_index_in_archetype, uint32_t index, Version version);
+        const_span<SharedComponentIndex> getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archetype);
+        void setSharedComponentValue(uint32_t shared_component_index_in_archetype, uint32_t index, SharedComponentIndex value);
+        SharedComponentIndex getSharedComponentValue(uint32_t shared_component_index_in_archetype, uint32_t index);
         SharedComponentValues getSharedComponentValues(uint32_t index);
     private:
         void popBack();
@@ -85,7 +96,4 @@ namespace ECS
 
 } // namespace ECS
 
-
-
-
-#endif // ARCHTYPECHUNKDATA_HPP
+#endif

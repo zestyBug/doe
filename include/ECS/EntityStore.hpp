@@ -29,18 +29,14 @@ namespace ECS
         align_ptr<DataBlock>  dataBlocks[BlockCount];
         std::atomic<uint32_t> entityCount[BlockCount];
 
-        bool exists(Entity entity)
-        {
-            uint32_t blockIndex   = entity.index() / EntitiesInBlock;
-            uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+        void ExistsOrThrow(uint32_t blockIndex, uint32_t indexInBlock) {
+            if(blockIndex >= BlockCount)
+                throw std::invalid_argument("ExistsOrThrow(): entity does not exists");
             DataBlock* block = dataBlocks[blockIndex].get();
-            if (block == nullptr) return false;
-            if (/*(entity.version() & 1) == 0 || */block->versions[indexInBlock] != entity.version()) return false;
-            return true;
-        }
-        void ExistsOrThrow(DataBlock* block, uint32_t indexInBlock) {
-            if(block==nullptr || (block->allocated[indexInBlock / 32] & (1UL << (indexInBlock % 32)))==0)
-                throw std::invalid_argument("ExistsOrThrow(): Entity does not exists");
+            if(block==nullptr)
+                throw std::invalid_argument("ExistsOrThrow(): entity does not exists");
+            if((block->allocated[indexInBlock / 32] & (1UL << (indexInBlock % 32)))==0)
+                throw std::invalid_argument("ExistsOrThrow(): entity does not exists");
         }
         void integrityCheck(uint32_t blockIndex)
         {
@@ -69,34 +65,48 @@ namespace ECS
                 integrityCheck(i);
             }
         }
+        Chunk* getChunkIfExists(Entity entity)
+        {
+            uint32_t blockIndex   = entity.index() / EntitiesInBlock;
+            uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+            if(blockIndex >= BlockCount)
+                return nullptr;
+            DataBlock* block = dataBlocks[blockIndex].get();
+            if (block == nullptr)
+                return nullptr;
+            if (/*(entity.version() & 1) == 0 || */block->versions[indexInBlock] != entity.version())
+                return nullptr;
+            return block->entityInChunk[indexInBlock].chunk;
+        }
         void setEntityInChunk(Entity entity, EntityInChunk entityInChunk)
         {
             uint32_t blockIndex   = entity.index() / EntitiesInBlock;
             uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+            ExistsOrThrow(blockIndex, indexInBlock);
             DataBlock* block = dataBlocks[blockIndex].get();
-            ExistsOrThrow(block, indexInBlock);
             ((EntityInChunk*)block->entityInChunk)[indexInBlock] = entityInChunk;
         }
         void setEntityVersion(Entity entity, uint32_t version)
         {
             uint32_t blockIndex   = entity.index() / EntitiesInBlock;
             uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+            ExistsOrThrow(blockIndex, indexInBlock);
             DataBlock* block = dataBlocks[blockIndex].get();
-            ExistsOrThrow(block, indexInBlock);
             block->versions[indexInBlock] = version;
         }
         EntityInChunk getEntityInChunk(Entity entity)
         {
             uint32_t blockIndex   = entity.index() / EntitiesInBlock;
             uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+            ExistsOrThrow(blockIndex, indexInBlock);
             DataBlock* block = dataBlocks[blockIndex].get();
-            if (block == nullptr) return EntityInChunk();
-            uint32_t bitfield = block->allocated[indexInBlock / 32];
-            uint32_t mask = 1UL << (indexInBlock % 32);
-            if ((bitfield & mask) == 0) return EntityInChunk();
             return block->entityInChunk[indexInBlock];
         }
-        void allocateEntities(Entity* entities, uint32_t totalCount, const ChunkIndex chunkIndex = ChunkIndex(), uint32_t firstEntityInChunkIndex = 0)
+        /// @brief Allocated and create some new Entities.
+        /// @param entities output buffer. usually Chunk->buffer + index
+        /// @param chunk if you want to fill EntityInChunk value
+        /// @param firstEntityInChunkIndex if you want to fill EntityInChunk value
+        void allocateEntities(span<Entity> entities, Chunk *chunk = nullptr, uint32_t firstEntityInChunkIndex = 0)
         {
             uint32_t entityInChunkIndex = firstEntityInChunkIndex;
             /// @brief the current chunk index we are searching for empty slots
@@ -107,7 +117,7 @@ namespace ECS
                 /// the blocks available entities
                 uint32_t blockAvailable = EntitiesInBlock - blockCount;
                 /// number of entities to allocate in this block
-                uint32_t count = std::min(blockAvailable, totalCount);
+                uint32_t count = std::min(blockAvailable, entities.size());
                 // Set the count to a flag indicating that this block is busy (-1)
                 uint32_t buffer = blockCount;
                 if (!entityCount[i].compare_exchange_weak(buffer, BlockBusy)) {
@@ -145,12 +155,12 @@ namespace ECS
                                     uint32_t index = baseEntityIndex + indexInBlock;
                                     if(index > Entity::Maximum)
                                         throw std::runtime_error("allocateEntities(): out of entity index");
-                                    *entities = Entity{(int32_t)index, versions[indexInBlock]++};
-                                    if (chunkIndex != ChunkIndex())
-                                        entityInChunk[indexInBlock] = EntityInChunk{chunkIndex,entityInChunkIndex};
+                                    entities[0] = Entity{(int32_t)index, versions[indexInBlock]++};
+                                    if (chunk != nullptr)
+                                        entityInChunk[indexInBlock] = EntityInChunk{chunk,entityInChunkIndex};
                                     else
                                         entityInChunk[indexInBlock] = EntityInChunk();
-                                    entities++;
+                                    ++entities;
                                     entityInChunkIndex++;
                                     remainingCount--;
                                     if (remainingCount == 0)
@@ -165,8 +175,7 @@ namespace ECS
                 buffer = BlockBusy;
                 if(!entityCount[i].compare_exchange_weak(buffer, blockCount + count))
                     throw std::runtime_error("AllocateEntities()");
-                totalCount -= count;
-                if (totalCount == 0)
+                if(entities.empty())
                     return;
             }
             throw std::runtime_error("AllocateEntities(): could not find a data block for entity allocation.");
@@ -178,6 +187,8 @@ namespace ECS
                 uint32_t rangeStart = i;
                 uint32_t startIndex = entities[i].index();
                 uint32_t blockIndex = startIndex / EntitiesInBlock;
+                if(blockIndex >= BlockCount)
+                    throw std::invalid_argument("deallocateEntities(): entity does not exists");
                 uint32_t prevIndexInBlock = startIndex % EntitiesInBlock;
                 for (i++; i < entities.size(); i++)
                 {
@@ -259,20 +270,17 @@ namespace ECS
         {
             uint32_t blockIndex   = entity.index() / EntitiesInBlock;
             uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+            ExistsOrThrow(blockIndex, indexInBlock);
             DataBlock* block = dataBlocks[blockIndex].get();
-            if (block == nullptr) return EntityName::Null();
-            uint32_t bitfield = block->allocated[indexInBlock / 32];
-            uint32_t mask = 1UL << (indexInBlock % 32);
-            if ((bitfield & mask) == 0) return EntityName::Null();
             return &block->names[indexInBlock];
         }
-        void setEntityName(Entity entity, EntityName* name)
+        void setEntityName(Entity entity, EntityName* name = nullptr)
         {
             uint32_t blockIndex   = entity.index() / EntitiesInBlock;
             uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+            ExistsOrThrow(blockIndex, indexInBlock);
             DataBlock* block = dataBlocks[blockIndex].get();
-            ExistsOrThrow(block, indexInBlock);
-            if(name)
+            if(name != nullptr)
                 memcpy(block->names + indexInBlock, name, sizeof(EntityName));
             else
                 memset(block->names + indexInBlock, 0, sizeof(EntityName));

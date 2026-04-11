@@ -42,7 +42,7 @@ void TypeID::Debug() {
         "Unknown");
     printf("\tisSharedComponent: %i\n", this->isSharedComponent());
     printf("\tisZeroSized: %i\n", this->isZeroSized());
-    printf("\tisManaged: %i\n", this->isManaged());
+    printf("\tisManaged: %i\n", this->isManagedComponent());
 }
 
 template<> TypeID __typeid__<nullptr_t>(){

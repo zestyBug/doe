@@ -8,9 +8,7 @@
 namespace ECS {
     struct ISharedComponentData {};
     struct IComponentData {};
-    struct IManagedComponentData {
-        virtual ~IManagedComponentData() {}
-    };
+    struct IManagedComponentData {};
     struct TypeID final {
         TypeID()=default;
         TypeID(uint32_t v):value{v}{};
@@ -26,7 +24,7 @@ namespace ECS {
         inline uint32_t flags() const;
         inline bool isSharedComponent() const;
         inline bool isZeroSized() const;
-        inline bool isManaged() const ;
+        inline bool isManagedComponent() const ;
         /// @brief MAGIC NUMBER, Maximum number of unique component types supported by the TypeManager
         /// @details Considerations: SharedComponentIndex can only use up to 19 bit for the sharead component type
         /// TypeManager::ClearFlagsMask this number must be power of 2 because of bit
@@ -58,7 +56,7 @@ namespace ECS {
         static constexpr uint32_t ClearFlagsMask = TypeID::MaximumTypesCount-1;
         enum class TypeCategory : uint16_t {
             /// Implements IComponentData (can be either a struct or a class)
-            IComponentData,
+            IComponentData = 0,
             /// Implements ISharedComponentData (can be either a struct or a class)
             ISharedComponentData,
             /// Is an Entity
@@ -66,7 +64,7 @@ namespace ECS {
         };
         typedef void(*DefaultFunction)(void*);
         struct TypeInfo {
-            TypeID       TypeIndex;
+            TypeID       TypeIndex = 0;
             /// @brief Blittable size of the component type.
             uint16_t     TypeSize = 0;
             /// @brief The number of bytes used in a Chunk to store an instance of this component.
@@ -75,10 +73,10 @@ namespace ECS {
             /// TypeSize of GREATER than 0 (since C++ does not allow for zero-sized types).
             uint16_t     SizeInChunk = 0;
             /// @brief The alignment requirement for the component.
-            uint16_t     AlignmentInBytes;
-            TypeCategory Category;
-            DefaultFunction defaultConstruct;
-            DefaultFunction defaultDestruct;
+            uint16_t     AlignmentInBytes = 0;
+            TypeCategory Category = TypeCategory::IComponentData;
+            DefaultFunction defaultConstruct = nullptr;
+            DefaultFunction defaultDestruct = nullptr;
             /// @brief Returns true if the component does not require space in Chunk memory
             bool         IsZeroSized() {return SizeInChunk==0;}
         };
@@ -93,7 +91,7 @@ namespace ECS {
         static uint32_t GetTypeCount() {
             return typeCount;
         }
-        static const TypeInfo GetTypeInfo(TypeID typeIndex) {
+        static const TypeInfo& GetTypeInfo(TypeID typeIndex) {
             if(typeIndex.index() >= typeCount) throw std::bad_typeid();
             return sharedTypeInfos[typeIndex.index()];
         }
@@ -109,12 +107,11 @@ namespace ECS {
             static_assert(sizeof(T) <= 0x800 && alignof(T) <= 0x1000);
             static_assert(
                 std::is_class_v<T> && std::is_default_constructible_v<T> && (
-                std::is_same_v<T,Entity> || 
-                std::is_base_of_v<IComponentData,T> || 
-                (std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>)
+                    std::is_same_v<T,Entity> || 
+                    std::is_base_of_v<IComponentData,T> || 
+                    (std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>)
                 )
             );
-            static_assert(!(std::is_base_of_v<IComponentData,T> && std::is_base_of_v<ISharedComponentData,T>));
             if(unlikely(typeCount >= TypeID::MaximumTypesCount))
                 throw std::runtime_error("TypeID::MaximumTypesCount");
 
@@ -156,7 +153,7 @@ namespace ECS {
     uint32_t TypeID::flags() const {return this->value & ~TypeManager::ClearFlagsMask;}
     bool TypeID::isSharedComponent() const {return this->value & TypeManager::SharedComponentTypeFlag;}
     bool TypeID::isZeroSized() const {return this->value & TypeManager::ZeroSizeInChunkTypeFlag;}
-    bool TypeID::isManaged() const {return this->value & TypeManager::ManagedComponentTypeFlag;}
+    bool TypeID::isManagedComponent() const {return this->value & TypeManager::ManagedComponentTypeFlag;}
 
     template<typename T>
     inline TypeID getTypeID() { return __typeid__<std::remove_const_t<std::remove_reference_t<T>>>(); }

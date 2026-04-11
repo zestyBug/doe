@@ -74,6 +74,8 @@ namespace ECS
             Chunk* v = chunks[chunk].exchange(nullptr);
             if(v)
                 allocator<Chunk>().deallocate(v,1);
+            else
+                throw std::invalid_argument("freeChunk(): invalid chunk");
         }
     };
 } // namespace ECS

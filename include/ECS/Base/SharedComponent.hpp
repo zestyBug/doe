@@ -19,6 +19,7 @@ namespace ECS
     private:
         uint32_t value = 0;
     };
+    /// @brief A (pointer) container
     struct SharedComponentValues final {
         SharedComponentIndex* firstIndex = nullptr;
         uint32_t stride = sizeof(SharedComponentIndex);

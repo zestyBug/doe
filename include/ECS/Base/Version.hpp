@@ -17,9 +17,6 @@ namespace ECS
         constexpr bool operator == (const Version& v) const {return this->value == v.value;}
         constexpr bool operator != (const Version& v) const {return this->value != v.value;}
 
-        inline operator uint32_t& () {
-            return value;
-        }
         inline operator uint32_t () const {
             return value;
         }

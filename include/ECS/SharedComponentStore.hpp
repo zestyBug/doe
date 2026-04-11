@@ -16,7 +16,7 @@ namespace ECS
         static constexpr uint32_t AValidHashCode = 0x00000001;
         static constexpr uint32_t SkipCode = 0xFFFFFFFF;
         struct SharedComponentInfo {
-            uint32_t refrenceCount;
+            uint32_t referenceCount;
             Version version;
             uint32_t hash;
         };
@@ -41,18 +41,17 @@ namespace ECS
         }
         static uint32_t getTypeIndex(SharedComponentIndex value) {
             uint32_t typeIndex = value >> SharedComponentIndex::TypeIndexBitOffset;
-            if(typeIndex > TypeID::MaximumTypesCount)
+            if(typeIndex > TypeManager::GetTypeCount())
                 throw std::invalid_argument("refIncrease(): invalid shared component index");
             return typeIndex;
         }
         static int getElementIndex(SharedComponentIndex value) {
             return value & 0xffff;
         }
-        void resizeIfNeeded(uint32_t typeIndex){
+        void initiate(uint32_t typeIndex){
             const uint32_t typeSize = TypeManager::GetTypeInfoPointer()[typeIndex].TypeSize;
-            uint32_t freeIndex;
             SharedComponentChunk* ptr = dataChunk[typeIndex].get();
-            if(!ptr){
+            if(unlikely(!ptr)){
                 // count
                 const uint32_t buffer1 =  32;
                 // buffer size
@@ -62,73 +61,83 @@ namespace ECS
                 const uint32_t buffer5 = buffer4 + buffer1*sizeof(uint32_t);
                 ptr = (SharedComponentChunk*) allocator().allocate(buffer5);
                 ptr->capacity = buffer1;
-                ptr->count = 0;
+                ptr->count = 1;
                 ptr->freeSlotIndex = SharedComponentChunk::InvalidIndex;
                 ptr->infos = (SharedComponentInfo*)(((uint8_t*)ptr)+buffer2);
                 ptr->hashes =           (uint32_t*)(((uint8_t*)ptr)+buffer3);
                 ptr->hashes_index =     (uint32_t*)(((uint8_t*)ptr)+buffer4);
                 memset(ptr->infos, 0, buffer1*sizeof(SharedComponentInfo)+buffer1*sizeof(uint32_t));
+                TypeManager::GetTypeInfoPointer()[typeIndex].defaultConstruct(ptr->buffer);
+                uint32_t hashCode = HashHelper::FNV1A32(ptr->buffer,typeSize);
+                if (hashCode == 0 || hashCode == SkipCode)
+                    hashCode = AValidHashCode;
+                ptr->infos[0].referenceCount = 1;
+                ptr->infos[0].version = 0;
+                ptr->infos[0].hash = hashCode;
                 dataChunk[typeIndex].reset(ptr);
+            }
+        }
+        void resize(uint32_t typeIndex){
+            const uint32_t typeSize = TypeManager::GetTypeInfoPointer()[typeIndex].TypeSize;
+            SharedComponentChunk* ptr = dataChunk[typeIndex].get();
+            if(unlikely(!ptr)){
+                initiate(typeIndex);
             }else{
-                if(ptr->capacity == ptr->count && ptr->freeSlotIndex == SharedComponentChunk::InvalidIndex)
+                // old capacity
+                const uint32_t buffer0 = ptr->capacity;
+                // the new capacity
+                const uint32_t buffer1 = buffer0 * 2;
+                SharedComponentChunk* ptr2;
+            #if VERBOSE
+                printf("SharedComponentStore::resize(): %u => %u\n", ptr->capacity, buffer1);
+            #endif
                 {
-                    // old capacity
-                    const uint32_t buffer0 = ptr->capacity;
-                    // the new capacity
-                    const uint32_t buffer1 = buffer0 * 2;
-                    SharedComponentChunk* ptr2;
-                #if VERBOSE
-                    printf("SharedComponentStore::resize(): %u => %u\n", ptr->capacity, buffer1);
-                #endif
-                    {
-                        // buffer size
-                        const uint32_t buffer2 = buffer1 * typeSize;
-                        // plus info buffer size
-                        const uint32_t buffer3 = buffer2 + buffer1*sizeof(SharedComponentInfo);
-                        // plus hash buffer size
-                        const uint32_t buffer4 = buffer3 + buffer1*sizeof(uint32_t);
-                        // plus indecies buffer size
-                        const uint32_t buffer5 = buffer4 + buffer1*sizeof(uint32_t);
-                        ptr2 = (SharedComponentChunk*) allocator().allocate(buffer5);
-                        ptr2->capacity = buffer1;
-                        ptr2->count = ptr->count;
-                        ptr2->freeSlotIndex = SharedComponentChunk::InvalidIndex;
-                        ptr2->infos = (SharedComponentInfo*)(((uint8_t*)ptr2)+buffer2);
-                        ptr2->hashes =           (uint32_t*)(((uint8_t*)ptr2)+buffer3);
-                        ptr2->hashes_index =     (uint32_t*)(((uint8_t*)ptr2)+buffer4);
-                    }
-                    memcpy(ptr2->buffer,ptr->buffer,buffer0*typeSize);
-                    memcpy(ptr2->infos,ptr->infos,buffer0*sizeof(SharedComponentInfo));
-                    memset(ptr2->hashes, 0, buffer1*sizeof(uint32_t));
-                    uint32_t *indecies1 = ptr->hashes_index;
-                    uint32_t *indecies2 = ptr2->hashes_index;
-                    uint32_t *hashes1 = ptr->hashes;
-                    uint32_t *hashes2 = ptr2->hashes;
-                    for(uint32_t i=0;i<buffer0;i++){
-                        const uint32_t hashBuffer = hashes1[i];
-                        if(hashBuffer!=0 && hashBuffer!=SkipCode){
-                            /** insertHash */{
-                                uint32_t offset = hashBuffer & (buffer1-1);
-                                uint32_t attempts = 0;
-                                while (true)
+                    // buffer size
+                    const uint32_t buffer2 = buffer1 * typeSize;
+                    // plus info buffer size
+                    const uint32_t buffer3 = buffer2 + buffer1*(uint32_t)sizeof(SharedComponentInfo);
+                    // plus hash buffer size
+                    const uint32_t buffer4 = buffer3 + buffer1*(uint32_t)sizeof(uint32_t);
+                    // plus indecies buffer size
+                    const uint32_t buffer5 = buffer4 + buffer1*(uint32_t)sizeof(uint32_t);
+                    ptr2 = (SharedComponentChunk*) allocator().allocate(buffer5);
+                    ptr2->capacity = buffer1;
+                    ptr2->count = ptr->count;
+                    ptr2->freeSlotIndex = ptr->freeSlotIndex;
+                    ptr2->infos = (SharedComponentInfo*)(((uint8_t*)ptr2)+buffer2);
+                    ptr2->hashes =           (uint32_t*)(((uint8_t*)ptr2)+buffer3);
+                    ptr2->hashes_index =     (uint32_t*)(((uint8_t*)ptr2)+buffer4);
+                }
+                memcpy(ptr2->buffer,ptr->buffer,buffer0*typeSize);
+                memcpy(ptr2->infos,ptr->infos,buffer0*sizeof(SharedComponentInfo));
+                memset(ptr2->hashes, 0, buffer1*sizeof(uint32_t));
+                uint32_t *indecies1 = ptr->hashes_index;
+                uint32_t *indecies2 = ptr2->hashes_index;
+                uint32_t *hashes1 = ptr->hashes;
+                uint32_t *hashes2 = ptr2->hashes;
+                for(uint32_t i=0;i<buffer0;i++){
+                    const uint32_t hashBuffer = hashes1[i];
+                    if(hashBuffer!=0 && hashBuffer!=SkipCode){
+                        /** insertHash */ {
+                            uint32_t offset = hashBuffer & (buffer1-1);
+                            uint32_t attempts = 0;
+                            while (true) {
+                                if (hashes2[offset] == 0)
                                 {
-                                    if (hashes2[offset] == 0)
-                                    {
-                                        hashes2[offset] = hashBuffer;
-                                        indecies2[offset] = indecies1[i];
-                                        break;
-                                    }
-                                    offset = (offset+1) & (buffer1-1);
-                                    ++attempts;
-                                    if(attempts == buffer1)
-                                        throw std::runtime_error("resizeIfNeeded(): something went wrong");
+                                    hashes2[offset] = hashBuffer;
+                                    indecies2[offset] = indecies1[i];
+                                    break;
                                 }
+                                offset = (offset+1) & (buffer1-1);
+                                ++attempts;
+                                if(attempts == buffer1)
+                                    throw std::runtime_error("resizeIfNeeded(): something went wrong");
                             }
                         }
                     }
-                    ptr = ptr2;
-                    dataChunk[typeIndex].reset(ptr2);
                 }
+                ptr = ptr2;
+                dataChunk[typeIndex].reset(ptr2);
             }
         }
     public:
@@ -143,21 +152,22 @@ namespace ECS
             for (uint32_t i: range<uint32_t>(TypeID::MaximumTypesCount))
             {
                 SharedComponentChunk *ptr = dataChunk[i].get();
-                if(ptr && TypeManager::GetTypeInfoPointer()[i].TypeIndex.isManaged())
+                if(ptr && TypeManager::GetTypeInfoPointer()[i].TypeIndex.isManagedComponent())
                 {
                 #if VERBOSE
                     printf("\tType %s:\n",TypeManager::GetTypeName(i));
                 #endif
-                    const uint32_t typesize = TypeManager::GetTypeInfoPointer()[i].TypeSize;
+                    const uint32_t typesize = TypeManager::GetTypeInfo(i).TypeSize;
+                    TypeManager::DefaultFunction dFunc = TypeManager::GetTypeInfo(i).defaultDestruct;
                     const SharedComponentInfo* infos = ptr->infos;
                     uint8_t *data = ptr->buffer;
                     for (uint32_t j = 0;j < ptr->count;j++)
                     {
-                        if(infos[j].refrenceCount > 0){
+                        if(infos[j].referenceCount > 0){
                             #if VERBOSE
                                 //printf("\t\tValue %u %p, refCount \n", j, data, infos[j].refCount);
                             #endif
-                            ((IManagedComponentData*)data)->~IManagedComponentData();
+                            dFunc(data);
                         }
                         data += typesize;
                     }
@@ -171,11 +181,12 @@ namespace ECS
                 return nullptr;
             const uint32_t typeIndex = getTypeIndex(index);
             const uint32_t elementIndex = getElementIndex(index);
+            initiate(typeIndex);
             SharedComponentChunk* ptr = dataChunk[typeIndex].get();
             if(!ptr || elementIndex >= ptr->count)
                 return nullptr;
             const uint32_t typeSize = TypeManager::GetTypeInfoPointer()[typeIndex].TypeSize;
-            if(ptr->infos[elementIndex].refrenceCount < 1)
+            if(ptr->infos[elementIndex].referenceCount < 1)
                 return nullptr;
             return ptr->buffer + typeSize * elementIndex;
         }
@@ -185,7 +196,7 @@ namespace ECS
             if(data == nullptr)
                 return SharedComponentIndex();
             const uint32_t typeIndex = type.index();
-            resizeIfNeeded(typeIndex);
+            initiate(typeIndex);
 
             const uint32_t typeSize = TypeManager::GetTypeInfoPointer()[typeIndex].TypeSize;
             uint32_t hashCode = HashHelper::FNV1A32(data,typeSize);
@@ -214,7 +225,7 @@ namespace ECS
                         elementIndex = indecies[offset];
                         addressBuffer = buffer + typeSize * elementIndex;
                         if (memcmp(addressBuffer,data,typeSize) == 0){
-                            ptr->infos[elementIndex].refrenceCount++;
+                            ptr->infos[elementIndex].referenceCount++;
                             goto finalize;
                         }
                     }
@@ -233,8 +244,10 @@ namespace ECS
                 info = ptr->infos + elementIndex;
                 if(elementIndex > SharedComponentChunk::MaximumSize)
                     throw std::runtime_error("allocate(): allocating a new SharedComponent failed");
+                if(ptr->count == ptr->capacity)
+                    resize(typeIndex);
             }
-            info->refrenceCount = 1;
+            info->referenceCount = 1;
             info->version = ++sharedComponentVersion;
             info->hash = hashCode;
             memcpy(ptr->buffer + typeSize * elementIndex, data, typeSize);
@@ -266,7 +279,7 @@ namespace ECS
             elementIndex |= typeIndex << SharedComponentIndex::TypeIndexBitOffset;
             return SharedComponentIndex{elementIndex};
         }
-        void addRefrence(SharedComponentIndex index, uint32_t num = 1) {
+        void addReference(SharedComponentIndex index, uint32_t num = 1) {
             const uint32_t typeIndex = getTypeIndex(index);
             const uint32_t elementIndex = getElementIndex(index);
             SharedComponentChunk* ptr = dataChunk[typeIndex].get();
@@ -275,12 +288,12 @@ namespace ECS
             SharedComponentInfo *info = ptr->infos + elementIndex;
             if(num == 0)
                 return;
-            if(info->refrenceCount == 0)
+            if(info->referenceCount == 0)
                 throw std::invalid_argument("refIncrease(): invalid shared component index");
             // TODO overflow check.
-            info->refrenceCount += num;
+            info->referenceCount += num;
         }
-        void removeRefrence(SharedComponentIndex index, uint32_t num = 1) {
+        void removeReference(SharedComponentIndex index, uint32_t num = 1) {
             const uint32_t typeIndex = getTypeIndex(index);
             const uint32_t elementIndex = getElementIndex(index);
             SharedComponentChunk* ptr = dataChunk[typeIndex].get();
@@ -290,11 +303,11 @@ namespace ECS
             SharedComponentInfo *info = ptr->infos + elementIndex;
             if(num == 0)
                 return;
-            if(info->refrenceCount == 0 || info->refrenceCount < num)
-                throw std::runtime_error("refDecrease(): negative refrence count");
-            info->refrenceCount -= num;
+            if(info->referenceCount == 0 || info->referenceCount < num)
+                throw std::runtime_error("refDecrease(): negative reference count");
+            info->referenceCount -= num;
 
-            if(unlikely(info->refrenceCount == 0)) {
+            if(unlikely(info->referenceCount == 0)) {
                 if(ptr->count == (elementIndex+1))
                     ptr->count--;
                 else {
@@ -314,7 +327,7 @@ namespace ECS
                     {
                         hashBuffer = hashes[offset];
                         if (hashBuffer == 0)
-                            throw std::runtime_error("removeRefrence(): unable to find the hash");
+                            throw std::runtime_error("removeReference(): unable to find the hash");
                         if (hashBuffer == hashCode)
                             if(indecies[offset] == elementIndex){
                                 hashes[offset] = SkipCode;
@@ -327,8 +340,8 @@ namespace ECS
                             throw std::runtime_error("insert(): something went wrong");
                     }
                 }
-                IManagedComponentData *com = (IManagedComponentData *)(ptr->buffer + typeSize * elementIndex);
-                com->~IManagedComponentData();
+                TypeManager::DefaultFunction dFunc = TypeManager::GetTypeInfo(typeIndex).defaultDestruct;
+                dFunc(ptr->buffer + typeSize * elementIndex);
             }
         }
         void incrementVersion(SharedComponentIndex index) {
@@ -338,7 +351,7 @@ namespace ECS
             if(!ptr || elementIndex >= ptr->count)
                 throw std::invalid_argument("refIncrease(): invalid shared component index");
             SharedComponentInfo *info = ptr->infos + elementIndex;
-            if(info->refrenceCount == 0)
+            if(info->referenceCount == 0)
                 throw std::invalid_argument("refIncrease(): invalid shared component index");
             info->version = ++this->sharedComponentVersion;
         }
@@ -349,7 +362,7 @@ namespace ECS
             if(!ptr || elementIndex >= ptr->count)
                 throw std::invalid_argument("refIncrease(): invalid shared component index");
             const SharedComponentInfo *info = ptr->infos + elementIndex;
-            if(info->refrenceCount == 0)
+            if(info->referenceCount == 0)
                 throw std::invalid_argument("refIncrease(): invalid shared component index");
             return info->version;
         }
@@ -367,7 +380,7 @@ namespace ECS
                     const uint32_t *indecies = ptr->hashes_index;
                     for (uint32_t elementIndex = 0;elementIndex < capacity;elementIndex++)
                     {
-                        if(infos[elementIndex].refrenceCount > 0)
+                        if(infos[elementIndex].referenceCount > 0)
                         /** tryFind */ {
                             const uint32_t hashCode = infos[elementIndex].hash;
                             uint32_t offset = hashCode & hashMask;

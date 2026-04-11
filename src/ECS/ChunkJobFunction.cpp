@@ -152,7 +152,7 @@ void ECS::ChunkJobFunction::callExecution(
             if(!didChange(v,sv))
                 goto endChunk;
         }
-        buffer = archetype->chunksData[chunkIndex]->memory;
+        buffer = archetype->chunksData[chunkIndex]->buffer;
         for (i = 0; i < argCount; i++)
             argsBuffer[i] = buffer + argsOffsets[i];
         try{

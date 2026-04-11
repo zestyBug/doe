@@ -35,16 +35,10 @@ namespace ECS
     };
 
     struct EntityInChunk final {
-        ChunkIndex chunk;
+        Chunk* chunk = nullptr;
         uint32_t indexInChunk = 0;
-        inline bool isNull() {return chunk.isNull();}
+        inline bool isNull() {return chunk == nullptr;}
         EntityInChunk() = default;
-        bool operator >  (const EntityInChunk& other) const {
-            return this->chunk != other.chunk ? (this->chunk < other.chunk) : (this->indexInChunk < other.indexInChunk);
-        }
-        bool operator <  (const EntityInChunk& other) const {
-            return this->chunk != other.chunk ? (this->chunk < other.chunk) : (this->indexInChunk < other.indexInChunk);
-        }
         bool operator == (const EntityInChunk& other) const {
             return this->chunk == other.chunk && this->indexInChunk == other.indexInChunk;
         }
@@ -56,6 +50,12 @@ namespace ECS
             static const EntityName v = {0};
             return &v;
         }
+    };
+
+    struct EntityBatchInChunk {
+        Chunk* chunk;
+        uint32_t startIndex;
+        uint32_t count;
     };
 }
 
