@@ -3,13 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <bits/algorithmfwd.h>
 #include <stdexcept>
-
-#include <typeindex>
-#include <typeinfo>
-
-#include "./HashHelper.hpp"
 
 class bitset
 {
@@ -242,7 +236,7 @@ class bitset_static
 private:
     // data is stored like this (numbers represent index of bit)
     // 7 6 5 4 3 2 1 0 - 15 14 13 12 11 10 9 8 - 23 22 21 20 19 18 17 16 - ...
-    unsigned char data[BYTE];
+    uint8_t data[BYTE];
 public:
     bitset_static() = default;
     ~bitset_static() = default;
@@ -266,7 +260,7 @@ public:
     }
     template<typename T>
     void set(const T value){
-        unsigned char min_size = std::min(BYTE,sizeof(T));
+        const uint32_t min_size = std::min(BYTE,sizeof(T));
         for (size_t i = 0; i < min_size; i++)
             this->data[i] = (unsigned char)((value >> (8*i)) & 0xFF);
     }

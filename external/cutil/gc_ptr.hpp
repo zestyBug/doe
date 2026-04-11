@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <atomic>
 
-// contain const copy of data, refrence counting CG
+// contain const copy of data, reference counting CG
 template<typename T>
 class counter_ptr {
 public:
@@ -143,7 +143,7 @@ struct gc_val {
 template<typename T>
 class weak_gc_ptr;
 
-// pointer to actual data, refrence counting CG
+// pointer to actual data, reference counting CG
 template<typename T>
 class gc_ptr final {
 public:
@@ -370,49 +370,49 @@ gc_ptr<_Ty> make_gc(_Types&&... _Args) {
 	return ret;
 }
 
-// C++ complicated, inherited, custom function, refrence counting CG
+// C++ complicated, inherited, custom function, reference counting CG
 class object_ptr {
 public:
 	object_ptr() {
 		//puts("object_ptr::object_ptr()");
-		this->__refrence_count = (int32_t*)malloc(sizeof(int32_t));
-		*this->__refrence_count = 1;
+		this->__reference_count = (int32_t*)malloc(sizeof(int32_t));
+		*this->__reference_count = 1;
 		__alloc();
 	}
 	object_ptr(const object_ptr& obj) {
 		//puts("object_ptr::object_ptr(const object_ptr&)");
-		this->__refrence_count = obj.__refrence_count;
-		(*this->__refrence_count)++;
+		this->__reference_count = obj.__reference_count;
+		(*this->__reference_count)++;
 	}
 	object_ptr(object_ptr&& obj) {
 		//puts("object_ptr::object_ptr(object_ptr&&)");
-		this->__refrence_count = obj.__refrence_count;
-		obj.__refrence_count = nullptr;
+		this->__reference_count = obj.__reference_count;
+		obj.__reference_count = nullptr;
 	}
 	object_ptr& operator = (const object_ptr& obj) {
 		//puts("object_ptr::operator = (const object_ptr&)");
 		if (this != &obj) {
-			this->__refrence_count = obj.__refrence_count;
-			(*this->__refrence_count)++;
+			this->__reference_count = obj.__reference_count;
+			(*this->__reference_count)++;
 		}
 		return *this;
 	}
 	object_ptr& operator = (object_ptr&& obj) {
 		//puts("object_ptr::operator = (object_ptr&&)");
 		if (this != &obj) {
-			this->__refrence_count = obj.__refrence_count;
-			obj.__refrence_count = nullptr;
+			this->__reference_count = obj.__reference_count;
+			obj.__reference_count = nullptr;
 		}
 		return *this;
 	}
 	virtual ~object_ptr() {
 		//puts("object_ptr::~object_ptr()");
-		if (this->__refrence_count) {
-			(*this->__refrence_count)--;
-			if ((*this->__refrence_count) == 0) {
+		if (this->__reference_count) {
+			(*this->__reference_count)--;
+			if ((*this->__reference_count) == 0) {
 				__dealloc();
-				free(this->__refrence_count);
-				this->__refrence_count = nullptr;
+				free(this->__reference_count);
+				this->__reference_count = nullptr;
 			}
 		}
 	}
@@ -426,7 +426,7 @@ protected:
 		//puts("object_ptr::__dealloc()");
 	}
 private:
-	int32_t* __refrence_count;
+	int32_t* __reference_count;
 };
 
 #endif

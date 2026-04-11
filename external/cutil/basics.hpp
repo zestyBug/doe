@@ -134,7 +134,7 @@ private:
 };
 
 /// @brief smart pointer to hold ownership of an aligned pointer.
-/// @warning this class is not responsible for calling constructor/destructor, anyhow.
+/// @tparam Type required to know the size, and destructor function
 template <typename Type>
 class align_ptr
 {
@@ -168,9 +168,12 @@ class align_ptr
     /// @brief Destructor, invokes the deleter if the stored pointer is not null.
     ~align_ptr() noexcept
     {
-        if(_M_t != nullptr)
+        if(_M_t != nullptr){
+            if(!std::is_trivial_v<Type>)
+                _M_t->~Type();
             allocator().deallocate(_M_t);
-        _M_t = nullptr;
+            _M_t = nullptr;
+        }
     }
 
     // Assignment.
@@ -196,6 +199,16 @@ class align_ptr
 
     // Observers.
 
+    inline Type* operator->() noexcept
+    {
+        return get();
+    }
+
+    inline const Type* operator->() const noexcept
+    {
+        return get();
+    }
+
     Type& operator*()
     {
         if(unlikely(_M_t == nullptr))
@@ -211,16 +224,12 @@ class align_ptr
     }
 
     /// @brief Return the stored pointer. safe but slow
-    Type* get() {
-        if(_M_t == nullptr)
-            return nullptr;
+    inline Type* get() {
         return _M_t;
     }
 
     /// @brief Return the stored pointer. safe but slow
     const Type* get() const {
-        if(_M_t == nullptr)
-            return nullptr;
         return _M_t;
     }
 
@@ -262,8 +271,9 @@ class align_ptr
     align_ptr(const align_ptr&) = delete;
     align_ptr& operator=(const align_ptr&) = delete;
 };
-/// @brief smart pointer to hold ownership of an aligned pointer.
-/// @warning this class is not responsible for calling constructor/destructor, anyhow.
+
+/// @brief smart pointer to hold ownership of an aligned array pointer.
+/// @warning since this class does not store the array size, it is not responsible for calling constructor/destructor, anyhow.
 template <typename Type>
 class align_ptr<Type[]>
 {
