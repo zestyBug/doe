@@ -69,7 +69,7 @@ class allocator
         _Tp* ret = nullptr;
         __n = alignTo64(sizeof(_Tp),(uint32_t)__n);
         if(__n < 1)      return nullptr;
-        if(__n>0x10000)  throw std::bad_alloc();
+        if(__n>0x100000)  throw std::bad_alloc();
         #if DOE_WIN32
             ret = (_Tp*) _aligned_malloc(__n,64);
         #else

@@ -71,7 +71,7 @@ namespace mtest {
 
 } // namespace mtest
 
-// Macro to define test
+// Macro to register a test function from a class. The function is public, static and void(*)(void).
 #define CLASS_TEST(class,name) \
     static mtest::Register reg_##class##name(#class "::" #name, &class::name); \
     void class::name()

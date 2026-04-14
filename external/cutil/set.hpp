@@ -36,137 +36,137 @@ protected:
     }
 public:
 
-        set(uint32_t count = 0) {
-            if (count < minimumSize())
-                count = minimumSize();
+    set(uint32_t count = 0) {
+        if (count < minimumSize())
+            count = minimumSize();
 
-            // is power of 2?
-            if(0 != (count & (count - 1)))
-                throw std::invalid_argument("Init(): count must be power of 2");
+        // is power of 2?
+        if(0 != (count & (count - 1)))
+            throw std::invalid_argument("Init(): count must be power of 2");
 
-            hashes.resize(count);
-            values.resize(count);
+        hashes.resize(count);
+        values.resize(count);
 
-            unoccupied[0] = count;
-            unoccupied[1] = 0;
-        }
-        set(const set&) = delete;
-        set(set&& v): hashes{std::move(v.hashes)},values{std::move(v.values)} {
+        unoccupied[0] = count;
+        unoccupied[1] = 0;
+    }
+    set(const set&) = delete;
+    set(set&& v): hashes{std::move(v.hashes)},values{std::move(v.values)} {
+        this->unoccupied[0] = v.unoccupied[0];
+        this->unoccupied[1] = v.unoccupied[1];
+        v.unoccupied[0]=0;
+        v.unoccupied[1]=0;
+    }
+    set& operator=(const set&) = delete;
+    set& operator=(set&& v){
+        if(this != &v){
+            this->hashes = std::move(v.hashes);
+            this->values = std::move(v.values);
             this->unoccupied[0] = v.unoccupied[0];
             this->unoccupied[1] = v.unoccupied[1];
             v.unoccupied[0]=0;
             v.unoccupied[1]=0;
         }
-        set& operator=(const set&) = delete;
-        set& operator=(set&& v){
-            if(this != &v){
-                this->hashes = std::move(v.hashes);
-                this->values = std::move(v.values);
-                this->unoccupied[0] = v.unoccupied[0];
-                this->unoccupied[1] = v.unoccupied[1];
-                v.unoccupied[0]=0;
-                v.unoccupied[1]=0;
-            }
-            return *this;
+        return *this;
+    }
+    inline uint32_t size() const { return (uint32_t) hashes.size(); }
+    inline uint32_t unoccupiedNodes() const { return unoccupied[0] + unoccupied[1]; }
+    inline uint32_t occupiedNodes() const { return size() - unoccupiedNodes(); }
+    inline bool isEmpty() const { return occupiedNodes() == 0; }
+    /// @brief ! suppose size is power of 2
+    inline uint32_t hashMask() const { return size() - 1; }
+    inline uint32_t minimumSize() const { return 64 / sizeof(uint32_t); }
+    inline void possiblyGrow() { if (unoccupiedNodes() < size() / 3) resize(size() * 2); }
+    inline void possiblyShrink() { if (occupiedNodes() < size() / 3) resize(size() / 2); }
+    void appendFrom(const set& src){
+        for (uint32_t offset = 0; offset < src.size(); ++offset)
+        {
+            uint32_t hash = src.hashes[offset];
+            if (hash != 0 && hash != _SkipCode)
+                insert(src.values[offset]);
         }
-        inline uint32_t size() const { return (uint32_t) hashes.size(); }
-        inline uint32_t unoccupiedNodes() const { return unoccupied[0] + unoccupied[1]; }
-        inline uint32_t occupiedNodes() const { return size() - unoccupiedNodes(); }
-        inline bool isEmpty() const { return occupiedNodes() == 0; }
-        /// @brief ! suppose size is power of 2
-        inline uint32_t hashMask() const { return size() - 1; }
-        inline uint32_t minimumSize() const { return 64 / sizeof(uint32_t); }
-        inline void possiblyGrow() { if (unoccupiedNodes() < size() / 3) resize(size() * 2); }
-        inline void possiblyShrink() { if (occupiedNodes() < size() / 3) resize(size() / 2); }
-        void appendFrom(const set& src){
-            for (uint32_t offset = 0; offset < src.size(); ++offset)
-            {
-                uint32_t hash = src.hashes[offset];
-                if (hash != 0 && hash != _SkipCode)
-                    insert(src.values[offset]);
-            }
-        }
-        void resize(uint32_t size){
-            if (size < minimumSize())
-                size = minimumSize();
-            if (size == this->size())
-                return;
-            set temp{size};
-            temp.appendFrom(*this);
-            *this = std::move(temp);
-        }
-        void setCapacity(uint32_t capacity){
-            if (capacity < minimumSize())
-                capacity = minimumSize();
-            hashes.resize(capacity);
-            values.resize(capacity);
-        }
-        void insert(Type value) {
-            uint32_t desiredHash = getHashCode(value);
-            uint32_t offset = (int)(desiredHash & hashMask());
-            uint32_t attempts = 0;
-            while (true)
-            {
-                uint32_t hash = hashes.at(offset);
-                if(hash == desiredHash) {
-                    if(value[offset] == value)
-                        return;
-                }
-                
-                if (hash == 0 || hash == _SkipCode)
-                {
-                    hashes[offset] = desiredHash;
-                    values[offset] = value;
-                    // micro optimized!
-                    unoccupied[hash]--;
-                    possiblyGrow();
+    }
+    void resize(uint32_t size){
+        if (size < minimumSize())
+            size = minimumSize();
+        if (size == this->size())
+            return;
+        set temp{size};
+        temp.appendFrom(*this);
+        *this = std::move(temp);
+    }
+    void setCapacity(uint32_t capacity){
+        if (capacity < minimumSize())
+            capacity = minimumSize();
+        hashes.resize(capacity);
+        values.resize(capacity);
+    }
+    void insert(Type value) {
+        uint32_t desiredHash = getHashCode(value);
+        uint32_t offset = (int)(desiredHash & hashMask());
+        uint32_t attempts = 0;
+        while (true)
+        {
+            uint32_t hash = hashes.at(offset);
+            if(hash == desiredHash) {
+                if(value[offset] == value)
                     return;
-                }
-
-                offset = (offset + 1) & hashMask();
-                ++attempts;
-                if(attempts >= size())
-                    // we should nor reach here, a possiblyGrow() call must prevent it
-                    throw std::runtime_error("add(): something went wrong");
             }
-        }
-        void remove(Type value){
-            int32_t offset = indexOf(value);
-            if(offset < 0)
-                throw std::runtime_error("remove(): value not found");
-            hashes[offset] = _SkipCode;
-            unoccupied[1]++;
-            possiblyShrink();
-        }
-        int indexOf(Type value) const {
-            uint32_t desiredHash = getHashCode(value);
-            uint32_t offset = (desiredHash & hashMask());
-            uint32_t attempts = 0;
-            while (true)
+            
+            if (hash == 0 || hash == _SkipCode)
             {
-                uint32_t hash = hashes[offset];
-                if (hash == 0)
-                    return -1;
-                if (hash == desiredHash)
-                {
-                    if (values[offset] == value)
-                        return offset;
-                }
-                offset = (offset + 1) & hashMask();
-                ++attempts;
-                if (attempts == size())
-                    return -1;
+                hashes[offset] = desiredHash;
+                values[offset] = value;
+                // micro optimized!
+                unoccupied[hash]--;
+                possiblyGrow();
+                return;
             }
+
+            offset = (offset + 1) & hashMask();
+            ++attempts;
+            if(attempts >= size())
+                // we should nor reach here, a possiblyGrow() call must prevent it
+                throw std::runtime_error("add(): something went wrong");
         }
-        bool contains(Type value) const {
-            return indexOf(value) != -1;
+    }
+    void remove(Type value){
+        int32_t offset = indexOf(value);
+        if(offset < 0)
+            throw std::runtime_error("remove(): value not found");
+        hashes[offset] = _SkipCode;
+        unoccupied[1]++;
+        possiblyShrink();
+    }
+    int indexOf(Type value) const {
+        uint32_t desiredHash = getHashCode(value);
+        uint32_t offset = (desiredHash & hashMask());
+        uint32_t attempts = 0;
+        while (true)
+        {
+            uint32_t hash = hashes[offset];
+            if (hash == 0)
+                return -1;
+            if (hash == desiredHash)
+            {
+                if (values[offset] == value)
+                    return offset;
+            }
+            offset = (offset + 1) & hashMask();
+            ++attempts;
+            if (attempts == size())
+                return -1;
         }
-        // the whole popuse is to free space when object is unused but still in memory
-        void reset(){
-            hashes = std::vector<uint32_t,Allocator>();
-            values = std::vector<Type,Allocator>();
-            memset(unoccupied,0,sizeof(unoccupied));
-        }
+    }
+    bool contains(Type value) const {
+        return indexOf(value) != -1;
+    }
+    // the whole popuse is to free space when object is unused but still in memory
+    void reset(){
+        hashes = std::vector<uint32_t,Allocator>();
+        values = std::vector<Type,Allocator>();
+        memset(unoccupied,0,sizeof(unoccupied));
+    }
 };
 
 /**
@@ -180,19 +180,17 @@ protected:
     // std::vector allocates array with default value,
     // so we consider default value as unallocated space
     const Type invalidValue = Type();
-    std::vector<Type,Allocator> values{};
+    align_ptr<Type[]> values;
+    uint32_t _capacity = 0;
     uint32_t unoccupied = 0;
 public:
     vector_set(uint32_t count = 0){
-        if (count < minimumSize())
-            count = minimumSize();
-
         // is power of 2?
         if(0 != (count & (count - 1)))
             throw std::invalid_argument("Init(): count must be power of 2");
-
-        values.resize(count);
-
+        if(count > 0)
+            values = make_align<Type[]>(count);
+        _capacity = count;
         unoccupied = count;
     }
     vector_set(const vector_set&) = delete;
@@ -204,13 +202,15 @@ public:
     vector_set& operator=(vector_set&& v){
         if(this != &v){
             this->values = std::move(v.values);
+            _capacity = v._capacity;
             unoccupied = v.unoccupied;
+            v._capacity = 0;
             v.unoccupied = 0;
         }
         return *this;
     }
     inline uint32_t size() const {
-        return (uint32_t) values.size();
+        return _capacity;
     }
     inline uint32_t unoccupiedNodes() const {
         return unoccupied;
@@ -255,12 +255,6 @@ public:
         vector_set temp(size);
         temp.appendFrom(*this);
         *this = std::move(temp);
-    }
-    
-    void setCapacity(uint32_t capacity){
-        if (capacity < minimumSize())
-            capacity = minimumSize();
-        values.resize(capacity);
     }
     void insert(Type value) {
         if(value == invalidValue)
@@ -309,14 +303,14 @@ public:
     }
     // the whole popuse is to free space when object is unused but still in memory
     void reset(){
-        values = std::vector<Type,Allocator>();
-        unoccupied=0;
+        values.reset();
+        _capacity = 0;
+        unoccupied = 0;
     }
     const_span<Type> raw() const {
-        return {this->values.data(),(uint32_t)this->values.size()};
+        return {this->values.get(),_capacity};
     }
     struct iterator{
-        const Type invalidValue = Type();
         const_span<Type> ptr;
         iterator(const_span<Type> addr):ptr{addr}{
             this->findNextValue();
@@ -324,7 +318,7 @@ public:
         inline void findNextValue(){
             uint32_t i = 0;
             for (; i < ptr.size(); i++)
-                if(ptr[i] != invalidValue)
+                if(ptr[i] != Type())
                     break;
             ptr += i;
         }
@@ -340,11 +334,6 @@ public:
             if(ptr.empty())
                 return false;
             return true;
-        }
-        bool operator == (const iterator&){
-            if(ptr.empty())
-                return true;
-            return false;
         }
     };
     iterator begin(){

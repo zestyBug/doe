@@ -27,42 +27,46 @@ namespace ECS
     protected:
 
         friend class ChunkJobFunction;
-        friend class EntityComponentManager;
+        friend class EntityComponentStore;
         friend class ChunkListMap;
         friend struct ArchetypeData;
         friend class ::Test;
 
+        ArchetypeChunkData chunks;
+        std::vector<Chunk*,allocator<Chunk*>> chunksWithEmptySlots;
+        ChunkListMap freeChunksBySharedComponents;
+
+        // optimal for 16 component per archetype or less
+        // 'Entity' are stored as the first type
+        TypeID*   _types = nullptr;
+        // faster access to TypeID::realIndecies() for iteration
+        uint16_t* _realIndecies = nullptr;
+        /// @brief  components offsets in the chunks
+        uint32_t* _offsets = nullptr;
+        uint16_t* _sizeOfs = nullptr;
+        TypeManager::DefaultFunction *_dDestructor = nullptr;
+        TypeManager::DefaultFunction *_dConstructor = nullptr;
+        uint32_t typeCount;
         // maximum number of entities that can be fit into a single chunk
         uint32_t chunkCapacity = 0;
         uint32_t entityCount = 0;
-        uint32_t instanceSize = 0;
-        uint32_t instanceSizeWithOverhead = 0;
-        ArchetypeChunkData chunks;
-
-        std::vector<Chunk*> chunksWithEmptySlots;
-        ChunkListMap freeChunksBySharedComponents;
-
-        // optimal for 16 component per archtype or less
-        // 'Entity' are stored as the first type
-        TypeID* __types = nullptr;
-        // faster access to TypeID::realIndecies() for iteration
-        uint16_t* __realIndecies = nullptr;
-        /// @brief  components offsets in the chunks
-        uint32_t* __offsets = nullptr;
-        uint16_t* __sizeOfs = nullptr;
-        uint32_t __type_count;
 
         // Order of components in the types array is always:
         // Entity, native component data, shared components, tag components
 
         // any index above/equal this is zero sized
-        // 1 <= firstTagComponent <= firstSharedComponent <= __type_count
+        // 1 <= firstManaged<= firstTagComponent <= firstSharedComponent <= __type_count
 
+        uint32_t firstManagedComponent =0;
         uint32_t firstTagComponent = 0;
         uint32_t firstSharedComponent = 0;
+        uint32_t instanceSize = 0;
+        uint32_t instanceSizeWithOverhead = 0;
 
         /// @brief archetype index in ECS archetype list, used for backward access.
         uint32_t archetypeIndex=0;
+
+        EntityComponentStore *entityComponentStore;
 
         void addToChunkListWithEmptySlots(Chunk* chunk);
         void removeFromChunkListWithEmptySlots(Chunk* chunk);
@@ -73,16 +77,20 @@ namespace ECS
     public:
         /// @brief MAGIC NUMBER, maximum number of type an archetype can manage, any number higher than this may lead to overflow
         static constexpr uint32_t MaximumComponentCount = 0x6f;
-        uint32_t numNativeComponentData() {return firstTagComponent - 1;}
-        uint32_t numTagComponents() {return firstSharedComponent - firstTagComponent;}
-        uint32_t numSharedComponents() {return __type_count - firstSharedComponent;}
-        uint32_t numZeroSizedComponents() {return __type_count - firstTagComponent;}
+        /// @brief MAGIC NUMBER
+        static constexpr uint32_t MaximumSharedComponentCount = 16;
+        inline uint32_t numNonZeroSizedTypes() {return firstTagComponent;}
+        /// @brief number of non zero sized IComponentData components (not Entity)
+        inline uint32_t numNativeComponentData() {return firstManagedComponent - 1;}
+        inline uint32_t numManagedComponents() {return firstTagComponent - firstManagedComponent;}
+        inline uint32_t numTagComponents()  {return firstSharedComponent - firstTagComponent;}
+        inline uint32_t numSharedComponents()  {return typeCount - firstSharedComponent;}
         // this fucntion is a little more expensive than empty
-        uint32_t count() const noexcept { return entityCount; }
-        inline const_span<TypeID>   getType()   const {return {this->__types,  this->__type_count};}
-        inline const_span<uint32_t> getOffset() const {return {this->__offsets,this->__type_count};}
-        inline const_span<uint16_t> getSize()   const {return {this->__sizeOfs,this->__type_count};}
-        inline const_span<uint16_t> getIndex()  const {return {this->__realIndecies,this->__type_count};}
+        inline uint32_t count() const noexcept { return entityCount; }
+        inline const_span<TypeID>   getType()   const {return {this->_types,  this->typeCount};}
+        inline const_span<uint32_t> getOffset() const {return {this->_offsets,this->typeCount};}
+        inline const_span<uint16_t> getSize()   const {return {this->_sizeOfs,this->typeCount};}
+        inline const_span<uint16_t> getIndex()  const {return {this->_realIndecies,this->typeCount};}
         Archetype& operator =(const Archetype&) = delete;
         Archetype(const Archetype&) = delete;
         // data structor stores pointer to itself
@@ -91,6 +99,65 @@ namespace ECS
         ~Archetype() = default;
         void addToChunkList(Chunk* chunk, SharedComponentValues sharedComponentIndices, uint32_t changeVersion);
         void removeFromChunkList(Chunk* chunk);
+
+        /**
+         * ChunkDataUtility
+         */
+    private:
+        /// @brief iterates over types array to find 
+        /// @return -1 if not found
+        int32_t getIndexInTypeArray(TypeID type) const;
+        /// @brief when type arrays are pre-sorted, this can be used to search linearly for a match
+        int32_t getNextIndexInTypeArray(TypeID type, int32_t lastTypeIndexInTypeArray) const;
+        void releaseChunk(Chunk* chunk);
+        void setChunkCount(Chunk* chunk, uint32_t newCount);
+
+        void initializeComponents(Chunk* chunk, uint32_t dstIndex, uint32_t count);
+        /// @brief allocating space into a chunk (updating entity count)
+        /// @param chunk the chunk
+        /// @param count number of entites
+        /// @param outIndex index of the first allocated entity
+        /// @return actual allocated entity count (if more space was not available)
+        uint32_t allocateIntoChunk(Chunk* chunk, uint32_t count, uint32_t& outIndex);
+        /// @brief allocate few new entities in a given chunk
+        /// @param chunk the given chunk must belong to the archetype
+        /// @param entities result allocated entities
+        /// @return actuall allocated entity count if not enough space was available
+        uint32_t allocate(Chunk* chunk, uint32_t count, Entity *entities = nullptr);
+        void deallocate(Chunk *chunk);
+        /// @brief deallocate and remove a batch of entities.
+        /// @note may remove the chunk if chunk empties entirely.
+        void deallocate(EntityBatchInChunk batch);
+        /// @brief remove a batch of entities in a chunk and fill the space if required. No destructor is called.
+        /// @note may remove the chunk if chunk empties entirely.
+        static void remove(EntityBatchInChunk batch);
+        static void copy(Chunk *srcChunk, uint32_t srcIndex, Chunk *dstChunk, uint32_t dstIndex, uint32_t count);
+        static void copyComponents(Chunk *srcChunk, uint32_t srcIndex, Chunk *dstChunk, uint32_t dstIndex, uint32_t count, uint32_t dstGlobalSystemVersion);
+        /// @brief Check if non-zero-sized components are same. Means chunks can be moved between archetypes.
+        static bool areLayoutCompatible(Archetype *a, Archetype *b);
+
+        /// @brief 
+        /// @param srcArchetype 
+        /// @param srcBatch 
+        /// @param dstArchetype 
+        /// @param dstChunk 
+        static void clone(Archetype *srcArchetype, EntityBatchInChunk srcBatch, Archetype *dstArchetype, Chunk *dstChunk);
+        /// @brief move sized components data from a Chunk to another Chunk
+        /// @details operations are: copy: memcpy(dst,src), new added: memset(dst,0), removed: destruct(src)
+        /// @warning assuming srcArchetype.Types[0] == dstArchetype.Types[0] == Entity
+        static void convert(Archetype *srcArchetype, Chunk *srcChunk, uint32_t srcIndex, Archetype *dstArchetype, Chunk *dstChunk, uint32_t dstIndex, uint32_t count);
+        static void cloneChangeVersions(Archetype* srcArchetype, int32_t chunkIndexInSrcArchetype, Archetype* dstArchetype, int32_t chunkIndexInDstArchetype, bool dstValidExistingVersions = false);
+        static void changeArchetypeInPlace(Archetype* srcArchetype, Chunk *srcChunk, Archetype* dstArchetype, SharedComponentValues sharedComponentValues);
+
+        void addEmptyChunk(Chunk *chunk, SharedComponentValues sharedComponentValues);
+
+        void setSharedComponentDataIndex(Entity entity, SharedComponentValues sharedComponentValues, TypeID typeIndex);
+        void setSharedComponentDataIndex(Chunk *chunk, SharedComponentValues sharedComponentValues, TypeID typeIndex);
+        void setSharedComponentDataIndex(EntityBatchInChunk batch, SharedComponentValues sharedComponentValues, TypeID typeIndex);
+        const uint8_t* getComponentDataWithTypeRO(Chunk *chunk, uint32_t baseEntityIndex, TypeID typeIndex) const;
+        const uint8_t* getComponentDataRO(Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray) const;
+        uint8_t* getComponentDataWithTypeRW(Chunk *chunk, uint32_t baseEntityIndex, TypeID typeIndex, Version globalSystemVersion);
+        uint8_t* getComponentDataRW(Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray, Version globalSystemVersion);
     };
     struct ArchetypeData
     {
