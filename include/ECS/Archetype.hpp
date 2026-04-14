@@ -33,7 +33,9 @@ namespace ECS
         friend class ::Test;
 
         ArchetypeChunkData chunks;
+        /// @brief for archetypes with zero shared components
         std::vector<Chunk*,allocator<Chunk*>> chunksWithEmptySlots;
+        /// @brief for archetypes with shared components
         ChunkListMap freeChunksBySharedComponents;
 
         // optimal for 16 component per archetype or less
@@ -73,18 +75,18 @@ namespace ECS
     private:
         void emptySlotTrackingRemoveChunk(Chunk* chunk);
         void emptySlotTrackingAddChunk(Chunk* chunk);
-        Chunk* getExistingChunkWithEmptySlots(SharedComponentValues sharedComponentValues);
+        Chunk* getExistingChunkWithEmptySlots(const SharedComponentValues sharedComponentValues);
     public:
         /// @brief MAGIC NUMBER, maximum number of type an archetype can manage, any number higher than this may lead to overflow
         static constexpr uint32_t MaximumComponentCount = 0x6f;
         /// @brief MAGIC NUMBER
         static constexpr uint32_t MaximumSharedComponentCount = 16;
-        inline uint32_t numNonZeroSizedTypes() {return firstTagComponent;}
+        inline uint32_t numNonZeroSizedTypes() const {return firstTagComponent;}
         /// @brief number of non zero sized IComponentData components (not Entity)
-        inline uint32_t numNativeComponentData() {return firstManagedComponent - 1;}
-        inline uint32_t numManagedComponents() {return firstTagComponent - firstManagedComponent;}
-        inline uint32_t numTagComponents()  {return firstSharedComponent - firstTagComponent;}
-        inline uint32_t numSharedComponents()  {return typeCount - firstSharedComponent;}
+        inline uint32_t numNativeComponentData() const {return firstManagedComponent - 1;}
+        inline uint32_t numManagedComponents()   const {return firstTagComponent - firstManagedComponent;}
+        inline uint32_t numTagComponents()       const {return firstSharedComponent - firstTagComponent;}
+        inline uint32_t numSharedComponents()    const {return typeCount - firstSharedComponent;}
         // this fucntion is a little more expensive than empty
         inline uint32_t count() const noexcept { return entityCount; }
         inline const_span<TypeID>   getType()   const {return {this->_types,  this->typeCount};}
@@ -97,7 +99,7 @@ namespace ECS
         // any move operation requires recalculation
         Archetype(Archetype&&) = delete;
         ~Archetype() = default;
-        void addToChunkList(Chunk* chunk, SharedComponentValues sharedComponentIndices, uint32_t changeVersion);
+        void addToChunkList(Chunk* chunk, const SharedComponentValues sharedComponentIndices, uint32_t changeVersion);
         void removeFromChunkList(Chunk* chunk);
 
         /**
@@ -147,13 +149,13 @@ namespace ECS
         /// @warning assuming srcArchetype.Types[0] == dstArchetype.Types[0] == Entity
         static void convert(Archetype *srcArchetype, Chunk *srcChunk, uint32_t srcIndex, Archetype *dstArchetype, Chunk *dstChunk, uint32_t dstIndex, uint32_t count);
         static void cloneChangeVersions(Archetype* srcArchetype, int32_t chunkIndexInSrcArchetype, Archetype* dstArchetype, int32_t chunkIndexInDstArchetype, bool dstValidExistingVersions = false);
-        static void changeArchetypeInPlace(Archetype* srcArchetype, Chunk *srcChunk, Archetype* dstArchetype, SharedComponentValues sharedComponentValues);
+        static void changeArchetypeInPlace(Archetype* srcArchetype, Chunk *srcChunk, Archetype* dstArchetype, const SharedComponentValues sharedComponentValues);
 
-        void addEmptyChunk(Chunk *chunk, SharedComponentValues sharedComponentValues);
+        void addEmptyChunk(Chunk *chunk, const SharedComponentValues sharedComponentValues);
 
-        void setSharedComponentDataIndex(Entity entity, SharedComponentValues sharedComponentValues, TypeID typeIndex);
-        void setSharedComponentDataIndex(Chunk *chunk, SharedComponentValues sharedComponentValues, TypeID typeIndex);
-        void setSharedComponentDataIndex(EntityBatchInChunk batch, SharedComponentValues sharedComponentValues, TypeID typeIndex);
+        void setSharedComponentDataIndex(Entity entity, const SharedComponentValues sharedComponentValues, TypeID typeIndex);
+        void setSharedComponentDataIndex(Chunk *chunk, const SharedComponentValues sharedComponentValues, TypeID typeIndex);
+        void setSharedComponentDataIndex(EntityBatchInChunk batch, const SharedComponentValues sharedComponentValues, TypeID typeIndex);
         const uint8_t* getComponentDataWithTypeRO(Chunk *chunk, uint32_t baseEntityIndex, TypeID typeIndex) const;
         const uint8_t* getComponentDataRO(Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray) const;
         uint8_t* getComponentDataWithTypeRW(Chunk *chunk, uint32_t baseEntityIndex, TypeID typeIndex, Version globalSystemVersion);

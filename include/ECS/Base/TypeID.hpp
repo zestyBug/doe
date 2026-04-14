@@ -105,13 +105,8 @@ namespace ECS {
         static TypeID registerType(const char* name) {
             // MAGIC NUMBER
             static_assert(sizeof(T) <= 0x800 && alignof(T) <= 0x1000);
-            static_assert(
-                std::is_class_v<T> && std::is_default_constructible_v<T> && (
-                    std::is_same_v<T,Entity> || 
-                    std::is_base_of_v<IComponentData,T> || 
-                    (std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>)
-                )
-            );
+            static_assert(std::is_class_v<T> && std::is_default_constructible_v<T>);
+            static_assert(std::is_same_v<T,Entity> || std::is_base_of_v<IComponentData,T> || (std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>));
             if(unlikely(typeCount >= TypeID::MaximumTypesCount))
                 throw std::runtime_error("TypeID::MaximumTypesCount");
 

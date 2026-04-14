@@ -99,5 +99,10 @@ $(BIN)/test-2: $(OBJ)/$(testDir)/test-2.o $(OBJS)
 	mkdir -p $(@D)
 	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
+$(BIN)/test-3: $(OBJ)/$(testDir)/test-3.o $(OBJS)
+	mkdir -p $(@D)
+	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
+
 test-1: $(BIN)/test-1
 test-2: $(BIN)/test-2
+test-3: $(BIN)/test-3

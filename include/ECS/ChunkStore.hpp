@@ -11,22 +11,23 @@ namespace ECS
 {
     struct ChunkStore {
         // MAGIC NUMBER
-        static constexpr uint32_t MaximumChunkCount = 0x100000;
-        static constexpr uint32_t BitmaskSize = MaximumChunkCount / 32;
+        static constexpr uint32_t MaximumChunkCount = 0x10000;
+        static constexpr uint32_t BitmaskSize = 32;
+        static constexpr uint32_t ChunkBunchCount = MaximumChunkCount / BitmaskSize;
     private:
         std::array<std::atomic<Chunk*>,MaximumChunkCount> chunks;
-        std::array<std::atomic<uint32_t>,BitmaskSize> bitmasks;
+        std::array<std::atomic<uint32_t>,ChunkBunchCount> bitmasks;
     public:
         ChunkStore() = default;
         ~ChunkStore(){
             uint32_t bitmask;
             uint32_t s_index = 0;
             uint32_t b_index = 0;
-            for(;b_index < BitmaskSize;b_index++){
+            for(;b_index < ChunkBunchCount;b_index++){
                 bitmask = bitmasks[b_index];
                 if(bitmask == 0)
                     continue;
-                for(;s_index<32;s_index++)
+                for(;s_index<BitmaskSize;s_index++)
                     if ((bitmask & (1<<s_index))){
                         Chunk* v = chunks[b_index * 32 + s_index];
                         if(v)
@@ -44,22 +45,23 @@ namespace ECS
             uint32_t buffer;
             uint32_t s_index = 0;
             uint32_t b_index = 0;
-            for(;b_index < BitmaskSize;){
+            for(;b_index < ChunkBunchCount;){
                 bitmask = bitmasks[b_index].load(std::memory_order_acquire);
                 if(bitmask == ~(uint32_t)0) {
                     b_index++;
                     continue;
                 }
-                for(;s_index<32;s_index++)
+                for(;s_index<BitmaskSize;s_index++)
                     if ((bitmask & (1<<s_index)) == 0)
                         break;
-                buffer = b_index * 32 + s_index;
+                buffer = bitmask | (1<<s_index);
                 if(bitmasks[b_index].compare_exchange_weak(bitmask, buffer, std::memory_order_acq_rel))
                     break;
             }
-            if(b_index >= BitmaskSize)
+            if(b_index >= ChunkBunchCount)
                 throw std::runtime_error("AllocateChunk(): out of memory");
             Chunk* v = allocator<Chunk>().allocate(1);
+            buffer = b_index * BitmaskSize + s_index;
             chunks[buffer].store(v);
             v->index = ChunkIndex(buffer);
             return ChunkIndex(buffer);
@@ -67,8 +69,8 @@ namespace ECS
         void freeChunk(const ChunkIndex chunk) {
             if(chunk > MaximumChunkCount)
                 return;
-            uint32_t s_index = chunk % 32;
-            uint32_t b_index = chunk / 32;
+            uint32_t s_index = chunk % BitmaskSize;
+            uint32_t b_index = chunk / BitmaskSize;
             uint32_t bitmask = ~(1 << s_index);
             bitmasks[b_index] &= bitmask;
             Chunk* v = chunks[chunk].exchange(nullptr);

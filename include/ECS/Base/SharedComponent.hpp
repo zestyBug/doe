@@ -22,8 +22,8 @@ namespace ECS
     /// @brief A (pointer) container
     struct SharedComponentValues final {
         SharedComponentIndex* firstIndex = nullptr;
-        uint32_t stride = sizeof(SharedComponentIndex);
-        SharedComponentIndex operator[](uint32_t i) const
+        int32_t stride = sizeof(SharedComponentIndex);
+        SharedComponentIndex operator[](int32_t i) const
         {
             return *(SharedComponentIndex*)(((uint8_t*)firstIndex) + i * stride);
         }
@@ -38,6 +38,9 @@ namespace ECS
         {
             for (int i = 0; i < count; ++i)
                 dest[i] = (*this)[startIndex + i];
+        }
+        inline void operator ++ (){
+            firstIndex = (SharedComponentIndex*)((uint8_t*)firstIndex + stride);
         }
     };
 }

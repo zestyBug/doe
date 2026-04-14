@@ -9,7 +9,7 @@ span<Version> ArchetypeChunkData::getChangeVersionArrayForType(uint32_t componen
     uint32_t index = component_index * this->_capacity;
     return span<Version>(_ChangeVersion+index,this->_count);
 }
-Version ArchetypeChunkData::getChangeVersion(uint32_t component_index, uint32_t index)
+Version ArchetypeChunkData::getChangeVersion(uint32_t component_index, uint32_t index) const
 {
     if(index >= this->_count || component_index >= this->componentCount)
         throw std::out_of_range("getChangeVersion()");
@@ -40,16 +40,16 @@ const_span<SharedComponentIndex> ArchetypeChunkData::getSharedComponentValueArra
         throw std::out_of_range("getSharedComponentValueArrayForType()");
     return {_SharedComponentValue + (shared_component_index_in_archtype * _capacity), _capacity};
 }
-SharedComponentIndex ArchetypeChunkData::getSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index) {
+SharedComponentIndex ArchetypeChunkData::getSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index) const {
     if(index >= this->_count || shared_component_index_in_archtype >= this->sharedComponentCount)
         throw std::out_of_range("getSharedComponentValue()");
     return _SharedComponentValue[shared_component_index_in_archtype * _capacity + index];
 }
-SharedComponentValues ArchetypeChunkData::getSharedComponentValues(uint32_t index)
+const SharedComponentValues ArchetypeChunkData::getSharedComponentValues(uint32_t index) const
 {
     if(index >= this->_count)
         throw std::out_of_range("getSharedComponentValues()");
-    return {_SharedComponentValue + index, _capacity * (uint32_t)sizeof(SharedComponentIndex)};
+    return {_SharedComponentValue + index, (int32_t)_capacity * (int32_t)sizeof(SharedComponentIndex)};
 }
 void ArchetypeChunkData::setSharedComponentValue(uint32_t shared_component_index_in_archtype, uint32_t index, SharedComponentIndex value)
 {
@@ -63,7 +63,7 @@ void ArchetypeChunkData::popBack() {
         throw std::out_of_range("popBack(): empty array");
     this->_count--;
 }
-void ArchetypeChunkData::add(Chunk* chunk, SharedComponentValues sharedComponentIndices, Version version) {
+void ArchetypeChunkData::add(Chunk* chunk, const SharedComponentValues sharedComponentIndices, Version version) {
     if(this->sharedComponentCount)
         if(sharedComponentIndices.firstIndex == nullptr)
             throw std::invalid_argument("add(): ");

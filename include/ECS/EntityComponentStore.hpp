@@ -1,14 +1,13 @@
 #if !defined(EntityComponentManager_HPP)
 #define EntityComponentManager_HPP
 
-#include "Base/Chunk.hpp"
-#include "Base/Entity.hpp"
 #include <vector>
 #include <array>
 #include <memory>
-#include "Archetype.hpp"
-#include "cutil/bitset.hpp"
 #include "cutil/span.hpp"
+#include "Base/Chunk.hpp"
+#include "Base/Entity.hpp"
+#include "Archetype.hpp"
 #include "ArchetypeListMap.hpp"
 #include "EntityStore.hpp"
 #include "ChunkStore.hpp"
@@ -26,14 +25,14 @@ namespace ECS
     private:
         // array of entities value,
         // contains index of it archetype and it index in that archetype
-        EntityStore entities{};
-        ChunkStore chunks{};
-        SharedComponentStore sharedComponents;
-        ArchetypeListMap archetypeTypeMap{};
+        ArchetypeListMap typeLookup;
         std::vector<align_ptr<Archetype>,allocator<align_ptr<Archetype>>> archetypes;
+        EntityStore entityStore{};
+        SharedComponentStore sharedComponents;
         align_ptr<Version[]> componentTypeOrderVersion;
         // global version buffer, used for any entity create/modify command
         Version globalVersion = 1;
+        ChunkStore chunks{};
 
 
         //int m_UnmanagedSharedComponentCount;
@@ -61,7 +60,7 @@ namespace ECS
         /// @param types sorted array of types
         /// @return nullptr or a pointer to the archtype
         inline Archetype* getExistingArchetype(const_span<TypeID> types){
-            return this->archetypeTypeMap.tryGet(types);
+            return this->typeLookup.tryGet(types);
         }
     public:
         /// @param types sorted array of types
@@ -76,11 +75,11 @@ namespace ECS
     private:
         Chunk *allocateChunk();
         inline void freeChunk(Chunk *chunk) {chunks.freeChunk(chunk->index);}
-        Chunk* getCleanChunk(Archetype* archetype, SharedComponentValues sharedComponentValues);
-        Chunk* getChunkWithEmptySlots(Archetype* archetype, SharedComponentValues sharedComponents);
+        Chunk* getCleanChunk(Archetype* archetype, const SharedComponentValues sharedComponentValues);
+        Chunk* getChunkWithEmptySlots(Archetype* archetype, const SharedComponentValues sharedComponents);
         void setSharedComponentDataIndexForChunk(Chunk* chunk, Archetype* chunkArchetype, TypeID type, SharedComponentIndex value);
         inline Chunk* getChunk(Entity entity){
-            return entities.getEntityInChunk(entity).chunk;
+            return entityStore.getEntityInChunk(entity).chunk;
         }
         EntityBatchInChunk getFirstEntityBatchInChunk(const_span<Entity> entities);
         /// @brief Create a SharedComponent list based on the provided chunk, after changing the value of a shared component.
@@ -94,16 +93,22 @@ namespace ECS
         // Entity
     public:
         uint32_t countEntities();
-        void createEntities(Archetype* archetype, span<Entity> entities, SharedComponentValues values = SharedComponentValues());
+        void createEntities(Archetype* archetype, span<Entity> entities, const SharedComponentValues values = SharedComponentValues());
         bool exists(Entity entity);
         bool hasComponent(Entity entity, TypeID type);
         const EntityName* getName(Entity entity);
         void setName(Entity entity, const EntityName* name);
     private:
         void allocateEntities(Archetype* arch, Chunk *chunk, uint32_t baseIndex, uint count, Entity* outputEntities = nullptr);
+        /// @brief A wrapper to deallocate components, entites and fill the space
+        /// @details EntityComponentStore::deallocateManagedComponents, EntityStore::deallocateEntities, Archetype::copy
         void deallocateDataEntitiesInChunk(EntityBatchInChunk batch);
+        /// @brief calling destructor for managed non-zero-sized components in a batch
         void deallocateManagedComponents(EntityBatchInChunk batch);
+        /// @brief destroying a batch of entities.
+        /// @details a wrapper to call arch->deallocate
         void destroyBatch(EntityBatchInChunk batch);
+        /// @brief Free all entities in a chunk from EntityStore
         void freeEntities(Chunk* chunk);
     public:
         void validateEntities(span<Entity> entities);
@@ -112,10 +117,10 @@ namespace ECS
     private:
         void addExistingEntitiesInChunk(Chunk* chunk);
         inline void setEntityInChunk(Entity entity, EntityInChunk entityInChunk){
-            entities.setEntityInChunk(entity, entityInChunk);
+            entityStore.setEntityInChunk(entity, entityInChunk);
         }
         inline EntityInChunk getEntityInChunk(Entity entity) {
-            return entities.getEntityInChunk(entity);
+            return entityStore.getEntityInChunk(entity);
         }
 
         // Component
@@ -125,8 +130,12 @@ namespace ECS
         void* getComponentDataWithTypeRW(Entity entity, TypeID typeIndex);
     private:
         void moveAllSharedComponents(EntityComponentStore* srcEntityComponentStore);
-        void incrementComponentOrderVersion(Archetype* archetype, SharedComponentValues sharedComponentValues);
+        void incrementComponentOrderVersion(Archetype* archetype, const SharedComponentValues sharedComponentValues);
         void incrementComponentTypeOrderVersion(const Archetype* archetype);
+        void buildSharedComponentIndicesWithAddedComponents(Chunk* srcChunk, const Archetype* dstArchetype, SharedComponentIndex* outSharedComponentValues);
+        void buildSharedComponentIndicesWithAddedComponent (Chunk* srcChunk, const Archetype* dstArchetype, uint32_t newTypeIndex, SharedComponentIndex value, SharedComponentIndex* outSharedComponentValues);
+        void buildSharedComponentIndicesWithRemovedComponents(Chunk* srcChunk, const Archetype* dstArchetype, SharedComponentIndex* outSharedComponentValues);
+        void buildSharedComponentIndicesWithRemovedComponent (Chunk* srcChunk, const Archetype* dstArchetype, uint32_t oldTypeIndex, SharedComponentIndex* outSharedComponentValues);
 
         // Move
     private:
@@ -137,7 +146,7 @@ namespace ECS
         /// @param types sorted
         Archetype* getArchetypeWithRemovedComponents(Archetype* archetype, const_span<TypeID> types);
     private:
-        void moveAndSetChangeVersion(EntityBatchInChunk batch, Archetype *archetype, SharedComponentValues sharedComponentValues, TypeID type);
+        void moveAndSetChangeVersion(EntityBatchInChunk batch, Archetype *archetype, const SharedComponentValues sharedComponentValues, TypeID type);
         /// @brief move subset of chunk data into another chunk.
         /// @remarks chunks can be of same archetype (but differ by shared component values).
         /// @details if the chunk be smaller than available space, it only copies partially from the end of entity batch.
@@ -149,28 +158,28 @@ namespace ECS
         /// @param archetype 
         /// @param sharedComponentValues 
         /// @return 
-        void move(Entity entity, Archetype* archetype, SharedComponentValues sharedComponentValues);
+        void move(Entity entity, Archetype* archetype, const SharedComponentValues sharedComponentValues);
         /// @brief moves a entire chunk into another archetype/shared value
         /// @details calls move(EntityBatchInChunk , Archetype*, SharedComponentValues);
         /// @param chunk source chunk
         /// @param archetype destination archetype
         /// @param sharedComponentValues a pointer to the shared component values
         /// @return 
-        void move(Chunk *chunk, Archetype* archetype, SharedComponentValues sharedComponentValues);
+        void move(Chunk *chunk, Archetype* archetype, const SharedComponentValues sharedComponentValues);
         /// @brief moves a batch of entities into another archetype/shared value
         /// @details calls move(EntityBatchInChunk, Chunk*)
         /// @param batch 
         /// @param archetype 
         /// @param sharedComponentValues 
         /// @return 
-        void move(EntityBatchInChunk batch, Archetype* archetype, SharedComponentValues sharedComponentValues);
+        void move(EntityBatchInChunk batch, Archetype* archetype, const SharedComponentValues sharedComponentValues);
     public:
         bool addComponent(Entity entity, TypeID type);
         /// @param types sorted
-        void addComponents(Entity entity, const_span<TypeID> types);
+        bool addComponents(Entity entity, const_span<TypeID> types);
         bool removeComponent(Entity entity, TypeID type);
         /// @param types sorted
-        void removeComponents(Entity entity, const_span<TypeID> types);
+        bool removeComponents(Entity entity, const_span<TypeID> types);
         /// @param value shared component index, ignored if type is not a shared component.
         bool addComponent(EntityBatchInChunk entityBatchInChunk, TypeID type, SharedComponentIndex value);
         bool removeComponent(EntityBatchInChunk entityBatchInChunk, TypeID type);
@@ -179,12 +188,12 @@ namespace ECS
         /// @param types sorted
         bool removeComponents(EntityBatchInChunk entityBatchInChunk, const_span<TypeID> types);
 
-
     private:
         inline void incrementGlobalSystemVersion() {globalVersion.updateVersion();}
     public:
         inline Version getGlobalSystemVersion() const {return globalVersion;}
-        EntityComponentStore();
+        static align_ptr<EntityComponentStore> create();
+        ~EntityComponentStore();
     };
 } // namespace ECS
 

@@ -33,7 +33,7 @@ namespace ECS
             uint32_t* hashes_index;
             alignas(64) uint8_t buffer[];
         };
-        align_ptr<align_ptr<SharedComponentChunk>[]> dataChunk;
+        align_ptr<SharedComponentChunk> dataChunk[TypeID::MaximumTypesCount];
         uint32_t sharedComponentVersion = 0;
 
         TypeID getComponentType(SharedComponentIndex value) {
@@ -74,6 +74,11 @@ namespace ECS
                 ptr->infos[0].referenceCount = 1;
                 ptr->infos[0].version = 0;
                 ptr->infos[0].hash = hashCode;
+                {
+                    uint32_t offset = hashCode & (buffer1-1);
+                    ptr->hashes[offset]       = hashCode;
+                    ptr->hashes_index[offset] = 0;
+                }
                 dataChunk[typeIndex].reset(ptr);
             }
         }
@@ -142,8 +147,7 @@ namespace ECS
         }
     public:
         SharedComponentStore() {
-            dataChunk = make_align<align_ptr<SharedComponentChunk>[]>(TypeID::MaximumTypesCount);
-            memset(dataChunk.get(),0,TypeID::MaximumTypesCount*sizeof(align_ptr<SharedComponentChunk>));
+            memset(dataChunk,0,TypeID::MaximumTypesCount*sizeof(align_ptr<SharedComponentChunk>));
         }
         ~SharedComponentStore() {
         #if VERBOSE
@@ -174,7 +178,6 @@ namespace ECS
                     dataChunk[i].reset();
                 }
             }
-            dataChunk.reset();
         }
         void *getPointer(SharedComponentIndex index) noexcept {
             if(index.isNull())
@@ -279,15 +282,22 @@ namespace ECS
             elementIndex |= typeIndex << SharedComponentIndex::TypeIndexBitOffset;
             return SharedComponentIndex{elementIndex};
         }
+        SharedComponentIndex getDefaultValue(TypeID type){
+            if(!type.isSharedComponent() || type.isZeroSized())
+                throw std::bad_typeid();
+            const uint32_t typeIndex = type.index();
+            initiate(typeIndex);
+            return typeIndex << SharedComponentIndex::TypeIndexBitOffset;
+        }
         void addReference(SharedComponentIndex index, uint32_t num = 1) {
             const uint32_t typeIndex = getTypeIndex(index);
             const uint32_t elementIndex = getElementIndex(index);
             SharedComponentChunk* ptr = dataChunk[typeIndex].get();
             if(!ptr || elementIndex >= ptr->count)
                 throw std::invalid_argument("refIncrease(): invalid shared component index");
-            SharedComponentInfo *info = ptr->infos + elementIndex;
-            if(num == 0)
+            if(num == 0 || elementIndex == 0)
                 return;
+            SharedComponentInfo *info = ptr->infos + elementIndex;
             if(info->referenceCount == 0)
                 throw std::invalid_argument("refIncrease(): invalid shared component index");
             // TODO overflow check.
@@ -299,10 +309,10 @@ namespace ECS
             SharedComponentChunk* ptr = dataChunk[typeIndex].get();
             if(!ptr || elementIndex >= ptr->count)
                 throw std::invalid_argument("refDecrease(): invalid shared component index");
+            if(elementIndex == 0 || num == 0)
+                return;
             const uint32_t typeSize = TypeManager::GetTypeInfoPointer()[typeIndex].TypeSize;
             SharedComponentInfo *info = ptr->infos + elementIndex;
-            if(num == 0)
-                return;
             if(info->referenceCount == 0 || info->referenceCount < num)
                 throw std::runtime_error("refDecrease(): negative reference count");
             info->referenceCount -= num;

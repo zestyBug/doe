@@ -72,7 +72,7 @@ namespace ECS
         }
         inline const_span<Chunk*> getChunkIndexArray() { return {_Chunk, this->_count}; }
         span<Version> getChangeVersionArrayForType(uint32_t component_index_in_archetype);
-        Version getChangeVersion(uint32_t component_index_in_archetype, uint32_t index);
+        Version getChangeVersion(uint32_t component_index_in_archetype, uint32_t index) const;
         // set version of all components in a chunk
         void setAllChangeVersion(uint32_t index, Version version);
         // set Entity version of a given chunk
@@ -80,15 +80,15 @@ namespace ECS
         // set a component version of a given chunk
         void setChangeVersion(uint32_t component_index_in_archetype, uint32_t index, Version version);
         const_span<SharedComponentIndex> getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archetype);
-        void setSharedComponentValue(uint32_t shared_component_index_in_archetype, uint32_t index, SharedComponentIndex value);
-        SharedComponentIndex getSharedComponentValue(uint32_t shared_component_index_in_archetype, uint32_t index);
-        SharedComponentValues getSharedComponentValues(uint32_t index);
+        void setSharedComponentValue(uint32_t shared_component_index_in_archetype, uint32_t index, const SharedComponentIndex value);
+        SharedComponentIndex getSharedComponentValue(uint32_t shared_component_index_in_archetype, uint32_t index) const;
+        const SharedComponentValues getSharedComponentValues(uint32_t index) const;
     private:
         void popBack();
         void removeAtSwapBack(uint32_t index);
         /// @brief add new chunk at end of list
         /// @param version the version to be set
-        void add(Chunk* chunk, SharedComponentValues sharedComponentIndices = {}, Version version = 0);
+        void add(Chunk* chunk, const SharedComponentValues sharedComponentIndices = {}, Version version = 0);
     protected:
         // dont call it on your own!
         void grow(uint32_t new_capacity);

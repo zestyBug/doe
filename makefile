@@ -24,6 +24,8 @@ test-1:
 	$(MAKE) -f ./test-v2/makefile.mk test-1
 test-2:
 	$(MAKE) -f ./test-v2/makefile.mk test-2
+test-3:
+	$(MAKE) -f ./test-v2/makefile.mk test-3
 
 clean:
 	@echo "Cleaning up..."
