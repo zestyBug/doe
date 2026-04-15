@@ -1,6 +1,6 @@
 #include "ECS/EntityComponentStore.hpp"
 #include "cutil/mini_test.hpp"
-#define COUNT 100
+
 static int counter1 = 0;
 static int counter2 = 0;
 struct test_1 : ECS::ISharedComponentData, ECS::IManagedComponentData
@@ -45,10 +45,13 @@ void Test::Test1() {
     Archetype *arch = store->getOrCreateArchetype(componentTypes<Entity,test_2,test_1>());
     Entity entities[10];
     SharedComponentIndex index = store->sharedComponents.getDefaultValue(getTypeID<test_1>());
-    store->createEntities(arch,{entities,10},{&index,0});
+    store->createEntities(arch,{entities,10},{&index});
     store->removeComponent(entities[1], getTypeID<test_2>());
+    store->removeComponent(entities[1], getTypeID<test_2>());
+    store->addComponents(entities[1], componentTypes<test_2,test_1>());
     store->removeComponent(entities[1], getTypeID<test_1>());
     store->removeComponent(entities[2], getTypeID<test_1>());
+    store->destroyEntities({entities,10});
 }
 
 int main(){

@@ -99,6 +99,12 @@ namespace ECS
         const EntityName* getName(Entity entity);
         void setName(Entity entity, const EntityName* name);
     private:
+        /// @brief Allocating some Entity's in entityStore
+        /// @param arch 
+        /// @param chunk 
+        /// @param baseIndex 
+        /// @param count 
+        /// @param outputEntities 
         void allocateEntities(Archetype* arch, Chunk *chunk, uint32_t baseIndex, uint count, Entity* outputEntities = nullptr);
         /// @brief A wrapper to deallocate components, entites and fill the space
         /// @details EntityComponentStore::deallocateManagedComponents, EntityStore::deallocateEntities, Archetype::copy
@@ -112,6 +118,7 @@ namespace ECS
         void freeEntities(Chunk* chunk);
     public:
         void validateEntities(span<Entity> entities);
+        /// @brief A wrapper to call destroyBatch
         void destroyEntities(const_span<Entity> entities);
         void freeAllEntities(bool resetVersion);
     private:

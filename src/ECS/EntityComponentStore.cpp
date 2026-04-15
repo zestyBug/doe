@@ -85,7 +85,8 @@ Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
         offsets[6] = offsets[5] + alignTo64(sizeof(TypeManager::DefaultFunction),types.size());
         arch.reset((Archetype*)allocator().allocate(offsets[6]));
         new (&arch->chunks) ArchetypeChunkData(types.size(),numSharedComponents);
-        new (&arch->chunksWithEmptySlots) std::vector<Chunk*,allocator<Chunk*>>(16);
+        new (&arch->chunksWithEmptySlots) std::vector<Chunk*,allocator<Chunk*>>();
+        arch->chunksWithEmptySlots.reserve(16);
         new (&arch->freeChunksBySharedComponents) ChunkListMap();
         arch->freeChunksBySharedComponents.init(arch.get());
         arch->_types        = (TypeID*)  ((uint8_t*)(arch.get()) + offsets[0]);
@@ -299,7 +300,7 @@ EntityBatchInChunk EntityComponentStore::getFirstEntityBatchInChunk(const_span<E
             break;
     }
 
-    if((ret.startIndex + ret.count) >= ret.chunk->entityCount)
+    if(ret.chunk != nullptr && (ret.startIndex + ret.count) > ret.chunk->entityCount)
         throw std::runtime_error("getFirstEntityBatchInChunk():");
 
     return ret;
@@ -331,6 +332,8 @@ void EntityComponentStore::allocateEntities(Archetype* arch, Chunk *chunk, uint3
 }
 void EntityComponentStore::deallocateDataEntitiesInChunk(EntityBatchInChunk batch)
 {
+    if(batch.chunk->entityCount < (batch.startIndex + batch.count))
+        throw std::out_of_range("deallocateDataEntitiesInChunk(): invalid batch");
     deallocateManagedComponents(batch);
 
     Entity* entities = (Entity*)batch.chunk->buffer + batch.startIndex;
@@ -426,7 +429,7 @@ bool EntityComponentStore::getArchetypeChunkFilterWithChangedSharedComponent(Chu
 
 
 bool EntityComponentStore::exists(Entity entity){
-    if(entity.isValid())
+    if(!entity.isValid())
         return false;
     Chunk* chunk = this->entityStore.getChunkIfExists(entity);
     if(chunk == nullptr)
@@ -604,22 +607,22 @@ void EntityComponentStore::move(EntityBatchInChunk batch, Archetype* archetype, 
 bool EntityComponentStore::addComponent(Entity entity, TypeID type){
     EntityInChunk eich = this->getEntityInChunk(entity);
     return this->addComponent(
-        EntityBatchInChunk{.chunk = eich.chunk, .startIndex = eich.indexInChunk, .count = 0 },
-        type, sharedComponents.getDefaultValue(type));
+        EntityBatchInChunk{.chunk = eich.chunk, .startIndex = eich.indexInChunk, .count = 1 },
+        type, type.isSharedComponent() ? sharedComponents.getDefaultValue(type) : SharedComponentIndex());
 }
 /// @param types sorted
 bool EntityComponentStore::addComponents(Entity entity, const_span<TypeID> types){
     EntityInChunk eich = this->getEntityInChunk(entity);
-    return this->addComponents(EntityBatchInChunk{.chunk = eich.chunk, .startIndex = eich.indexInChunk, .count = 0 },types);
+    return this->addComponents(EntityBatchInChunk{.chunk = eich.chunk, .startIndex = eich.indexInChunk, .count = 1 },types);
 }
 bool EntityComponentStore::removeComponent(Entity entity, TypeID type){
     EntityInChunk eich = this->getEntityInChunk(entity);
-    return this->removeComponent(EntityBatchInChunk{.chunk = eich.chunk, .startIndex = eich.indexInChunk, .count = 0 },type);
+    return this->removeComponent(EntityBatchInChunk{.chunk = eich.chunk, .startIndex = eich.indexInChunk, .count = 1 },type);
 }
 /// @param types sorted
 bool EntityComponentStore::removeComponents(Entity entity, const_span<TypeID> types){
     EntityInChunk eich = this->getEntityInChunk(entity);
-    return this->removeComponents(EntityBatchInChunk{.chunk = eich.chunk, .startIndex = eich.indexInChunk, .count = 0 },types);
+    return this->removeComponents(EntityBatchInChunk{.chunk = eich.chunk, .startIndex = eich.indexInChunk, .count = 1 },types);
 }
 /// @param value shared component index, ignored if type is not a shared component.
 bool EntityComponentStore::addComponent(EntityBatchInChunk entityBatchInChunk, TypeID type, SharedComponentIndex value){

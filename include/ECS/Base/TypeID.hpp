@@ -19,7 +19,7 @@ namespace ECS {
         bool operator == (const TypeID& v) const { return this->value == v.value; }
         bool operator != (const TypeID& v) const { return this->value != v.value; }
         bool operator <  (const TypeID& v) const { return this->value <  v.value; }
-        bool operator >  (const TypeID& v) const { return this->value <  v.value; }
+        bool operator >  (const TypeID& v) const { return this->value >  v.value; }
         inline uint32_t index() const;
         inline uint32_t flags() const;
         inline bool isSharedComponent() const;

@@ -45,14 +45,14 @@ namespace ECS
             uint32_t result;
             if (sharedComponents.stride == sizeof(SharedComponentIndex))
             {
-                result = HashHelper::FNV1A32(sharedComponents.firstIndex, numSharedComponents * sizeof(void*));
+                result = HashHelper::FNV1A32(sharedComponents.firstIndex, numSharedComponents * sizeof(SharedComponentIndex));
             }
             else
             {
                 SharedComponentIndex indexArray[numSharedComponents];
                 for (uint32_t i = 0; i < numSharedComponents; ++i)
                     indexArray[i] = sharedComponents[i];
-                result = HashHelper::FNV1A32(indexArray, numSharedComponents * sizeof(uint32_t));
+                result = HashHelper::FNV1A32(indexArray, numSharedComponents * sizeof(SharedComponentIndex));
             }
             if (result == 0 || result == _SkipCode)
                 result = _AValidHashCode;

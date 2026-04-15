@@ -2,7 +2,6 @@
 #define EntityStore_HPP
 
 #include <vector>
-#include <array>
 #include <memory>
 #include <atomic>
 #include "Base/Entity.hpp"
@@ -155,7 +154,7 @@ namespace ECS
                                     uint32_t index = baseEntityIndex + indexInBlock;
                                     if(index > Entity::Maximum)
                                         throw std::runtime_error("allocateEntities(): out of entity index");
-                                    entities[0] = Entity{(int32_t)index, versions[indexInBlock]++};
+                                    entities[0] = Entity{(int32_t)index, ++versions[indexInBlock]};
                                     if (chunk != nullptr)
                                         entityInChunk[indexInBlock] = EntityInChunk{chunk,entityInChunkIndex};
                                     else
