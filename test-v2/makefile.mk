@@ -41,16 +41,13 @@ $(OBJ)/$(srcDir)/ECS/EntityComponentStore.o: $(srcDir)/ECS/EntityComponentStore.
 $(OBJ)/$(srcDir)/ECS/TypeID.o: $(srcDir)/ECS/TypeID.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
+$(OBJ)/$(srcDir)/ECS/ThreadPool.o: $(srcDir)/ECS/ThreadPool.cpp
+	mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 $(OBJ)/$(cutilDir)/HashHelper.o: $(cutilDir)/HashHelper.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(testDir)/test-1.o: $(testDir)/test-1.cpp
-	mkdir -p $(@D)
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
-$(OBJ)/$(testDir)/test-2.o: $(testDir)/test-2.cpp
-	mkdir -p $(@D)
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
-$(OBJ)/$(testDir)/test-3.o: $(testDir)/test-3.cpp
+$(OBJ)/$(testDir)/test-%.o: $(testDir)/test-%.cpp
 	mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
@@ -60,23 +57,18 @@ OBJS= \
 	$(OBJ)/$(srcDir)/ECS/ChunkListMap.o \
 	$(OBJ)/$(srcDir)/ECS/EntityComponentStore.o \
 	$(OBJ)/$(srcDir)/ECS/TypeID.o \
+	$(OBJ)/$(srcDir)/ECS/ThreadPool.o \
 	$(OBJ)/$(cutilDir)/HashHelper.o
 
 DEPS = $(OBJS:.o=.d)
 -include $(DEPS)
 
-$(BIN)/test-1: $(OBJ)/$(testDir)/test-1.o $(OBJS)
+$(BIN)/test-%: $(OBJ)/$(testDir)/test-%.o $(OBJS)
 	mkdir -p $(@D)
 	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
-$(BIN)/test-2: $(OBJ)/$(testDir)/test-2.o $(OBJS)
-	mkdir -p $(@D)
-	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
-
-$(BIN)/test-3: $(OBJ)/$(testDir)/test-3.o $(OBJS)
-	mkdir -p $(@D)
-	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
 test-1: $(BIN)/test-1
 test-2: $(BIN)/test-2
 test-3: $(BIN)/test-3
+test-4: $(BIN)/test-4

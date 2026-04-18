@@ -26,9 +26,12 @@
 #define DOE_WIN32 0
 #define DOE_UNIX 1
 #endif
-
+#ifndef likely
 #define likely(x)       __builtin_expect(!!(x), 1)
+#endif
+#ifndef unlikely
 #define unlikely(x)     __builtin_expect(!!(x), 0)
+#endif
 
 
 /// @brief alignes array size to 64 byte for cache, perfermance and resolving false sharing issues
@@ -135,6 +138,7 @@ private:
 
 /// @brief smart pointer to hold ownership of an aligned pointer.
 /// @tparam Type required to know the size, and destructor function
+/// @brief better be safe than sorry
 template <typename Type>
 class align_ptr
 {
@@ -209,6 +213,7 @@ class align_ptr
         return get();
     }
 
+    /// @brief Return the stored pointer as a refrence. safe but slow
     Type& operator*()
     {
         if(unlikely(_M_t == nullptr))
@@ -216,6 +221,7 @@ class align_ptr
         return *_M_t;
     }
     
+    /// @brief Return the stored pointer as a refrence. safe but slow
     const Type& operator*() const
     {
         if(unlikely(_M_t == nullptr))
@@ -223,17 +229,17 @@ class align_ptr
         return *_M_t;
     }
 
-    /// @brief Return the stored pointer. safe but slow
+    /// @brief Return the stored pointer.
     inline Type* get() {
         return _M_t;
     }
 
-    /// @brief Return the stored pointer. safe but slow
+    /// @brief Return the stored pointer.
     const Type* get() const {
         return _M_t;
     }
 
-    /// Return @c true if the stored pointer is not null.
+    /// @returns true if the stored pointer is not null.
     explicit inline operator bool() const noexcept { return get() == nullptr ? false : true; }
 
     // Modifiers.

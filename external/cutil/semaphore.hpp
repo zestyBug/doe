@@ -4,20 +4,27 @@
 #include <mutex>
 #include <condition_variable>
 
+/// @brief A mutex for recource
 class Semaphore {
     std::mutex mutex_;
     std::condition_variable condition_;
-    volatile unsigned long count_ = 0; // Initialized as locked.
+    volatile uint32_t count_ = 0; // Initialized as locked.
 
 public:
     Semaphore(unsigned long initial_value = 0) : count_(initial_value) {}
-    // signal
+    /// @brief signal semaphore is available.
     void release() {
         std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
         ++this->count_;
         this->condition_.notify_one();
     }
-    // wait
+    /// @brief use it with caution
+    void release(uint32_t num) {
+        std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
+        this->count_ += num;
+        this->condition_.notify_all();
+    }
+    /// @brief wait semaphore the resource to be available
     void acquire() {
         std::unique_lock<decltype(this->mutex_)> lock(this->mutex_);
         while (count_ == 0) // Handle spurious wake-ups.
@@ -34,7 +41,7 @@ public:
         return false;
     }
     void setValue(const unsigned long value){
-            std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
+        std::lock_guard<decltype(this->mutex_)> lock(this->mutex_);
         this->count_ = value;
     }
 };
