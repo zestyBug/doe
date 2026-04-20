@@ -44,6 +44,9 @@ $(OBJ)/$(srcDir)/ECS/TypeID.o: $(srcDir)/ECS/TypeID.cpp
 $(OBJ)/$(srcDir)/ECS/ThreadPool.o: $(srcDir)/ECS/ThreadPool.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
+$(OBJ)/$(srcDir)/ECS/ChunkListChanges.o: $(srcDir)/ECS/ChunkListChanges.cpp
+	mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 $(OBJ)/$(cutilDir)/HashHelper.o: $(cutilDir)/HashHelper.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
@@ -58,6 +61,7 @@ OBJS= \
 	$(OBJ)/$(srcDir)/ECS/EntityComponentStore.o \
 	$(OBJ)/$(srcDir)/ECS/TypeID.o \
 	$(OBJ)/$(srcDir)/ECS/ThreadPool.o \
+	$(OBJ)/$(srcDir)/ECS/ChunkListChanges.o \
 	$(OBJ)/$(cutilDir)/HashHelper.o
 
 DEPS = $(OBJS:.o=.d)

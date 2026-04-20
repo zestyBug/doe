@@ -43,6 +43,7 @@ namespace ECS
         void signalStart();
         void signalStop();
         bool isFinished();
+        uint32_t threadCount();
         /// @brief 
         /// @param context  
         /// @param func function returns zero if need to be executed again

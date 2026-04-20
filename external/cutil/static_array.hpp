@@ -22,7 +22,7 @@ private:
     container _data{};
     uint32_t count = 0;
 public:
-    static_assert(S > 0);
+    static_assert((sizeof(T)*S) > 0);
     static_array(){}
     static_array(const static_array& value){
         for (size_t i = 0; i < value.count; i++)

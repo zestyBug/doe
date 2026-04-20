@@ -67,7 +67,7 @@ void ArchetypeChunkData::add(Chunk* chunk, const SharedComponentValues sharedCom
     if(this->sharedComponentCount)
         if(sharedComponentIndices.firstIndex == nullptr)
             throw std::invalid_argument("add(): ");
-    if(this->_count >= this->_capacity)
+    if(unlikely(full()))
         this->grow(this->_capacity < 1 ? 4 : this->_capacity*2);
     uint32_t index = this->_count++;
     _Chunk[index] = chunk;
@@ -99,6 +99,7 @@ void ArchetypeChunkData::grow(uint32_t new_capacity) {
     Version* nextChangeVersion;
     SharedComponentIndex* nextSharedComponentValue;
     EnabledBitset* nextComponentEnabledBit;
+    void *nextBuckEnd;
     {
         uint8_t* nextBufferPtr   = new_data.get();
         nextChunk                = (Chunk**)nextBufferPtr;
@@ -108,6 +109,8 @@ void ArchetypeChunkData::grow(uint32_t new_capacity) {
         nextSharedComponentValue = (SharedComponentIndex*)nextBufferPtr;
         nextBufferPtr += nextSharedComponentValuesSize;
         nextComponentEnabledBit  = (EnabledBitset*)nextBufferPtr;
+        nextBufferPtr += nextComponentEnabledBitsSize;
+        nextBuckEnd = nextBufferPtr;
     }
 
     if(this->buck) {
@@ -136,6 +139,7 @@ void ArchetypeChunkData::grow(uint32_t new_capacity) {
     this->_ChangeVersion = nextChangeVersion;
     this->_SharedComponentValue = nextSharedComponentValue;
     this->_ComponentEnabledBit = nextComponentEnabledBit;
+    this->buckEnd = nextBuckEnd;
     this->_capacity = new_capacity;
 }
 void ArchetypeChunkData::removeAtSwapBack(uint32_t index) {

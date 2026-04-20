@@ -32,8 +32,20 @@ namespace ECS
         align_ptr<Version[]> componentTypeOrderVersion;
         // global version buffer, used for any entity create/modify command
         Version globalVersion = 1;
+        ChunkListChanges chunkListChangesTracker;
         ChunkStore chunks{};
 
+        void cleanChangeList()
+        {
+            Archetype *archetype = chunkListChangesTracker.head;
+            while(archetype != nullptr)
+            {
+                Archetype *nextArchetype = archetype->nextChangedArchetype;
+                archetype->nextChangedArchetype = nullptr;
+                archetype = nextArchetype;
+            }
+            chunkListChangesTracker.head = nullptr;
+        }
 
         //int m_UnmanagedSharedComponentCount;
         //std::vector<ComponentTypeList> m_UnmanagedSharedComponentsByType;

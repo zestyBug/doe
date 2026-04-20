@@ -25,7 +25,8 @@ namespace ECS
         Chunk** _Chunk = nullptr;
         Version* _ChangeVersion = nullptr;
         SharedComponentIndex* _SharedComponentValue = nullptr;
-        EnabledBitset* _ComponentEnabledBit;
+        EnabledBitset* _ComponentEnabledBit = nullptr;
+        void *buckEnd = nullptr;
 
         // maximum number of chunks information that can be stored, before grow
         uint32_t _capacity=0;
@@ -59,6 +60,9 @@ namespace ECS
         inline bool empty() const {
             return this->_count < 1;
         }
+        inline bool full() const {
+            return this->_count >= this->_capacity;
+        }
         inline uint32_t capacity() const {
             return this->_capacity;
         }
@@ -69,6 +73,10 @@ namespace ECS
             if(i >= this->_count)
                 throw std::out_of_range("ArchetypeChunkData::operator[]");
             return _Chunk[i];
+        }
+        /// @brief If a SharedComponentValues is stored inside ArchetypeChunkData and it resizes, pointers are no longer valid.
+        bool insideAllocation(void *addr) {
+            return (buck.get() <= addr) && (addr <= buckEnd);
         }
         inline const_span<Chunk*> getChunkIndexArray() { return {_Chunk, this->_count}; }
         span<Version> getChangeVersionArrayForType(uint32_t component_index_in_archetype);

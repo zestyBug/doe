@@ -20,6 +20,7 @@ align_ptr<EntityComponentStore> EntityComponentStore::create(){
     new (&ret->sharedComponents) SharedComponentStore();
     new (&ret->componentTypeOrderVersion) align_ptr<Version[]>();
     new (&ret->globalVersion) Version();
+    new (&ret->chunkListChangesTracker) ChunkListChanges();
     new (&ret->chunks) ChunkStore();
     ret->componentTypeOrderVersion = make_align<Version[]>(TypeID::MaximumTypesCount);
     ret->typeLookup.init(16);
@@ -113,6 +114,7 @@ Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
     arch->instanceSize = 0;
     arch->instanceSizeWithOverhead = 0;
     arch->entityComponentStore = this;
+    arch->nextChangedArchetype = nullptr;
 
     memcpy(arch->_types,types.data(),types.size_bytes());
     for (uint32_t i = 0; i < types.size(); ++i)

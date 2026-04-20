@@ -3,12 +3,13 @@
 
 #include <stdint.h>
 #include <vector>
-#include "Base/TypeID.hpp"
-#include "ArchetypeChunkData.hpp"
 #include "cutil/basics.hpp"
 #include "cutil/mark_ptr.hpp"
 #include "cutil/HashHelper.hpp"
+#include "Base/TypeID.hpp"
+#include "Base/ChunkListChanges.hpp"
 #include "Base/Chunk.hpp"
+#include "ArchetypeChunkData.hpp"
 #include "ChunkListMap.hpp"
 
 class Test;
@@ -30,6 +31,7 @@ namespace ECS
         friend class EntityComponentStore;
         friend class ChunkListMap;
         friend struct ArchetypeData;
+        friend struct ChunkListChanges;
         friend class ::Test;
 
         ArchetypeChunkData chunks;
@@ -69,6 +71,7 @@ namespace ECS
         uint32_t archetypeIndex=0;
 
         EntityComponentStore *entityComponentStore;
+        Archetype* nextChangedArchetype = nullptr;
 
         void addToChunkListWithEmptySlots(Chunk* chunk);
         void removeFromChunkListWithEmptySlots(Chunk* chunk);
@@ -99,8 +102,8 @@ namespace ECS
         // any move operation requires recalculation
         Archetype(Archetype&&) = delete;
         ~Archetype() = default;
-        void addToChunkList(Chunk* chunk, const SharedComponentValues sharedComponentIndices, uint32_t changeVersion);
-        void removeFromChunkList(Chunk* chunk);
+        void addToChunkList(Chunk* chunk, SharedComponentValues sharedComponentIndices, uint32_t changeVersion, ChunkListChanges&);
+        void removeFromChunkList(Chunk* chunk, ChunkListChanges&);
 
         /**
          * ChunkDataUtility

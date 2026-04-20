@@ -2,24 +2,42 @@
 #include "ECS/EntityComponentStore.hpp"
 using namespace ECS;
 
-void Archetype::addToChunkList(Chunk* chunk, const SharedComponentValues sharedComponentIndices, uint32_t changeVersion) {
+void Archetype::addToChunkList(Chunk* chunk, SharedComponentValues sharedComponentIndices, uint32_t changeVersion, ChunkListChanges& changes) {
     if(chunk == nullptr)
         throw std::invalid_argument("addToChunkList(): invalid chunk");
     chunk->listIndex = chunks._count;
+    if (chunks._count == chunks.capacity())
+    {
+        uint32_t newCapacity = (chunks.capacity() < 1) ? 4 : (chunks.capacity() * 2);
+
+        // The shared component indices we are inserting belong to the same archetype so they need to be adjusted after reallocation
+        if (chunks.insideAllocation(sharedComponentIndices.firstIndex))
+        {
+            uint32_t chunkIndex = sharedComponentIndices.firstIndex - chunks.getSharedComponentValueArrayForType(0).data();
+            chunks.grow(newCapacity);
+            sharedComponentIndices = chunks.getSharedComponentValues(chunkIndex);
+        }
+        else
+        {
+            chunks.grow(newCapacity);
+        }
+    }
     chunks.add(chunk, sharedComponentIndices, changeVersion);
+    changes.trackArchetype(this);
 }
-void Archetype::removeFromChunkList(Chunk* chunk){
+void Archetype::removeFromChunkList(Chunk* chunk, ChunkListChanges& changes){
     if(chunk == nullptr)
         throw std::invalid_argument("removeFromChunkList(): invalid chunk");
     int32_t chunkListIndex = chunk->listIndex;
     if(chunkListIndex < 0)
         throw std::invalid_argument("removeFromChunkList(): invalid chunk");
     chunks.removeAtSwapBack(chunkListIndex);
-    if(chunks._count > chunkListIndex)
+    if(chunks._count > (uint32_t)chunkListIndex)
     {
         Chunk* chunkThatMoved = chunks[chunkListIndex];
         chunkThatMoved->listIndex = chunkListIndex;
     }
+    changes.trackArchetype(this);
 }
 void Archetype::addToChunkListWithEmptySlots(Chunk* chunk){
     chunk->listWithEmptySlotsIndex = (uint32_t)chunksWithEmptySlots.size();
@@ -119,7 +137,7 @@ void Archetype::releaseChunk(Chunk* chunk)
     // this chunk is going away, so it shouldn't be in the empty slot list.
     if (chunk->entityCount < this->chunkCapacity)
         this->emptySlotTrackingRemoveChunk(chunk);
-    this->removeFromChunkList(chunk);
+    this->removeFromChunkList(chunk,this->entityComponentStore->chunkListChangesTracker);
     entityComponentStore->chunks.freeChunk(chunk->index);
 }
 void Archetype::setChunkCount(Chunk* chunk, uint32_t newCount)
@@ -420,7 +438,7 @@ void Archetype::addEmptyChunk(Chunk *chunk, const SharedComponentValues sharedCo
         }
     }
 
-    this->addToChunkList(chunk, sharedComponentValues, globalSystemVersion);
+    this->addToChunkList(chunk, sharedComponentValues, globalSystemVersion, this->entityComponentStore->chunkListChangesTracker);
     if(this->chunks.empty())
         throw std::runtime_error("addEmptyChunk(): internal error");
 
@@ -649,7 +667,7 @@ void Archetype::changeArchetypeInPlace(Archetype* srcArchetype, Chunk *srcChunk,
     if (likely(dstArchetype != srcArchetype))
     {
         //Change version is overriden below
-        dstArchetype->addToChunkList(srcChunk, dstSharedComponentValues, 0);
+        dstArchetype->addToChunkList(srcChunk, dstSharedComponentValues, 0, dstArchetype->entityComponentStore->chunkListChangesTracker);
         int32_t chunkIndexInDstArchetype = srcChunk->listIndex;
 
         // For unchanged components: Copy versions from src to dst archetype
@@ -660,7 +678,7 @@ void Archetype::changeArchetypeInPlace(Archetype* srcArchetype, Chunk *srcChunk,
         Archetype::cloneChangeVersions(srcArchetype, chunkIndexInSrcArchetype, dstArchetype, chunkIndexInDstArchetype);
 
         srcChunk->listIndex = chunkIndexInSrcArchetype;
-        srcArchetype->removeFromChunkList(srcChunk);
+        srcArchetype->removeFromChunkList(srcChunk, srcArchetype->entityComponentStore->chunkListChangesTracker);
         srcChunk->listIndex = chunkIndexInDstArchetype;
 
         srcArchetype->entityCount -= count;

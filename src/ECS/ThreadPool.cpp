@@ -5,7 +5,9 @@
 using namespace ECS;
 
 
-
+uint32_t ThreadPool::threadCount(){
+    return this->context.threadCount;
+}
 ThreadPool::ThreadPool(const uint8_t thread_count):worker(thread_count)
 {
     resizeJobPool(32);
