@@ -2,6 +2,7 @@
 #define THREADPOOL_HPP
 
 #include "cutil/basics.hpp"
+#include "cutil/span.hpp"
 #include <mutex>
 #include <condition_variable>
 #include <thread>
@@ -31,20 +32,22 @@ namespace ECS
     // manages threads and arrays of jobs
     struct ThreadPool final {
         typedef void(*JobFunctionSignature)(void*,uint32_t,uint32_t,JobHandle);
-        struct JobData {
+        struct JobParameter {
             JobFunctionSignature function;
             void *context = nullptr;
             uint32_t batchCount = 1;
             JobHandle dependsOn = JobHandle();
         };
         ThreadPool(const uint8_t thread_count);
+        /// @brief make sure isFinished before
         void signalStart();
         void signalStop();
         bool isFinished();
         /// @brief 
         /// @param context  
         /// @param func function returns zero if need to be executed again
-        JobHandle submit(const JobData&);
+        JobHandle schedule(const JobParameter&);
+        JobHandle combineDependencies(const_span<JobHandle>);
         void prepareJobs();
         ~ThreadPool();
     private:
@@ -57,14 +60,20 @@ namespace ECS
             inline bool operator <= (const JobEntry& o){return this->level <= o.level;}
             inline bool operator >= (const JobEntry& o){return this->level >= o.level;}
         };
+        struct JobData {
+            JobFunctionSignature function;
+            void *context = nullptr;
+            uint32_t batchCount = 1;
+            uint32_t level = 0;
+        };
         struct JobDataChunk {
             std::atomic<uint32_t> writeIndex = 0;
             std::atomic<uint32_t> readIndex = 0;
+            std::atomic<uint32_t> readerCounter = 0;
+            std::atomic<uint32_t> readerLevel = 0;
             std::atomic<uint32_t> capacity = 0;
             /// @brief batch begin index to start with
             std::atomic<uint32_t> *beginIndex = nullptr;
-            /// @brief only increase this once a job batch is done
-            std::atomic<uint32_t> *finishedCounter = nullptr;
             JobData  *jobs = nullptr;
             /// @brief sorted by dependency. use the handle to find the real index.
             JobHandle *jobsArray = nullptr;
