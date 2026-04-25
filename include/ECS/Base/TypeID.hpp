@@ -28,7 +28,10 @@ namespace ECS {
         /// @brief MAGIC NUMBER, Maximum number of unique component types supported by the TypeManager
         /// @details Considerations: SharedComponentIndex can only use up to 19 bit for the sharead component type
         /// TypeManager::ClearFlagsMask this number must be power of 2 because of bit
-        static constexpr uint16_t MaximumTypesCount = 1 << 11;
+        /// we must keep atleast 4 last bits as flags.
+        /// 15 bit for type number for uint16_t + 1 bit for RW/RO
+        /// the larger the number the larger EntityComponentStore byte size
+        static constexpr uint16_t MaximumTypesCount = 1 << 12;
         static bool compare(const_span<TypeID> v1,const_span<TypeID> v2)
         {
             if (v1.size() != v2.size())
@@ -143,6 +146,7 @@ namespace ECS {
     template<typename> TypeID __typeid__() = delete;
     template<> TypeID __typeid__<nullptr_t>();
     template<> TypeID __typeid__<ECS::Entity>();
+    #define DEF_TYPE(TYPE) template<> ECS::TypeID ECS::__typeid__<TYPE>(){static ECS::TypeID v = ECS::TypeManager::registerType<TYPE>(#TYPE);return v;}
 
     uint32_t TypeID::index() const {return this->value & TypeManager::ClearFlagsMask;}
     uint32_t TypeID::flags() const {return this->value & ~TypeManager::ClearFlagsMask;}

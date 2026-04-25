@@ -26,12 +26,11 @@ namespace ECS
     struct Archetype final
     {
     protected:
-
-        friend class ChunkJobFunction;
-        friend class EntityComponentStore;
-        friend class ChunkListMap;
+        friend struct EntityComponentStore;
+        friend struct ChunkListMap;
         friend struct ArchetypeData;
         friend struct ChunkListChanges;
+        friend struct JobChunkProducer;
         friend class ::Test;
 
         ArchetypeChunkData chunks;

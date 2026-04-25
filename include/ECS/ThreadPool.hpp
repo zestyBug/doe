@@ -3,6 +3,7 @@
 
 #include "cutil/basics.hpp"
 #include "cutil/span.hpp"
+#include "Base/Job.hpp"
 #include <mutex>
 #include <condition_variable>
 #include <thread>
@@ -11,34 +12,12 @@
 
 namespace ECS
 {
-    struct JobHandle {
-        friend class ThreadPool;
-        // default value is the invalid value
-        JobHandle() = default;
-        inline operator bool   () const {return this->id>=0;}
-        inline bool  operator !() const {return this->id<0;}
-        inline bool operator == (const JobHandle& o) const {return this->id == o.id;}
-        inline int32_t index  () const {return this->id;}
-    private:
-        static const uint32_t MaximumCount = INT32_MAX;
-        JobHandle(int32_t v):id{v}{}
-        inline bool operator <  (const JobHandle& o) const {return this->id <  o.id;}
-        inline bool operator >  (const JobHandle& o) const {return this->id >  o.id;}
-        inline bool operator <= (const JobHandle& o) const {return this->id <= o.id;}
-        inline bool operator >= (const JobHandle& o) const {return this->id >= o.id;}
-        int32_t id = -1;
-    };
     // thread pool for job system,
     // manages threads and arrays of jobs
     struct ThreadPool final {
-        typedef void(*JobFunctionSignature)(void*,uint32_t,uint32_t,JobHandle);
-        struct JobParameter {
-            JobFunctionSignature function;
-            void *context = nullptr;
-            uint32_t batchCount = 1;
-            JobHandle dependsOn = JobHandle();
-        };
         ThreadPool(const uint8_t thread_count);
+        ThreadPool(const ThreadPool&) = delete;
+        ThreadPool(ThreadPool&&) = delete;
         /// @brief make sure isFinished before
         void signalStart();
         void signalStop();

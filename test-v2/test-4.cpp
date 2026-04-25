@@ -10,7 +10,7 @@ std::mutex x;
 
 struct Test {
     static void Test1();
-    static void Test2(void*,uint32_t begin,uint32_t end,ECS::JobHandle handle){
+    static void Test2(void*,uint32_t,uint32_t,ECS::JobHandle handle){
         auto v = std::this_thread::get_id();
         auto i = *(unsigned long int*)&v;
         x.lock();
@@ -22,7 +22,7 @@ struct Test {
 CLASS_TEST(Test,Test1){
     using namespace ECS;
     ThreadPool tp(8);
-    ThreadPool::JobParameter data = ThreadPool::JobParameter{
+    JobParameter data = JobParameter{
         .function = &Test::Test2,
         .context = nullptr,
         .batchCount = 1,

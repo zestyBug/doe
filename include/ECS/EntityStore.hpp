@@ -130,7 +130,6 @@ namespace ECS
                 if (block == nullptr) {
                     dataBlocks[i] = make_align<DataBlock>();
                     block = dataBlocks[i].get();
-                    new (block) DataBlock();
                 }
                 // a buffer variable
                 uint32_t remainingCount = std::min(blockAvailable, count);

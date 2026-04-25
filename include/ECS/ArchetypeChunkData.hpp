@@ -76,7 +76,7 @@ namespace ECS
         }
         /// @brief If a SharedComponentValues is stored inside ArchetypeChunkData and it resizes, pointers are no longer valid.
         bool insideAllocation(void *addr) {
-            return (buck.get() <= addr) && (addr <= buckEnd);
+            return (buck.get() != nullptr) && (buck.get() <= addr) && (addr <= buckEnd);
         }
         inline const_span<Chunk*> getChunkIndexArray() { return {_Chunk, this->_count}; }
         span<Version> getChangeVersionArrayForType(uint32_t component_index_in_archetype);

@@ -19,20 +19,20 @@ namespace ECS
 {
     // the class that holds all entities
     struct EntityComponentStore final {
-        friend class ChunkJobFunction;
         friend class ::Test;
-        friend class Archetype;
+        friend struct Archetype;
+        friend struct JobChunkProducer;
     private:
         // array of entities value,
         // contains index of it archetype and it index in that archetype
         ArchetypeListMap typeLookup;
         std::vector<align_ptr<Archetype>,allocator<align_ptr<Archetype>>> archetypes;
         EntityStore entityStore{};
-        SharedComponentStore sharedComponents;
-        align_ptr<Version[]> componentTypeOrderVersion;
         // global version buffer, used for any entity create/modify command
         Version globalVersion = 1;
         ChunkListChanges chunkListChangesTracker;
+        align_ptr<Version[]> componentTypeOrderVersion;
+        SharedComponentStore sharedComponents;
         ChunkStore chunks{};
 
         void cleanChangeList()
@@ -211,7 +211,7 @@ namespace ECS
         inline void incrementGlobalSystemVersion() {globalVersion.updateVersion();}
     public:
         inline Version getGlobalSystemVersion() const {return globalVersion;}
-        static align_ptr<EntityComponentStore> create();
+        EntityComponentStore();
         ~EntityComponentStore();
     };
 } // namespace ECS

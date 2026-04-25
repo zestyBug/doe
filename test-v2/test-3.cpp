@@ -41,7 +41,7 @@ struct Test {
 
 void Test::Test1() {
     using namespace ECS;
-    align_ptr<EntityComponentStore> store = EntityComponentStore::create();
+    align_ptr<EntityComponentStore> store = make_align<EntityComponentStore>();
     Archetype *arch = store->getOrCreateArchetype(componentTypes<Entity,test_2,test_1>());
     Entity entities[10];
     SharedComponentIndex index = store->sharedComponents.getDefaultValue(getTypeID<test_1>());

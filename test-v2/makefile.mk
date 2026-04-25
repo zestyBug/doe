@@ -47,6 +47,15 @@ $(OBJ)/$(srcDir)/ECS/ThreadPool.o: $(srcDir)/ECS/ThreadPool.cpp
 $(OBJ)/$(srcDir)/ECS/ChunkListChanges.o: $(srcDir)/ECS/ChunkListChanges.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
+$(OBJ)/$(srcDir)/ECS/ComponentDependencyManager.o: $(srcDir)/ECS/ComponentDependencyManager.cpp
+	mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) -c $< -o $@
+$(OBJ)/$(srcDir)/ECS/EntityQueryManager.o: $(srcDir)/ECS/EntityQueryManager.cpp
+	mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) -c $< -o $@
+$(OBJ)/$(srcDir)/ECS/JobChunk.o: $(srcDir)/ECS/JobChunk.cpp
+	mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 $(OBJ)/$(cutilDir)/HashHelper.o: $(cutilDir)/HashHelper.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
@@ -61,7 +70,10 @@ OBJS= \
 	$(OBJ)/$(srcDir)/ECS/EntityComponentStore.o \
 	$(OBJ)/$(srcDir)/ECS/TypeID.o \
 	$(OBJ)/$(srcDir)/ECS/ThreadPool.o \
+	$(OBJ)/$(srcDir)/ECS/ComponentDependencyManager.o \
 	$(OBJ)/$(srcDir)/ECS/ChunkListChanges.o \
+	$(OBJ)/$(srcDir)/ECS/EntityQueryManager.o \
+	$(OBJ)/$(srcDir)/ECS/JobChunk.o \
 	$(OBJ)/$(cutilDir)/HashHelper.o
 
 DEPS = $(OBJS:.o=.d)
@@ -76,3 +88,4 @@ test-1: $(BIN)/test-1
 test-2: $(BIN)/test-2
 test-3: $(BIN)/test-3
 test-4: $(BIN)/test-4
+test-5: $(BIN)/test-5

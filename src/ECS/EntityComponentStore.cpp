@@ -12,20 +12,10 @@ EntityComponentStore::~EntityComponentStore(){
         }
     }
 }
-align_ptr<EntityComponentStore> EntityComponentStore::create(){
-    align_ptr<EntityComponentStore> ret = make_align<EntityComponentStore>();
-    new (&ret->typeLookup) ArchetypeListMap();
-    new (&ret->archetypes) std::vector<align_ptr<Archetype>,allocator<align_ptr<Archetype>>>();
-    new (&ret->entityStore) EntityStore();
-    new (&ret->sharedComponents) SharedComponentStore();
-    new (&ret->componentTypeOrderVersion) align_ptr<Version[]>();
-    new (&ret->globalVersion) Version();
-    new (&ret->chunkListChangesTracker) ChunkListChanges();
-    new (&ret->chunks) ChunkStore();
-    ret->componentTypeOrderVersion = make_align<Version[]>(TypeID::MaximumTypesCount);
-    ret->typeLookup.init(16);
-    ret->archetypes.reserve(16);
-    return std::move(ret);
+EntityComponentStore::EntityComponentStore(){
+    this->componentTypeOrderVersion = make_align<Version[]>(TypeID::MaximumTypesCount);
+    this->typeLookup.init(16);
+    this->archetypes.reserve(16);
 }
 uint32_t EntityComponentStore::calculateSpaceRequirement(const_span<uint16_t> componentSizes, uint32_t entityCount)
 {

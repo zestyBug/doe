@@ -147,7 +147,6 @@ namespace ECS
         }
     public:
         SharedComponentStore() {
-            memset(dataChunk,0,TypeID::MaximumTypesCount*sizeof(align_ptr<SharedComponentChunk>));
         }
         ~SharedComponentStore() {
         #if VERBOSE

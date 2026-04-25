@@ -439,11 +439,12 @@ namespace detail
     constexpr bool is_bounded_array_v<T[N]> = true;
 }
 
-template<class T>
+template<class T,typename... Args>
 std::enable_if_t<!std::is_array<T>::value, align_ptr<T>>
-make_align()
+make_align(Args&&... args)
 {
     T* ptr = allocator<T>().allocate(1);
+    new (ptr) T(args...);
     return align_ptr<T>(ptr);
 }
 
