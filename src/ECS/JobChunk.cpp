@@ -18,7 +18,7 @@ void JobChunkWrapperBase::schedule(ComponentDependencyManager &cdm,ThreadPool &t
 void JobChunkProducer::execute(void *j, uint32_t from, uint32_t, JobHandle){
     if(from!=0) return;
     JobChunkWrapperBase *base = reinterpret_cast<JobChunkWrapperBase*>(j);
-    span<align_ptr<Archetype>> archs {base->ecs->archetypes.data(),base->ecs->archetypes.size()};
+    span<align_ptr<Archetype>> archs {base->ecs->archetypes.data(),(uint32_t)base->ecs->archetypes.size()};
     for (uint32_t i = 0; i < archs.size(); i++){
         Archetype &arch = *archs[i];
         if(EntityQueryManager::isMatchingArchetype(arch,base->query)){

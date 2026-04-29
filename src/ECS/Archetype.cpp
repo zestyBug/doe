@@ -1,4 +1,6 @@
 #include "ECS/Archetype.hpp"
+#include "ECS/Base/Chunk.hpp"
+#include "ECS/Base/ChunkListChanges.hpp"
 #include "ECS/EntityComponentStore.hpp"
 using namespace ECS;
 

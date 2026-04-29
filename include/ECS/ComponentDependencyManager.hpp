@@ -2,9 +2,9 @@
 #define DEPENDENCYMANAGER_HPP
 
 #include "cutil/basics.hpp"
-#include "Base/TypeID.hpp"
 #include "Base/Version.hpp"
 #include "Base/Job.hpp"
+#include "Base/Constants.hpp"
 
 namespace ECS
 {
@@ -15,8 +15,6 @@ struct ArchetypeQuery;
 struct ComponentDependencyManager {
     ThreadPool *threadPool;
     JobHandle dependency;
-
-    static constexpr int32_t MaxJobCount = 0xFFFFF;
 
     ComponentDependencyManager(ThreadPool *tp):threadPool{tp}{}
     ComponentDependencyManager(const ComponentDependencyManager&) = default;
@@ -34,11 +32,9 @@ private:
 struct ComponentDependencyManager {
     ThreadPool *threadPool;
     static const uint32_t MaximumReaderPerType = 16;
-    std::array<JobHandle                      ,TypeID::MaximumTypesCount> jobRW;
-    std::array<uint32_t                       ,TypeID::MaximumTypesCount> jobsROCount;
-    std::array<JobHandle[MaximumReaderPerType],TypeID::MaximumTypesCount> jobsRO;
-
-    static constexpr int32_t MaxJobCount = 0xFFFFF;
+    std::array<JobHandle                      ,Constants::MaximumTypesCount> jobRW;
+    std::array<uint32_t                       ,Constants::MaximumTypesCount> jobsROCount;
+    std::array<JobHandle[MaximumReaderPerType],Constants::MaximumTypesCount> jobsRO;
 
     ComponentDependencyManager(ThreadPool *tp):threadPool{tp}{}
     ComponentDependencyManager(const ComponentDependencyManager&) = default;

@@ -3,20 +3,21 @@
 
 #include <stdint.h>
 #include <vector>
+#include <bitset>
 #include "cutil/basics.hpp"
-#include "cutil/mark_ptr.hpp"
-#include "cutil/HashHelper.hpp"
 #include "Base/TypeID.hpp"
-#include "Base/ChunkListChanges.hpp"
-#include "Base/Chunk.hpp"
 #include "ArchetypeChunkData.hpp"
 #include "ChunkListMap.hpp"
+#include "Base/Constants.hpp"
 
 class Test;
 
 namespace ECS
 {
     class EntityComponentStore;
+    struct ChunkListChanges;
+    struct Chunk;
+    struct EntityQueryData;
     /**
      * @brief A structure holding single archetype of components.
      * in a normal case type[0] must be Entity but this class has
@@ -68,9 +69,15 @@ namespace ECS
 
         /// @brief archetype index in ECS archetype list, used for backward access.
         uint32_t archetypeIndex=0;
+        /// @brief used by EntityQueryManager
+        uint32_t matchingQueryCount = 0;
 
         EntityComponentStore *entityComponentStore;
         Archetype* nextChangedArchetype = nullptr;
+        /// @brief used by EntityQueryManager
+        EntityQueryData* matchingQueryData[Constants::MaximumQueryCount];
+        /// @brief used by EntityQueryManager
+        std::bitset<Constants::MaximumQueryCount> queryMask;
 
         void addToChunkListWithEmptySlots(Chunk* chunk);
         void removeFromChunkListWithEmptySlots(Chunk* chunk);
@@ -79,10 +86,6 @@ namespace ECS
         void emptySlotTrackingAddChunk(Chunk* chunk);
         Chunk* getExistingChunkWithEmptySlots(const SharedComponentValues sharedComponentValues);
     public:
-        /// @brief MAGIC NUMBER, maximum number of type an archetype can manage, any number higher than this may lead to overflow
-        static constexpr uint32_t MaximumComponentCount = 0x6f;
-        /// @brief MAGIC NUMBER
-        static constexpr uint32_t MaximumSharedComponentCount = 16;
         inline uint32_t numNonZeroSizedTypes() const {return firstTagComponent;}
         /// @brief number of non zero sized IComponentData components (not Entity)
         inline uint32_t numNativeComponentData() const {return firstManagedComponent - 1;}
@@ -107,7 +110,8 @@ namespace ECS
         /**
          * ChunkDataUtility
          */
-    private:
+    //private:
+
         /// @brief iterates over types array to find 
         /// @return -1 if not found
         int32_t getIndexInTypeArray(TypeID type) const;

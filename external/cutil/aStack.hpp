@@ -23,7 +23,7 @@ class advancedStack {
     struct block
     {
         block *next;
-        T data[0];
+        T data[blocksize];
     };
 
     // there will never be an empty block
@@ -34,11 +34,11 @@ class advancedStack {
     void alloc()
     {
         if(tail){
-            block *new_tail = malloc(sizeof(block) + sizeof(T)*blocksize);
+            block *new_tail = malloc(sizeof(block));
             new_tail->next = tail;
             tail = new_tail;
         }else{
-            tail = malloc(sizeof(block) + sizeof(T)*blocksize);
+            tail = malloc(sizeof(block));
             tail->next = nullptr;
         }
         tail_index=1;

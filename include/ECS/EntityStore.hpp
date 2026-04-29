@@ -7,6 +7,7 @@
 #include "Base/Entity.hpp"
 #include "Base/TypeID.hpp"
 #include "Base/Chunk.hpp"
+#include "Base/Constants.hpp"
 
 namespace ECS
 {
@@ -14,7 +15,7 @@ namespace ECS
         // MAGIC NUMBER
         static constexpr uint32_t EntitiesInBlock = 8192;
         static constexpr uint32_t BlockCount = 4096;
-        static constexpr uint32_t MaximumTheoreticalAmountOfEntities = EntitiesInBlock * BlockCount;
+        static constexpr uint32_t MaximumTheoreticalAmountOfEntities = std::min(Constants::MaximumEntityCount, EntitiesInBlock * BlockCount);
         struct DataBlock
         {
             uint32_t allocated[EntitiesInBlock / 32];

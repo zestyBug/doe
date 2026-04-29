@@ -14,13 +14,11 @@ class set
 {
 protected:
     static const uint32_t _AValidHashCode = 2;
-    // must be 1 otherwise it will fail
     static const uint32_t _SkipCode = 1;
 
     std::vector<uint32_t,Allocator> hashes{};
     std::vector<Type,Allocator> values{};
-    // [emptyNodes,skipNodes]
-    uint32_t unoccupied[2] = {0,0};
+    uint32_t unoccupied = 0;
 
     static uint32_t getHashCode(Type key)
     {
@@ -47,30 +45,25 @@ public:
         hashes.resize(count);
         values.resize(count);
 
-        unoccupied[0] = count;
-        unoccupied[1] = 0;
+        unoccupied = count;
     }
     set(const set&) = delete;
     set(set&& v): hashes{std::move(v.hashes)},values{std::move(v.values)} {
-        this->unoccupied[0] = v.unoccupied[0];
-        this->unoccupied[1] = v.unoccupied[1];
-        v.unoccupied[0]=0;
-        v.unoccupied[1]=0;
+        this->unoccupied = v.unoccupied;
+        v.unoccupied=0;
     }
     set& operator=(const set&) = delete;
     set& operator=(set&& v){
         if(this != &v){
             this->hashes = std::move(v.hashes);
             this->values = std::move(v.values);
-            this->unoccupied[0] = v.unoccupied[0];
-            this->unoccupied[1] = v.unoccupied[1];
-            v.unoccupied[0]=0;
-            v.unoccupied[1]=0;
+            this->unoccupied = v.unoccupied;
+            v.unoccupied=0;
         }
         return *this;
     }
     inline uint32_t size() const { return (uint32_t) hashes.size(); }
-    inline uint32_t unoccupiedNodes() const { return unoccupied[0] + unoccupied[1]; }
+    inline uint32_t unoccupiedNodes() const { return unoccupied; }
     inline uint32_t occupiedNodes() const { return size() - unoccupiedNodes(); }
     inline bool isEmpty() const { return occupiedNodes() == 0; }
     /// @brief ! suppose size is power of 2
@@ -117,8 +110,7 @@ public:
             {
                 hashes[offset] = desiredHash;
                 values[offset] = value;
-                // micro optimized!
-                unoccupied[hash]--;
+                unoccupied--;
                 possiblyGrow();
                 return;
             }
@@ -135,7 +127,7 @@ public:
         if(offset < 0)
             throw std::runtime_error("remove(): value not found");
         hashes[offset] = _SkipCode;
-        unoccupied[1]++;
+        unoccupied++;
         possiblyShrink();
     }
     int indexOf(Type value) const {
@@ -165,7 +157,7 @@ public:
     void reset(){
         hashes = std::vector<uint32_t,Allocator>();
         values = std::vector<Type,Allocator>();
-        memset(unoccupied,0,sizeof(unoccupied));
+        unoccupied=0;
     }
 };
 

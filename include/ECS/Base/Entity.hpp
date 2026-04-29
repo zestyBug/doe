@@ -4,10 +4,10 @@
 #include <vector>
 #include <algorithm>    // std::sort
 #include "cutil/basics.hpp"
-#include "ECS/Base/Chunk.hpp"
 
 namespace ECS
 {
+    struct Chunk;
     // this engine uses uint32 and int32 for all cases,
     // unless it is specified.
 
@@ -27,8 +27,6 @@ namespace ECS
         static constexpr int32_t Null = -1;
         // simply checks entity index validity
         inline bool isValid() const {return this->index() >= 0;}
-        /// @details Considerations: 1 bit flag for invalid entities.
-        static constexpr uint32_t Maximum = INT32_MAX;
     protected:
         int32_t _value;
         uint32_t _version=0;

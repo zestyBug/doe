@@ -2,12 +2,13 @@
 #include "ECS/Base/TypeID.hpp"
 #include "ECS/Base/Entity.hpp"
 #include "cutil/HashHelper.hpp"
+#include "Base/Constants.hpp"
 
 namespace ECS {
 
 uint32_t              TypeManager::typeCount = 2;
-TypeManager::TypeInfo TypeManager::sharedTypeInfos[TypeID::MaximumTypesCount];
-const char*           TypeManager::sharedTypeNames[TypeID::MaximumTypesCount];
+TypeManager::TypeInfo TypeManager::sharedTypeInfos[Constants::MaximumTypesCount];
+const char*           TypeManager::sharedTypeNames[Constants::MaximumTypesCount];
 
 TypeID TypeManager::registerNull() {
     // MAGIC NUMBER

@@ -15,31 +15,42 @@ ThreadPool::ThreadPool(const uint8_t thread_count):worker(thread_count)
     for(auto& t: this->worker)
         t = std::thread{&ThreadPool::func,&this->context};
 }
+void ThreadPool::reset() {
+    std::lock_guard lock(this->context.mutex);
+    JobDataChunk *chunk = this->context.chunk.load();
+    chunk->writeIndex.store(0);
+    chunk->readIndex.store(0);
+}
 void ThreadPool::signalStart() {
     std::lock_guard lock(this->context.mutex);
-    this->chunk->readIndex.store(0);
-    this->chunk->readerCounter.store(0);
-    this->chunk->readerLevel.store(0);
+    JobDataChunk *chunk = this->context.chunk.load();
+    chunk->readIndex.store(0);
+    chunk->readerCounter.store(0);
+    chunk->readerLevel.store(0);
     this->context.condition.notify_all();
 }
 void ThreadPool::signalStop() {
     std::lock_guard lock(this->context.mutex);
-    this->chunk->readIndex.store(this->chunk->writeIndex.load());
+    JobDataChunk *chunk = this->context.chunk.load();
+    chunk->readIndex.store(
+        chunk->writeIndex.load()
+    );
 }
 bool ThreadPool::isFinished() {
     std::lock_guard lock(this->context.mutex);
-    JobDataChunk *cchunk = this->context.chunk.load();
-    if(cchunk == nullptr){
+    JobDataChunk *chunk = this->context.chunk.load();
+    if(chunk == nullptr){
         if(this->context.waitingThreads == 0)
             return true;
     }else{
-        if(cchunk->readIndex >= cchunk->writeIndex)
+        if(chunk->readIndex >= chunk->writeIndex)
             if(this->context.waitingThreads == this->worker.size())
                 return true;
     }
     return false;
 }
 ThreadPool::~ThreadPool(){
+    allocator().deallocate(this->context.chunk.load());
     this->context.chunk.store(nullptr);
     this->context.condition.notify_all();
     // chunk pointer is set to null, wait for result
@@ -47,8 +58,9 @@ ThreadPool::~ThreadPool(){
         t.join();
 }
 JobHandle ThreadPool::schedule(const JobParameter& data){
+    JobDataChunk *chunk = context.chunk.load();
     if(chunk->writeIndex >= chunk->capacity)
-        resizeJobPool(chunk->capacity);
+        resizeJobPool(chunk->capacity * 2);
     uint32_t index = chunk->writeIndex;
     if(index > JobHandle::MaximumCount)
         throw std::runtime_error("submit(): ThreadPool is full");
@@ -66,15 +78,16 @@ JobHandle ThreadPool::schedule(const JobParameter& data){
     return JobHandle((int32_t)index);
 }
 void ThreadPool::prepareJobs(){
+    JobDataChunk *chunk = this->context.chunk.load();
+    JobEntry *buffer = chunk->buffer;
     uint32_t count = chunk->writeIndex.load();
     JobData *jobs = chunk->jobs;
     if(count == 0)
         return;
-    memset(chunk->beginIndex,0,sizeof(std::atomic<uint32_t>)*count);
-    align_ptr<JobEntry[]> buffer = make_align<JobEntry[]>(count);
+    memset(chunk->beginIndex, 0, sizeof(std::atomic<uint32_t>)*count);
     for(uint32_t i=0;i<count;i++)
         buffer[i] = JobEntry{JobHandle(i), jobs[i].level};
-    std::sort(buffer.get(),buffer.get()+count);
+    std::sort(buffer,buffer+count);
     for(uint32_t i=0;i<count;i++)
         chunk->jobsArray[i] = buffer[i].handle;
 }
@@ -151,14 +164,15 @@ void ThreadPool::func(thread_context *context)
     }
 }
 JobHandle ThreadPool::combineDependencies(const_span<JobHandle> jobs){
+    JobDataChunk *chunk = this->context.chunk.load();
     JobHandle max = JobHandle();
     uint32_t maxLevel = 0;
     for(const JobHandle &j:jobs){
         if(j.index() < 0)
             continue;
-        if((uint32_t)j.index() > this->chunk->writeIndex)
+        if((uint32_t)j.index() > chunk->writeIndex)
             throw std::invalid_argument("combineDependencies(): array contains invalid JobHandle(s)");
-        const uint32_t level = this->chunk->jobs[j.index()].level;
+        const uint32_t level = chunk->jobs[j.index()].level;
         if(level > maxLevel){
             max = j;
             maxLevel = level;
@@ -167,22 +181,22 @@ JobHandle ThreadPool::combineDependencies(const_span<JobHandle> jobs){
     return max;
 }
 void ThreadPool::resizeJobPool(uint32_t capacity){
-    align_ptr<JobDataChunk> temp;
-    
-    uint32_t size_temp[4];
-    JobDataChunk *ptr1 = this->chunk.get();
+    JobDataChunk *ptr1 = this->context.chunk.load();
+    uint32_t size_temp[5];
     size_temp[0] = 64;
     size_temp[1] = size_temp[0] + alignTo64(sizeof(std::atomic<uint32_t>)*capacity);
-    size_temp[2] = size_temp[1] + alignTo64(sizeof(JobData)*capacity);
-    size_temp[3] = size_temp[2] + alignTo64(sizeof(JobEntry)*capacity);
-    JobDataChunk *ptr2 = (JobDataChunk*)allocator().allocate(size_temp[3]);
-    temp.reset(ptr2);
+    size_temp[2] = size_temp[1] + alignTo64(sizeof(JobData)  *capacity);
+    size_temp[3] = size_temp[2] + alignTo64(sizeof(JobHandle)*capacity);
+    size_temp[4] = size_temp[3] + alignTo64(sizeof(JobEntry) *capacity);
+    align_ptr<JobDataChunk> ptr2;
+    ptr2.reset((JobDataChunk*)allocator().allocate(size_temp[4]));
     ptr2->writeIndex = 0;
     ptr2->readIndex = 0;
     ptr2->capacity = capacity;
-    ptr2->beginIndex = (std::atomic<uint32_t>*)((uint8_t*)ptr2 + size_temp[0]);
-    ptr2->jobs = (JobData*)((uint8_t*)ptr2 + size_temp[1]);
-    ptr2->jobsArray = (JobHandle*)((uint8_t*)ptr2 + size_temp[2]);
+    ptr2->beginIndex = (std::atomic<uint32_t>*)((uint8_t*)ptr2.get() + size_temp[0]);
+    ptr2->jobs       = (JobData*)              ((uint8_t*)ptr2.get() + size_temp[1]);
+    ptr2->jobsArray  = (JobHandle*)            ((uint8_t*)ptr2.get() + size_temp[2]);
+    ptr2->buffer     = (JobEntry*)             ((uint8_t*)ptr2.get() + size_temp[3]);
     if(ptr1)
     {
         const uint32_t prevCap = ptr1->capacity;
@@ -191,6 +205,5 @@ void ThreadPool::resizeJobPool(uint32_t capacity){
         ptr2->writeIndex.store(prevCap);
         memcpy(ptr2->jobs, ptr1->jobs, prevCap);
     }
-    this->chunk = std::move(temp);
-    this->context.chunk.store(ptr2);
+    this->context.chunk.store(ptr2.release());
 }

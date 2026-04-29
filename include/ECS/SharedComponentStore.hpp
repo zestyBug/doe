@@ -4,6 +4,7 @@
 #include "cutil/range.hpp"
 #include "cutil/HashHelper.hpp"
 #include "Base/TypeID.hpp"
+#include "Base/Constants.hpp"
 #include "Base/Chunk.hpp"
 #include "Base/Version.hpp"
 #include "Base/SharedComponent.hpp"
@@ -33,7 +34,7 @@ namespace ECS
             uint32_t* hashes_index;
             alignas(64) uint8_t buffer[];
         };
-        align_ptr<SharedComponentChunk> dataChunk[TypeID::MaximumTypesCount];
+        align_ptr<SharedComponentChunk> dataChunk[Constants::MaximumTypesCount];
         uint32_t sharedComponentVersion = 0;
 
         TypeID getComponentType(SharedComponentIndex value) {
@@ -66,7 +67,7 @@ namespace ECS
                 ptr->infos = (SharedComponentInfo*)(((uint8_t*)ptr)+buffer2);
                 ptr->hashes =           (uint32_t*)(((uint8_t*)ptr)+buffer3);
                 ptr->hashes_index =     (uint32_t*)(((uint8_t*)ptr)+buffer4);
-                memset(ptr->infos, 0, buffer1*sizeof(SharedComponentInfo)+buffer1*sizeof(uint32_t));
+                memset(ptr->infos, 0, buffer1*(sizeof(uint32_t)+sizeof(SharedComponentInfo)));
                 TypeManager::GetTypeInfoPointer()[typeIndex].defaultConstruct(ptr->buffer);
                 uint32_t hashCode = HashHelper::FNV1A32(ptr->buffer,typeSize);
                 if (hashCode == 0 || hashCode == SkipCode)
@@ -152,7 +153,7 @@ namespace ECS
         #if VERBOSE
             printf("~SharedComponentStore(): %p\n",this);
         #endif
-            for (uint32_t i: range<uint32_t>(TypeID::MaximumTypesCount))
+            for (uint32_t i: range<uint32_t>(Constants::MaximumTypesCount))
             {
                 SharedComponentChunk *ptr = dataChunk[i].get();
                 if(ptr && TypeManager::GetTypeInfoPointer()[i].TypeIndex.isManagedComponent())
@@ -377,7 +378,7 @@ namespace ECS
         }
         void checkInternalConsistency()
         {
-            for (uint32_t i: range<uint32_t>(TypeID::MaximumTypesCount))
+            for (uint32_t i: range<uint32_t>(Constants::MaximumTypesCount))
             {
                 SharedComponentChunk *ptr = dataChunk[i].get();
                 if(ptr)

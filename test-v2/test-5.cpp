@@ -14,7 +14,17 @@ struct Speed : IComponentData {
 DEF_TYPE(Speed)
 struct SpeedJob : IJobChunk {
     void execute(Chunk*ch){
-        printf("Chunk %p\n",ch);
+        Archetype *arch = ch->archetype;
+        uint32_t count = ch->entityCount;
+        const uint32_t index1 = arch->getIndexInTypeArray(getTypeID<Speed>());
+        const uint32_t index2 = arch->getIndexInTypeArray(getTypeID<Position>());
+        Speed    *speedArray    = (Speed*)   arch->getComponentDataRO(ch,0,index1);
+        Position *positionArray = (Position*)arch->getComponentDataRO(ch,0,index2);
+        while(count--){
+            positionArray->x += speedArray->x;
+            ++speedArray;
+            ++positionArray;
+        }
     }
 };
 struct SpeedSystem : ISystem {
@@ -40,14 +50,17 @@ CLASS_TEST(Test,Test1){
     Archetype *arch = e->ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
     Entity entities[200];
     e->ecs.createEntities(arch,{entities,200});
+    uint32_t counter=100000;
     do {
         for(uint32_t i=0;i<e->sys.size();i++)
             e->sys[i]->OnUpdate(e.get());
         e->dpm.clear();
         e->tp.prepareJobs();
         e->tp.signalStart();
-        while(!e->tp.isFinished());
-    } while(false);
+        while(!e->tp.isFinished())
+            std::this_thread::yield();
+        e->tp.reset();
+    } while(--counter);
 }
 
 int main(){

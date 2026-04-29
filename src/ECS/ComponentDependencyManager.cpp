@@ -3,6 +3,7 @@
 #include "ECS/ThreadPool.hpp"
 #include "cutil/set.hpp"
 #include "cutil/range.hpp"
+#include "ECS/Base/Constants.hpp"
 using namespace ECS;
 
 #ifndef ENABLE_SIMPLE_SYSTEM_DEPENDENCIES
@@ -75,9 +76,9 @@ void ComponentDependencyManager::addDependency(JobHandle job, ArchetypeQuery &qu
     }
 }
 void ComponentDependencyManager::clear(){
-    for (uint32_t i = 0; i < TypeID::MaximumTypesCount; i++)
+    for (uint32_t i = 0; i < Constants::MaximumTypesCount; i++)
         this->jobsROCount[i] = 0;
-    for (uint32_t i = 0; i < TypeID::MaximumTypesCount; i++)
+    for (uint32_t i = 0; i < Constants::MaximumTypesCount; i++)
         this->jobRW[i] = JobHandle();
 }
 

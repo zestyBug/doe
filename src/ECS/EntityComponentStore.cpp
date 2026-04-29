@@ -1,4 +1,8 @@
 #include "ECS/EntityComponentStore.hpp"
+#include "ECS/Base/Constants.hpp"
+#include "ECS/Base/Chunk.hpp"
+#include "ECS/Archetype.hpp"
+
 using namespace ECS;
 EntityComponentStore::~EntityComponentStore(){
     // Move all chunks to become pooled chunks
@@ -13,7 +17,7 @@ EntityComponentStore::~EntityComponentStore(){
     }
 }
 EntityComponentStore::EntityComponentStore(){
-    this->componentTypeOrderVersion = make_align<Version[]>(TypeID::MaximumTypesCount);
+    this->componentTypeOrderVersion = make_align<Version[]>(Constants::MaximumTypesCount);
     this->typeLookup.init(16);
     this->archetypes.reserve(16);
 }
@@ -35,7 +39,7 @@ uint32_t EntityComponentStore::calculateChunkCapacity(const_span<uint16_t> compo
     return capacity;
 }
 void EntityComponentStore::validateArchetype(const_span<TypeID> types) {
-    if(unlikely(types.size() < 1 || types.size() > Archetype::MaximumComponentCount))
+    if(unlikely(types.size() < 1 || types.size() > Constants::MaximumArchetypeComponentCount))
         throw std::invalid_argument("validateArchetype(): archetype with unexpected component count");
     if(types[0] != getTypeID<Entity>())
         throw std::invalid_argument("validateArchetype(): the first type must be Entity");
@@ -63,7 +67,7 @@ Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
         if (ct.Category == TypeManager::TypeCategory::ISharedComponentData)
             ++numSharedComponents;
     }
-    if(Archetype::MaximumSharedComponentCount < numSharedComponents)
+    if(Constants::MaximumArchetypeSharedComponentCount < numSharedComponents)
         throw std::invalid_argument("validateArchetype(): too shareed components");
     {
         uint32_t offsets[7];
@@ -103,8 +107,10 @@ Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
     }
     arch->instanceSize = 0;
     arch->instanceSizeWithOverhead = 0;
+    arch->matchingQueryCount = 0;
     arch->entityComponentStore = this;
     arch->nextChangedArchetype = nullptr;
+    new (&arch->queryMask) std::bitset<Constants::MaximumQueryCount>();
 
     memcpy(arch->_types,types.data(),types.size_bytes());
     for (uint32_t i = 0; i < types.size(); ++i)
@@ -384,7 +390,7 @@ void EntityComponentStore::addExistingEntitiesInChunk(Chunk *chunk)
 }
 void EntityComponentStore::setSharedComponentDataIndexForChunk(Chunk* chunk, Archetype* chunkArchetype, TypeID type, SharedComponentIndex value)
 {
-    SharedComponentIndex chunkFilter[Archetype::MaximumSharedComponentCount];
+    SharedComponentIndex chunkFilter[Constants::MaximumArchetypeSharedComponentCount];
     // this chunk already has the desired shared component value
     if (!getArchetypeChunkFilterWithChangedSharedComponent(chunk, type, value, chunkFilter))
         return;
@@ -618,7 +624,7 @@ bool EntityComponentStore::removeComponents(Entity entity, const_span<TypeID> ty
 }
 /// @param value shared component index, ignored if type is not a shared component.
 bool EntityComponentStore::addComponent(EntityBatchInChunk entityBatchInChunk, TypeID type, SharedComponentIndex value){
-    SharedComponentIndex outSharedComponentValues[Archetype::MaximumSharedComponentCount];
+    SharedComponentIndex outSharedComponentValues[Constants::MaximumArchetypeSharedComponentCount];
     uint32_t indexInTypeArray;
     Archetype *srcArchetype = getArchetype(entityBatchInChunk.chunk);
     Archetype *dstArchetype = getArchetypeWithAddedComponent(srcArchetype, type, &indexInTypeArray);
@@ -629,7 +635,7 @@ bool EntityComponentStore::addComponent(EntityBatchInChunk entityBatchInChunk, T
     return true;
 }
 bool EntityComponentStore::removeComponent(EntityBatchInChunk entityBatchInChunk, TypeID type){
-    SharedComponentIndex outSharedComponentValues[Archetype::MaximumSharedComponentCount];
+    SharedComponentIndex outSharedComponentValues[Constants::MaximumArchetypeSharedComponentCount];
     uint32_t indexInTypeArray;
     Archetype *srcArchetype = getArchetype(entityBatchInChunk.chunk);
     Archetype *dstArchetype = getArchetypeWithRemovedComponent(srcArchetype, type, &indexInTypeArray);
@@ -641,7 +647,7 @@ bool EntityComponentStore::removeComponent(EntityBatchInChunk entityBatchInChunk
 }
 /// @param types sorted
 bool EntityComponentStore::addComponents(EntityBatchInChunk entityBatchInChunk, const_span<TypeID> types){
-    SharedComponentIndex outSharedComponentValues[Archetype::MaximumSharedComponentCount];
+    SharedComponentIndex outSharedComponentValues[Constants::MaximumArchetypeSharedComponentCount];
     Archetype *srcArchetype = getArchetype(entityBatchInChunk.chunk);
     Archetype *dstArchetype = getArchetypeWithAddedComponents(srcArchetype, types);
     if (dstArchetype == nullptr)
@@ -652,7 +658,7 @@ bool EntityComponentStore::addComponents(EntityBatchInChunk entityBatchInChunk, 
 }
 /// @param types sorted
 bool EntityComponentStore::removeComponents(EntityBatchInChunk entityBatchInChunk, const_span<TypeID> types){
-    SharedComponentIndex outSharedComponentValues[Archetype::MaximumSharedComponentCount];
+    SharedComponentIndex outSharedComponentValues[Constants::MaximumArchetypeSharedComponentCount];
     Archetype *srcArchetype = getArchetype(entityBatchInChunk.chunk);
     Archetype *dstArchetype = getArchetypeWithRemovedComponents(srcArchetype, types);
     if (dstArchetype == nullptr)

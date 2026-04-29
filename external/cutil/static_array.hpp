@@ -6,10 +6,9 @@
 #include <string.h>
 #include <stdexcept>
 
-template<typename T, uint32_t S>
+template<typename Type, uint32_t S>
 class static_array
 {
-    using Type = T;
 private:
     union container
     {
@@ -22,7 +21,7 @@ private:
     container _data{};
     uint32_t count = 0;
 public:
-    static_assert((sizeof(T)*S) > 0);
+    static_assert((sizeof(Type)*S) > 0);
     static_array(){}
     static_array(const static_array& value){
         for (size_t i = 0; i < value.count; i++)
@@ -56,9 +55,9 @@ public:
     inline uint32_t remainding()const {return S - this->count;}
         
     inline Type*  begin(){return this->_data.array;}
-    inline Type*  end(){return this->_data.array + S;}
+    inline Type*  end(){return this->_data.array + count;}
     inline const Type* begin()const {return this->_data.array;}
-    inline const Type* end()const {return this->_data.array + S;}
+    inline const Type* end()const {return this->_data.array + count;}
     inline const T* data () const {return this->_data.array;}
     inline T* data () {return this->_data.array;}
 

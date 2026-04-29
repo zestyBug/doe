@@ -5,9 +5,8 @@
 #include <array>
 #include <memory>
 #include "cutil/span.hpp"
-#include "Base/Chunk.hpp"
+#include "Base/ChunkListChanges.hpp"
 #include "Base/Entity.hpp"
-#include "Archetype.hpp"
 #include "ArchetypeListMap.hpp"
 #include "EntityStore.hpp"
 #include "ChunkStore.hpp"
@@ -17,6 +16,8 @@ class Test;
 
 namespace ECS
 {
+    struct Chunk;
+    struct Archetype;
     // the class that holds all entities
     struct EntityComponentStore final {
         friend class ::Test;
@@ -34,6 +35,8 @@ namespace ECS
         align_ptr<Version[]> componentTypeOrderVersion;
         SharedComponentStore sharedComponents;
         ChunkStore chunks{};
+        /// @brief used by EntityQueryManager
+        uint32_t previousArchetypeCount = 0;
 
         void cleanChangeList()
         {

@@ -5,6 +5,7 @@
 #include "cutil/span.hpp"
 #include "cutil/basics.hpp"
 #include "ECS/Base/Entity.hpp"
+#include "Constants.hpp"
 namespace ECS {
     struct ISharedComponentData {};
     struct IComponentData {};
@@ -25,13 +26,6 @@ namespace ECS {
         inline bool isSharedComponent() const;
         inline bool isZeroSized() const;
         inline bool isManagedComponent() const ;
-        /// @brief MAGIC NUMBER, Maximum number of unique component types supported by the TypeManager
-        /// @details Considerations: SharedComponentIndex can only use up to 19 bit for the sharead component type
-        /// TypeManager::ClearFlagsMask this number must be power of 2 because of bit
-        /// we must keep atleast 4 last bits as flags.
-        /// 15 bit for type number for uint16_t + 1 bit for RW/RO
-        /// the larger the number the larger EntityComponentStore byte size
-        static constexpr uint16_t MaximumTypesCount = 1 << 12;
         static bool compare(const_span<TypeID> v1,const_span<TypeID> v2)
         {
             if (v1.size() != v2.size())
@@ -56,7 +50,7 @@ namespace ECS {
         /// @details Considerations: SharedComponent must comes before ZeroSized components
         static constexpr uint32_t ManagedComponentTypeFlag = 1 << 17;
         static constexpr uint32_t ZeroSizeInChunkTypeFlag  = 1 << 28;
-        static constexpr uint32_t ClearFlagsMask = TypeID::MaximumTypesCount-1;
+        static constexpr uint32_t ClearFlagsMask = Constants::MaximumTypesCount-1;
         enum class TypeCategory : uint16_t {
             /// Implements IComponentData (can be either a struct or a class)
             IComponentData = 0,
@@ -85,8 +79,8 @@ namespace ECS {
         };
     private:
         static uint32_t    typeCount;
-        static TypeInfo    sharedTypeInfos[TypeID::MaximumTypesCount];
-        static const char *sharedTypeNames[TypeID::MaximumTypesCount];
+        static TypeInfo    sharedTypeInfos[Constants::MaximumTypesCount];
+        static const char *sharedTypeNames[Constants::MaximumTypesCount];
     public:
         static inline const_span<TypeInfo> GetTypeInfoPointer(){
             return {sharedTypeInfos, typeCount};
@@ -110,8 +104,8 @@ namespace ECS {
             static_assert(sizeof(T) <= 0x800 && alignof(T) <= 0x1000);
             static_assert(std::is_class_v<T> && std::is_default_constructible_v<T>);
             static_assert(std::is_same_v<T,Entity> || std::is_base_of_v<IComponentData,T> || (std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>));
-            if(unlikely(typeCount >= TypeID::MaximumTypesCount))
-                throw std::runtime_error("TypeID::MaximumTypesCount");
+            if(unlikely(typeCount >= Constants::MaximumTypesCount))
+                throw std::runtime_error("Constants::MaximumTypesCount");
 
             uint32_t index = typeCount++;
 

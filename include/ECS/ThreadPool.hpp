@@ -19,6 +19,7 @@ namespace ECS
         ThreadPool(const ThreadPool&) = delete;
         ThreadPool(ThreadPool&&) = delete;
         /// @brief make sure isFinished before
+        void reset();
         void signalStart();
         void signalStop();
         bool isFinished();
@@ -54,9 +55,10 @@ namespace ECS
             std::atomic<uint32_t> capacity = 0;
             /// @brief batch begin index to start with
             std::atomic<uint32_t> *beginIndex = nullptr;
-            JobData  *jobs = nullptr;
+            JobData   *jobs = nullptr;
             /// @brief sorted by dependency. use the handle to find the real index.
             JobHandle *jobsArray = nullptr;
+            JobEntry  *buffer = nullptr;
         };
 
         struct thread_context {
@@ -73,7 +75,6 @@ namespace ECS
         
         // need to keep track of threads so we can join them
         std::vector<std::thread,allocator<std::thread>> worker;
-        align_ptr<JobDataChunk> chunk;
 
         /// @brief job thread main function
         static void func(thread_context*);

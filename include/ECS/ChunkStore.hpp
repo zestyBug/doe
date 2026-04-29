@@ -6,16 +6,15 @@
 #include <atomic>
 #include "cutil/span.hpp"
 #include "Base/Chunk.hpp"
+#include "Base/Constants.hpp"
 
 namespace ECS
 {
     struct ChunkStore {
-        // MAGIC NUMBER
-        static constexpr uint32_t MaximumChunkCount = 0x10000;
         static constexpr uint32_t BitmaskSize = 32;
-        static constexpr uint32_t ChunkBunchCount = MaximumChunkCount / BitmaskSize;
+        static constexpr uint32_t ChunkBunchCount = Constants::MaximumChunkCount / BitmaskSize;
     private:
-        std::array<std::atomic<Chunk*>,MaximumChunkCount> chunks;
+        std::array<std::atomic<Chunk*>,Constants::MaximumChunkCount> chunks;
         std::array<std::atomic<uint32_t>,ChunkBunchCount> bitmasks;
     public:
         ChunkStore() = default;
@@ -36,7 +35,7 @@ namespace ECS
             }
         };
         Chunk* getChunkPointer(const ChunkIndex chunk) {
-            if(chunk > MaximumChunkCount)
+            if(chunk > Constants::MaximumChunkCount)
                 return nullptr;
             return chunks[chunk].load();
         }
@@ -67,7 +66,7 @@ namespace ECS
             return ChunkIndex(buffer);
         }
         void freeChunk(const ChunkIndex chunk) {
-            if(chunk > MaximumChunkCount)
+            if(chunk > Constants::MaximumChunkCount)
                 return;
             uint32_t s_index = chunk % BitmaskSize;
             uint32_t b_index = chunk / BitmaskSize;
