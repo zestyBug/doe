@@ -2,12 +2,13 @@
 #define IJOBCHUNK_HPP
 
 #include "cutil/basics.hpp"
+#include "cutil/span.hpp"
 
 namespace ECS
 {
     struct Chunk;
     struct IJobChunk {
-        virtual void execute(Chunk*) = 0;
+        void execute(const Chunk*,const_span<uint32_t>){};
     };
 }
 

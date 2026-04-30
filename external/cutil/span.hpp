@@ -1,7 +1,8 @@
-#ifndef SPAN_HPP_INCLUDED
-#define SPAN_HPP_INCLUDED
+#ifndef SPAN_HPP
+#define SPAN_HPP
 
 #include <vector>
+#include <span>
 #include <array>
 #include "static_array.hpp"
 
@@ -134,7 +135,7 @@ private:
 	size_type _M_count;
 };
 
-
+/// @brief A span that guaranties "const" data access only
 template<typename _Type>
 class const_span
 {
@@ -272,4 +273,4 @@ private:
 };
 
 
-#endif // SPAN_HPP_INCLUDED
+#endif // SPAN_HPP

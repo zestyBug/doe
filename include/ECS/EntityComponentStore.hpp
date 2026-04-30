@@ -81,6 +81,7 @@ namespace ECS
         /// @param types sorted array of types
         Archetype* getOrCreateArchetype(const_span<TypeID> types);
         Archetype* getArchetype(Entity entity);
+        span<Archetype*> getArchetypes();
     private:
         inline void setArchetype(Chunk *chunk, Archetype *arch){chunk->archetype = arch;}
         Archetype* getArchetype(ChunkIndex chunk);

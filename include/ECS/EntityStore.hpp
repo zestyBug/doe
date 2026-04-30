@@ -15,7 +15,7 @@ namespace ECS
         // MAGIC NUMBER
         static constexpr uint32_t EntitiesInBlock = 8192;
         static constexpr uint32_t BlockCount = 4096;
-        static constexpr uint32_t MaximumTheoreticalAmountOfEntities = std::min(Constants::MaximumEntityCount, EntitiesInBlock * BlockCount);
+        static constexpr uint32_t MaximumTheoreticalAmountOfEntities = EntitiesInBlock * BlockCount;
         struct DataBlock
         {
             uint32_t allocated[EntitiesInBlock / 32];
@@ -152,7 +152,7 @@ namespace ECS
                                     uint32_t indexInBlock = maskIndex * 32 + entity;
                                     allocated[maskIndex] |= mask;
                                     uint32_t index = baseEntityIndex + indexInBlock;
-                                    if(index > Entity::Maximum)
+                                    if(index > Constants::MaximumEntityCount)
                                         throw std::runtime_error("allocateEntities(): out of entity index");
                                     entities[0] = Entity{(int32_t)index, ++versions[indexInBlock]};
                                     if (chunk != nullptr)

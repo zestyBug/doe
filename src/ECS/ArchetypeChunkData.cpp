@@ -113,7 +113,7 @@ void ArchetypeChunkData::grow(uint32_t new_capacity) {
         nextBuckEnd = nextBufferPtr;
     }
 
-    if(this->buck) {
+    if(this->buck.get() != nullptr) {
         memcpy(nextChunk,
             this->_Chunk,
             this->_count * sizeof(uint32_t)

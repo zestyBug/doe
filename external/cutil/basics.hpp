@@ -220,7 +220,7 @@ class align_ptr
             throw std::runtime_error("operator*(): cant obtain invalid pointer");
         return *_M_t;
     }
-    
+
     /// @brief Return the stored pointer as a refrence. safe but slow
     const Type& operator*() const
     {
@@ -277,6 +277,7 @@ class align_ptr
     align_ptr(const align_ptr&) = delete;
     align_ptr& operator=(const align_ptr&) = delete;
 };
+static_assert(sizeof(align_ptr<int>) == sizeof(int*));
 
 /// @brief smart pointer to hold ownership of an aligned array pointer.
 /// @warning since this class does not store the array size, it is not responsible for calling constructor/destructor, anyhow.
@@ -341,18 +342,11 @@ class align_ptr<Type[]>
 
     // Observers.
 
-    Type& operator*()
+    operator pointer()
     {
         if(unlikely(_M_t == nullptr))
             throw std::runtime_error("operator*(): cant obtain invalid pointer");
-        return *_M_t;
-    }
-    
-    const Type& operator*() const
-    {
-        if(unlikely(_M_t == nullptr))
-            throw std::runtime_error("operator*(): cant obtain invalid pointer");
-        return *_M_t;
+        return _M_t;
     }
 
     /// Access an element of owned array.

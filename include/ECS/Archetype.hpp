@@ -14,7 +14,7 @@ class Test;
 
 namespace ECS
 {
-    class EntityComponentStore;
+    struct EntityComponentStore;
     struct ChunkListChanges;
     struct Chunk;
     struct EntityQueryData;
@@ -29,9 +29,8 @@ namespace ECS
     protected:
         friend struct EntityComponentStore;
         friend struct ChunkListMap;
-        friend struct ArchetypeData;
         friend struct ChunkListChanges;
-        friend struct JobChunkProducer;
+        friend struct EntityQueryManager;
         friend class ::Test;
 
         ArchetypeChunkData chunks;
@@ -93,8 +92,9 @@ namespace ECS
         inline uint32_t numTagComponents()       const {return firstSharedComponent - firstTagComponent;}
         inline uint32_t numSharedComponents()    const {return typeCount - firstSharedComponent;}
         // this fucntion is a little more expensive than empty
-        inline uint32_t count() const noexcept { return entityCount; }
-        inline const_span<TypeID>   getType()   const {return {this->_types,  this->typeCount};}
+        inline uint32_t count() const { return entityCount; }
+        inline const_span<Chunk*>   getChunks() const {return  this->chunks.getChunkArray(); }
+        inline const_span<TypeID>   getTypes()  const {return {this->_types,  this->typeCount};}
         inline const_span<uint32_t> getOffset() const {return {this->_offsets,this->typeCount};}
         inline const_span<uint16_t> getSize()   const {return {this->_sizeOfs,this->typeCount};}
         inline const_span<uint16_t> getIndex()  const {return {this->_realIndecies,this->typeCount};}
@@ -110,13 +110,16 @@ namespace ECS
         /**
          * ChunkDataUtility
          */
-    //private:
+    public:
 
         /// @brief iterates over types array to find 
         /// @return -1 if not found
         int32_t getIndexInTypeArray(TypeID type) const;
         /// @brief when type arrays are pre-sorted, this can be used to search linearly for a match
         int32_t getNextIndexInTypeArray(TypeID type, int32_t lastTypeIndexInTypeArray) const;
+        /// @brief Check if non-zero-sized components are same. Means chunks can be moved between archetypes.
+        static bool areLayoutCompatible(Archetype *a, Archetype *b);
+    private:
         void releaseChunk(Chunk* chunk);
         void setChunkCount(Chunk* chunk, uint32_t newCount);
 
@@ -139,16 +142,10 @@ namespace ECS
         /// @brief remove a batch of entities in a chunk and fill the space if required. No destructor is called.
         /// @note may remove the chunk if chunk empties entirely.
         static void remove(EntityBatchInChunk batch);
-        static void copy(Chunk *srcChunk, uint32_t srcIndex, Chunk *dstChunk, uint32_t dstIndex, uint32_t count);
-        static void copyComponents(Chunk *srcChunk, uint32_t srcIndex, Chunk *dstChunk, uint32_t dstIndex, uint32_t count, uint32_t dstGlobalSystemVersion);
-        /// @brief Check if non-zero-sized components are same. Means chunks can be moved between archetypes.
-        static bool areLayoutCompatible(Archetype *a, Archetype *b);
-
-        /// @brief 
-        /// @param srcArchetype 
-        /// @param srcBatch 
-        /// @param dstArchetype 
-        /// @param dstChunk 
+        static void copy(const Chunk *srcChunk, uint32_t srcIndex, const Chunk *dstChunk, uint32_t dstIndex, uint32_t count);
+        /// @brief copy + ChangeVersion
+        static void copyComponents(const Chunk *srcChunk, uint32_t srcIndex, const Chunk *dstChunk, uint32_t dstIndex, uint32_t count, uint32_t dstGlobalSystemVersion);
+        /// @brief convert + cloneChangeVersions
         static void clone(Archetype *srcArchetype, EntityBatchInChunk srcBatch, Archetype *dstArchetype, Chunk *dstChunk);
         /// @brief move sized components data from a Chunk to another Chunk
         /// @details operations are: copy: memcpy(dst,src), new added: memset(dst,0), removed: destruct(src)
@@ -156,21 +153,15 @@ namespace ECS
         static void convert(Archetype *srcArchetype, Chunk *srcChunk, uint32_t srcIndex, Archetype *dstArchetype, Chunk *dstChunk, uint32_t dstIndex, uint32_t count);
         static void cloneChangeVersions(Archetype* srcArchetype, int32_t chunkIndexInSrcArchetype, Archetype* dstArchetype, int32_t chunkIndexInDstArchetype, bool dstValidExistingVersions = false);
         static void changeArchetypeInPlace(Archetype* srcArchetype, Chunk *srcChunk, Archetype* dstArchetype, const SharedComponentValues sharedComponentValues);
-
         void addEmptyChunk(Chunk *chunk, const SharedComponentValues sharedComponentValues);
-
+    public:
         void setSharedComponentDataIndex(Entity entity, const SharedComponentValues sharedComponentValues, TypeID typeIndex);
         void setSharedComponentDataIndex(Chunk *chunk, const SharedComponentValues sharedComponentValues, TypeID typeIndex);
         void setSharedComponentDataIndex(EntityBatchInChunk batch, const SharedComponentValues sharedComponentValues, TypeID typeIndex);
-        const uint8_t* getComponentDataWithTypeRO(Chunk *chunk, uint32_t baseEntityIndex, TypeID typeIndex) const;
-        const uint8_t* getComponentDataRO(Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray) const;
-        uint8_t* getComponentDataWithTypeRW(Chunk *chunk, uint32_t baseEntityIndex, TypeID typeIndex, Version globalSystemVersion);
-        uint8_t* getComponentDataRW(Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray, Version globalSystemVersion);
-    };
-    struct ArchetypeData
-    {
-        static constexpr uint32_t BufferSize = 1024;
-        uint8_t buffer[BufferSize];
+        const uint8_t* getComponentDataWithTypeRO(const Chunk *chunk, uint32_t baseEntityIndex, TypeID typeIndex) const;
+        const uint8_t* getComponentDataRO(const Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray) const;
+        uint8_t* getComponentDataWithTypeRW(const Chunk *chunk, uint32_t baseEntityIndex, TypeID typeIndex, Version globalSystemVersion);
+        uint8_t* getComponentDataRW(const Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray, Version globalSystemVersion);
     };
 } // namespace ECS
 

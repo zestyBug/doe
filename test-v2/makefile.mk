@@ -26,37 +26,10 @@ export
 
 
 
-$(OBJ)/$(srcDir)/ECS/Archetype.o: $(srcDir)/ECS/Archetype.cpp
+$(OBJ)/$(srcDir)/ECS/%.o: $(srcDir)/ECS/%.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(srcDir)/ECS/ArchetypeChunkData.o: $(srcDir)/ECS/ArchetypeChunkData.cpp
-	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(srcDir)/ECS/ChunkListMap.o: $(srcDir)/ECS/ChunkListMap.cpp
-	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(srcDir)/ECS/EntityComponentStore.o: $(srcDir)/ECS/EntityComponentStore.cpp
-	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(srcDir)/ECS/TypeID.o: $(srcDir)/ECS/TypeID.cpp
-	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(srcDir)/ECS/ThreadPool.o: $(srcDir)/ECS/ThreadPool.cpp
-	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(srcDir)/ECS/ChunkListChanges.o: $(srcDir)/ECS/ChunkListChanges.cpp
-	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(srcDir)/ECS/ComponentDependencyManager.o: $(srcDir)/ECS/ComponentDependencyManager.cpp
-	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(srcDir)/ECS/EntityQueryManager.o: $(srcDir)/ECS/EntityQueryManager.cpp
-	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(srcDir)/ECS/JobChunk.o: $(srcDir)/ECS/JobChunk.cpp
-	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
-$(OBJ)/$(cutilDir)/HashHelper.o: $(cutilDir)/HashHelper.cpp
+$(OBJ)/$(cutilDir)/%.o: $(cutilDir)/%.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
 $(OBJ)/$(testDir)/test-%.o: $(testDir)/test-%.cpp
@@ -66,6 +39,7 @@ $(OBJ)/$(testDir)/test-%.o: $(testDir)/test-%.cpp
 OBJS= \
 	$(OBJ)/$(srcDir)/ECS/Archetype.o \
 	$(OBJ)/$(srcDir)/ECS/ArchetypeChunkData.o \
+	$(OBJ)/$(srcDir)/ECS/ArchetypeListMap.o \
 	$(OBJ)/$(srcDir)/ECS/ChunkListMap.o \
 	$(OBJ)/$(srcDir)/ECS/EntityComponentStore.o \
 	$(OBJ)/$(srcDir)/ECS/TypeID.o \

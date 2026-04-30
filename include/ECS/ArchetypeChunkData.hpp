@@ -78,7 +78,7 @@ namespace ECS
         bool insideAllocation(void *addr) {
             return (buck.get() != nullptr) && (buck.get() <= addr) && (addr <= buckEnd);
         }
-        inline const_span<Chunk*> getChunkIndexArray() { return {_Chunk, this->_count}; }
+        inline const_span<Chunk*> getChunkArray() const { return {_Chunk, this->_count}; }
         span<Version> getChangeVersionArrayForType(uint32_t component_index_in_archetype);
         Version getChangeVersion(uint32_t component_index_in_archetype, uint32_t index) const;
         // set version of all components in a chunk

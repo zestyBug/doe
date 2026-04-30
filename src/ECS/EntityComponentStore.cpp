@@ -11,10 +11,13 @@ EntityComponentStore::~EntityComponentStore(){
         for (uint32_t c = 0; c != archetype->chunks.count(); c++)
         {
             Chunk* chunk = archetype->chunks[c];
-            this->deallocateManagedComponents(EntityBatchInChunk{.chunk=chunk, .startIndex=0, .count = chunk->entityCount});
-            this->entityStore.deallocateEntities({(Entity*)chunk->buffer, chunk->entityCount});
+            this->deallocateManagedComponents(EntityBatchInChunk{.chunk=chunk, .startIndex=0, .count = chunk->count});
+            this->entityStore.deallocateEntities({(Entity*)chunk->buffer, chunk->count});
         }
     }
+}
+span<Archetype*> EntityComponentStore::getArchetypes(){
+    return {(Archetype**)(Archetype*)this->archetypes.data(),(uint32_t)this->archetypes.size()};
 }
 EntityComponentStore::EntityComponentStore(){
     this->componentTypeOrderVersion = make_align<Version[]>(Constants::MaximumTypesCount);
@@ -153,7 +156,7 @@ void EntityComponentStore::moveAndSetChangeVersion(
     const SharedComponentValues sharedComponentValues, 
     TypeID type)
 {
-    if ((batch.count == batch.chunk->entityCount))
+    if ((batch.count == batch.chunk->count))
     {
         if(batch.startIndex != 0)
             throw std::invalid_argument("moveAndSetChangeVersion(): invalid batch");
@@ -201,7 +204,7 @@ void EntityComponentStore::destroyBatch(EntityBatchInChunk batch){
 }
 void EntityComponentStore::freeEntities(Chunk* chunk)
 {   
-    this->entityStore.deallocateEntities({(Entity*)chunk->buffer, chunk->entityCount});
+    this->entityStore.deallocateEntities({(Entity*)chunk->buffer, chunk->count});
 }
 Chunk* EntityComponentStore::getChunkWithEmptySlots(Archetype* archetype, const SharedComponentValues sharedComponentIndecies)
 {
@@ -267,7 +270,7 @@ void EntityComponentStore::createEntities(Archetype* archetype, span<Entity> ent
     while (entities.size())
     {
         Chunk* chunk = getChunkWithEmptySlots(archetype, values);
-        uint32_t unusedCount = archetype->chunkCapacity - chunk->entityCount;
+        uint32_t unusedCount = archetype->chunkCapacity - chunk->count;
         uint32_t allocateCount = std::min(entities.size(), unusedCount);
         archetype->allocate(chunk, allocateCount, entities.data());
         entities += allocateCount;
@@ -298,7 +301,7 @@ EntityBatchInChunk EntityComponentStore::getFirstEntityBatchInChunk(const_span<E
             break;
     }
 
-    if(ret.chunk != nullptr && (ret.startIndex + ret.count) > ret.chunk->entityCount)
+    if(ret.chunk != nullptr && (ret.startIndex + ret.count) > ret.chunk->count)
         throw std::runtime_error("getFirstEntityBatchInChunk():");
 
     return ret;
@@ -318,7 +321,7 @@ void EntityComponentStore::destroyEntities(const_span<Entity> entities){
 }
 void EntityComponentStore::allocateEntities(Archetype* arch, Chunk *chunk, uint32_t baseIndex, uint count, Entity* outputEntities)
 {
-    if(arch->_types[0] != 1 || arch->_offsets[0] != 64)
+    if(arch->_types[0] != TypeID::fromIndex(1) || arch->_offsets[0] != 64)
         throw std::invalid_argument("allocateEntities(): invalid archetype");
 
     Entity* entityInChunkStart = (Entity*)(chunk->buffer) + baseIndex;
@@ -330,7 +333,7 @@ void EntityComponentStore::allocateEntities(Archetype* arch, Chunk *chunk, uint3
 }
 void EntityComponentStore::deallocateDataEntitiesInChunk(EntityBatchInChunk batch)
 {
-    if(batch.chunk->entityCount < (batch.startIndex + batch.count))
+    if(batch.chunk->count < (batch.startIndex + batch.count))
         throw std::out_of_range("deallocateDataEntitiesInChunk(): invalid batch");
     deallocateManagedComponents(batch);
 
@@ -340,14 +343,14 @@ void EntityComponentStore::deallocateDataEntitiesInChunk(EntityBatchInChunk batc
     this->entityStore.deallocateEntities({entities, batch.count});
 
     // Compute the number of things that need to moved and patched.
-    uint32_t patchCount = std::min(batch.count, batch.chunk->entityCount - batch.startIndex - batch.count);
+    uint32_t patchCount = std::min(batch.count, batch.chunk->count - batch.startIndex - batch.count);
 
     if (0 == patchCount)
         return;
 
     // updates indexInChunk to point to where the components will be moved to
     //Assert.IsTrue(chunk->archetype->sizeOfs[0] == sizeof(Entity) && chunk->archetype->offsets[0] == 0);
-    Entity* movedEntities = (Entity*)batch.chunk->buffer + (batch.chunk->entityCount - patchCount);
+    Entity* movedEntities = (Entity*)batch.chunk->buffer + (batch.chunk->count - patchCount);
     for (uint32_t i = 0; i != patchCount; i++)
     {
         EntityInChunk entityInChunk = getEntityInChunk(movedEntities[i]);
@@ -356,7 +359,7 @@ void EntityComponentStore::deallocateDataEntitiesInChunk(EntityBatchInChunk batc
     }
 
     // Move component data from the end to where we deleted components
-    uint32_t startIndex = batch.chunk->entityCount - patchCount;
+    uint32_t startIndex = batch.chunk->count - patchCount;
 
     Archetype::copy(batch.chunk, startIndex, batch.chunk, batch.startIndex, patchCount);
 }
@@ -381,7 +384,7 @@ void EntityComponentStore::deallocateManagedComponents(EntityBatchInChunk batch)
 void EntityComponentStore::addExistingEntitiesInChunk(Chunk *chunk)
 {
     Entity* entities = (Entity*)chunk->buffer;
-    for(uint32_t iEntity = 0, count = chunk->entityCount; iEntity < count; ++iEntity)
+    for(uint32_t iEntity = 0, count = chunk->count; iEntity < count; ++iEntity)
     {
         Entity entity = entities[iEntity];
         entityStore.setEntityInChunk(entity, {chunk, iEntity});
@@ -564,7 +567,7 @@ uint32_t EntityComponentStore::move(EntityBatchInChunk srcBatch, Chunk* dstChunk
 {
     Archetype *srcArchetype = this->getArchetype(srcBatch.chunk);
     Archetype *dstArchetype = this->getArchetype(dstChunk);
-    uint32_t   dstUnusedCount = dstArchetype->chunkCapacity - dstChunk->entityCount;
+    uint32_t   dstUnusedCount = dstArchetype->chunkCapacity - dstChunk->count;
 
     EntityBatchInChunk partialSrcBatch;
     partialSrcBatch.chunk = srcBatch.chunk;
@@ -591,7 +594,7 @@ void EntityComponentStore::move(Chunk *chunk, Archetype* archetype, SharedCompon
         Archetype::changeArchetypeInPlace(srcArchetype, chunk, archetype, sharedComponentValues);
         return;
     }
-    this->move({chunk,0,chunk->entityCount}, archetype, sharedComponentValues);
+    this->move({chunk,0,chunk->count}, archetype, sharedComponentValues);
 }
 void EntityComponentStore::move(EntityBatchInChunk batch, Archetype* archetype, SharedComponentValues sharedComponentValues)
 {

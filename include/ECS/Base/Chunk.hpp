@@ -5,12 +5,7 @@
 
 namespace ECS
 {
-    class ChunkListMap;
-    class ArchetypeChunkData;
     class Archetype;
-    class ChunkStore;
-    class EntityComponentStore;
-
     struct ChunkIndex {
         constexpr ChunkIndex() = default;
         constexpr ChunkIndex(const uint32_t v):value{v}{}
@@ -46,16 +41,15 @@ namespace ECS
         // lower the number, the better component version-ing performs,
         /// @details Considerations: ArchetypeChunkData uses bitset as enabling bit per type for entities in a chunk so it must be multiply of 64.
         static constexpr uint32_t MaximumEntitiesPerChunk = 192;
-    protected:
         Archetype *archetype = nullptr;
-        uint32_t entityCount = 0;
+        uint32_t count = 0;
         // index in chunksWithEmptySlots or freeChunksBySharedComponents
          int32_t listWithEmptySlotsIndex = -1;
         // index in ArchetypeChunkData
          int32_t listIndex = -1;
         /// @brief actual buffer
         ChunkIndex index = ChunkIndex();
-        alignas(MemoryOffset) uint8_t buffer[BufferSize];
+        alignas(MemoryOffset) mutable uint8_t buffer[BufferSize];
     };
     static_assert(sizeof(Chunk) == Chunk::MemorySize);
 }

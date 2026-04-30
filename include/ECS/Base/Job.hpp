@@ -5,9 +5,12 @@
 
 namespace ECS
 {
+    namespace internal {
+        struct ThreadPool;
+    }
     struct Chunk;
     struct JobHandle {
-        friend class ThreadPool;
+        friend struct internal::ThreadPool;
         // default value is the invalid value
         JobHandle() = default;
         inline operator bool   () const {return this->id>=0;}

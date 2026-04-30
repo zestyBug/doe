@@ -17,6 +17,7 @@ private:
         container(){
             _ = false;
         }
+        ~container(){}
     };
     container _data{};
     uint32_t count = 0;
@@ -44,7 +45,8 @@ public:
         count = 0;
     }
     ~static_array(){
-        clear();
+        for (size_t i = 0; i < count; i++)
+            _data.array[i].~Type();
     }
 
     inline uint32_t capacity()const {return S;}
@@ -58,19 +60,23 @@ public:
     inline Type*  end(){return this->_data.array + count;}
     inline const Type* begin()const {return this->_data.array;}
     inline const Type* end()const {return this->_data.array + count;}
-    inline const T* data () const {return this->_data.array;}
-    inline T* data () {return this->_data.array;}
+    inline const Type* data () const {return this->_data.array;}
+    inline Type* data () {return this->_data.array;}
 
     template<typename ... Args>
-    inline void emplace_back(Args ... arg){
+    inline Type& emplace_back(Args ... arg){
         if(full())
             throw std::out_of_range("at(): array full");
-        new (&(this->_data.array[this->count++])) Type(arg...);
+        Type *ptr = this->_data.array + (this->count++);
+        new (ptr) Type(arg...);
+        return *ptr;
     }
-    inline void push_back(const Type& v){
+    inline Type& push_back(const Type& v){
         if(full())
             throw std::out_of_range("at(): array full");
-        new (&(this->_data.array[this->count++])) Type(v);
+        const uint32_t index = this->count++;
+        new (&(this->_data.array[index])) Type(v);
+        return this->_data.array[index];
     }
     inline void pop_back() {
         if(this->count > 0){

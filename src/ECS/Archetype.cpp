@@ -15,9 +15,11 @@ void Archetype::addToChunkList(Chunk* chunk, SharedComponentValues sharedCompone
         // The shared component indices we are inserting belong to the same archetype so they need to be adjusted after reallocation
         if (chunks.insideAllocation(sharedComponentIndices.firstIndex))
         {
-            uint32_t chunkIndex = sharedComponentIndices.firstIndex - chunks.getSharedComponentValueArrayForType(0).data();
+            ssize_t chunkIndex = sharedComponentIndices.firstIndex - chunks.getSharedComponentValueArrayForType(0).data();
+            if(chunkIndex < 0)
+                throw std::runtime_error("addToChunkList(): unexpected index");
             chunks.grow(newCapacity);
-            sharedComponentIndices = chunks.getSharedComponentValues(chunkIndex);
+            sharedComponentIndices = chunks.getSharedComponentValues((uint32_t)chunkIndex);
         }
         else
         {
@@ -83,7 +85,7 @@ Chunk* Archetype::getExistingChunkWithEmptySlots(const SharedComponentValues sha
         if (!chunksWithEmptySlots.empty())
         {
             Chunk* chunk = chunksWithEmptySlots.back();
-            if(chunk->entityCount >= this->chunkCapacity)
+            if(chunk->count >= this->chunkCapacity)
                 throw std::runtime_error("getExistingChunkWithEmptySlots(): invalid chunk");
             return chunk;
         }
@@ -113,7 +115,7 @@ int32_t Archetype::getNextIndexInTypeArray(TypeID type, int32_t lastTypeIndexInT
     if(lastTypeIndexInTypeArray < 0 || (uint32_t)lastTypeIndexInTypeArray >= this->typeCount)
         throw std::out_of_range("getNextIndexInTypeArray(): invalid last index");
     TypeID *types = this->_types + lastTypeIndexInTypeArray;
-    TypeID *types_end = types + this->typeCount;
+    TypeID *types_end = this->_types + this->typeCount;
     for (;types!=types_end;++types) {
         if (type == *types)
             return (int32_t)(types_end - types);
@@ -137,14 +139,14 @@ void Archetype::releaseChunk(Chunk* chunk)
         }
     }
     // this chunk is going away, so it shouldn't be in the empty slot list.
-    if (chunk->entityCount < this->chunkCapacity)
+    if (chunk->count < this->chunkCapacity)
         this->emptySlotTrackingRemoveChunk(chunk);
     this->removeFromChunkList(chunk,this->entityComponentStore->chunkListChangesTracker);
     entityComponentStore->chunks.freeChunk(chunk->index);
 }
 void Archetype::setChunkCount(Chunk* chunk, uint32_t newCount)
 {
-    if(chunk->entityCount == newCount)
+    if(chunk->count == newCount)
         throw std::invalid_argument("setChunkCount(): no change detected");
     // Chunk released to empty chunk pool
     if (newCount == 0)
@@ -160,18 +162,19 @@ void Archetype::setChunkCount(Chunk* chunk, uint32_t newCount)
         this->emptySlotTrackingRemoveChunk(chunk);
     }
     // Chunk is no longer full
-    else if (chunk->entityCount == capacity)
+    else if (chunk->count == capacity)
     {
-        if(newCount >= chunk->entityCount)
+        if(newCount >= chunk->count)
             throw std::runtime_error("setChunkCount(): ");
         this->emptySlotTrackingAddChunk(chunk);
     }
-    chunk->entityCount = newCount;
+    chunk->count = newCount;
 }
 void Archetype::initializeComponents(Chunk* chunk, uint32_t dstIndex, uint32_t count) {
     uint32_t *offsets = this->_offsets;
     uint16_t *sizeOfs = this->_sizeOfs;
     TypeID *types = this->_types;
+    TypeManager::DefaultFunction *dCons = this->_dConstructor;
     uint8_t  *dstBuffer = (uint8_t*)chunk;
     uint32_t  typesCount = this->numNonZeroSizedTypes();
     for (uint32_t t = 1; t != typesCount; t++)
@@ -182,18 +185,17 @@ void Archetype::initializeComponents(Chunk* chunk, uint32_t dstIndex, uint32_t c
         if(!type.isManagedComponent()){
             memset(dst, 0, sizeOf*count);
         }else{
-            auto dCon = TypeManager::GetTypeInfo(type).defaultConstruct;
-            if(dCon != nullptr)
-                for (uint32_t i = 0; i != count; i++){
-                    dCon(dst);
-                    dst += sizeOf;
-                }
+            TypeManager::DefaultFunction dCon = dCons[t];
+            for (uint32_t i = 0; i != count; i++){
+                dCon(dst);
+                dst += sizeOf;
+            }
         }
     }
 }
 uint32_t Archetype::allocateIntoChunk(Chunk* chunk, uint32_t count, uint32_t& outIndex)
 {
-    outIndex = chunk->entityCount;
+    outIndex = chunk->count;
     uint32_t allocatedCount = std::min(chunkCapacity - outIndex, count);
     setChunkCount(chunk, outIndex + allocatedCount);
     this->entityCount += allocatedCount;
@@ -218,11 +220,11 @@ void Archetype::deallocate(Chunk *chunk)
 {
     if(chunk == nullptr)
         throw std::invalid_argument("deallocate(): invalid batch");
-    this->deallocate(EntityBatchInChunk{ .chunk = chunk, .startIndex = 0, .count = chunk->entityCount });
+    this->deallocate(EntityBatchInChunk{ .chunk = chunk, .startIndex = 0, .count = chunk->count });
 }
 void Archetype::deallocate(EntityBatchInChunk batch)
 {
-    if(batch.chunk == nullptr || batch.chunk->entityCount < (batch.count + batch.startIndex))
+    if(batch.chunk == nullptr || batch.chunk->count < (batch.count + batch.startIndex))
         throw std::invalid_argument("deallocate(): invalid batch");
 
     entityComponentStore->deallocateDataEntitiesInChunk(batch);
@@ -234,7 +236,7 @@ void Archetype::deallocate(EntityBatchInChunk batch)
     entityComponentStore->incrementComponentTypeOrderVersion(this);
 
     this->entityCount -= batch.count;
-    uint32_t newChunkEntityCount = batch.chunk->entityCount - batch.count;
+    uint32_t newChunkEntityCount = batch.chunk->count - batch.count;
     this->setChunkCount(batch.chunk, newChunkEntityCount);
 }
 void Archetype::remove(EntityBatchInChunk batch)
@@ -244,7 +246,7 @@ void Archetype::remove(EntityBatchInChunk batch)
 
     Archetype *archetype = batch.chunk->archetype;
     EntityComponentStore *entityComponentStore = archetype->entityComponentStore;
-    const uint32_t chunk_Count = batch.chunk->entityCount;
+    const uint32_t chunk_Count = batch.chunk->count;
     // Fill in moved component data from the end.
     const uint32_t srcTailIndex = batch.startIndex + batch.count;
     if(chunk_Count < srcTailIndex)
@@ -266,11 +268,11 @@ void Archetype::remove(EntityBatchInChunk batch)
     const SharedComponentValues sharedComponentValues = archetype->chunks.getSharedComponentValues(batch.chunk->listIndex);
     entityComponentStore->incrementComponentOrderVersion(archetype, sharedComponentValues);
 
-    int newChunkEntityCount = batch.chunk->entityCount - batch.count;
+    int newChunkEntityCount = batch.chunk->count - batch.count;
     archetype->setChunkCount(batch.chunk, newChunkEntityCount);
     archetype->entityCount -= batch.count;
 }
-void Archetype::copy(Chunk *srcChunk, uint32_t srcIndex, Chunk *dstChunk, uint32_t dstIndex, uint32_t count)
+void Archetype::copy(const Chunk *srcChunk, uint32_t srcIndex, const Chunk *dstChunk, uint32_t dstIndex, uint32_t count)
 {
     Archetype *arch = srcChunk->archetype;
 
@@ -293,7 +295,7 @@ void Archetype::copy(Chunk *srcChunk, uint32_t srcIndex, Chunk *dstChunk, uint32
         memcpy(dst, src, sizeOf * count);
     }
 }
-void Archetype::copyComponents(Chunk *srcChunk, uint32_t srcIndex, Chunk *dstChunk, uint32_t dstIndex, uint32_t count, uint32_t dstGlobalSystemVersion)
+void Archetype::copyComponents(const Chunk *srcChunk, uint32_t srcIndex, const Chunk *dstChunk, uint32_t dstIndex, uint32_t count, uint32_t dstGlobalSystemVersion)
 {
     if(!areLayoutCompatible(dstChunk->archetype,srcChunk->archetype))
         throw std::invalid_argument("copyComponents(): incompatible archetypes layout");
@@ -372,35 +374,35 @@ void Archetype::setSharedComponentDataIndex(EntityBatchInChunk batch, const Shar
     entityComponentStore->moveAndSetChangeVersion(batch, batch.chunk->archetype, sharedComponentValues, type);
 }
 
-const uint8_t* Archetype::getComponentDataWithTypeRO(Chunk *chunk, uint32_t baseEntityIndex, TypeID type) const
+const uint8_t* Archetype::getComponentDataWithTypeRO(const Chunk *chunk, uint32_t baseEntityIndex, TypeID type) const
 {
     int32_t indexInTypeArray = this->getIndexInTypeArray(type);
     if(indexInTypeArray < 0)
         throw std::invalid_argument("getComponentDataWithTypeRO(): type not fount");
-    if(chunk->entityCount <= baseEntityIndex)
+    if(chunk->count <= baseEntityIndex)
         throw std::out_of_range("getComponentDataWithTypeRO(): invalid entity index");
     uint32_t offset = this->_offsets[indexInTypeArray];
     uint32_t sizeOf = this->_sizeOfs[indexInTypeArray];
 
     return (uint8_t*)chunk + (offset + sizeOf * baseEntityIndex);
 }
-const uint8_t* Archetype::getComponentDataRO(Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray) const
+const uint8_t* Archetype::getComponentDataRO(const Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray) const
 {
     if(indexInTypeArray >= this->typeCount)
         throw std::invalid_argument("getComponentDataWithTypeRO(): type not fount");
-    if(chunk->entityCount <= baseEntityIndex)
+    if(chunk->count <= baseEntityIndex)
         throw std::out_of_range("getComponentDataWithTypeRO(): invalid entity index");
     uint32_t offset = this->_offsets[indexInTypeArray];
     uint32_t sizeOf = this->_sizeOfs[indexInTypeArray];
 
     return (uint8_t*)chunk + (offset + sizeOf * baseEntityIndex);
 }
-uint8_t* Archetype::getComponentDataWithTypeRW(Chunk *chunk, uint32_t baseEntityIndex, TypeID type, Version globalSystemVersion)
+uint8_t* Archetype::getComponentDataWithTypeRW(const Chunk *chunk, uint32_t baseEntityIndex, TypeID type, Version globalSystemVersion)
 {
     int32_t indexInTypeArray = this->getIndexInTypeArray(type);
     if(indexInTypeArray < 0)
         throw std::invalid_argument("getComponentDataWithTypeRO(): type not fount");
-    if(chunk->entityCount <= baseEntityIndex)
+    if(chunk->count <= baseEntityIndex)
         throw std::out_of_range("getComponentDataWithTypeRO(): invalid entity index");
     uint32_t offset = this->_offsets[indexInTypeArray];
     uint32_t sizeOf = this->_sizeOfs[indexInTypeArray];
@@ -410,11 +412,11 @@ uint8_t* Archetype::getComponentDataWithTypeRW(Chunk *chunk, uint32_t baseEntity
 
     return (uint8_t*)chunk + (offset + sizeOf * baseEntityIndex);
 }
-uint8_t* Archetype::getComponentDataRW(Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray, Version globalSystemVersion)
+uint8_t* Archetype::getComponentDataRW(const Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray, Version globalSystemVersion)
 {
     if(indexInTypeArray >= this->typeCount)
         throw std::invalid_argument("getComponentDataWithTypeRO(): type not fount");
-    if(chunk->entityCount <= baseEntityIndex)
+    if(chunk->count <= baseEntityIndex)
         throw std::out_of_range("getComponentDataWithTypeRO(): invalid entity index");
     uint32_t offset = this->_offsets[indexInTypeArray];
     uint32_t sizeOf = this->_sizeOfs[indexInTypeArray];
@@ -429,7 +431,7 @@ void Archetype::addEmptyChunk(Chunk *chunk, const SharedComponentValues sharedCo
     Version globalSystemVersion = entityComponentStore->getGlobalSystemVersion();
 
     entityComponentStore->setArchetype(chunk, this);
-    chunk->entityCount = 0;
+    chunk->count = 0;
     uint32_t numSharedComponents = this->numSharedComponents();
     if (numSharedComponents > 0)
     {
@@ -465,7 +467,7 @@ void Archetype::clone(Archetype *srcArchetype, EntityBatchInChunk srcBatch, Arch
     // Note (srcArchetype == dstArchetype) is valid
     // Archetypes can the the same, but chunks still differ because filter is different (e.g. shared component)
 
-    bool dstValidExistingVersions = dstChunk->entityCount != 0;
+    bool dstValidExistingVersions = dstChunk->count != 0;
     uint32_t dstChunkIndex;
     uint32_t dstCount = dstArchetype->allocateIntoChunk(dstChunk, srcBatch.count, dstChunkIndex);
     if(dstCount != srcBatch.count)
@@ -496,6 +498,7 @@ void Archetype::convert(Archetype *srcArchetype, Chunk *srcChunk, uint32_t srcIn
     int32_t dstI = dstArchetype->numNonZeroSizedTypes() - 1;
     uint32_t srcFirstManagedComponent = srcArchetype->firstManagedComponent;
 
+    const TypeManager::DefaultFunction *srcDDes = srcArchetype->_dDestructor;
     const TypeID *srcTypes = srcArchetype->_types;
     const TypeID *dstTypes = dstArchetype->_types;
     const uint16_t *srcSizeOfs = srcArchetype->_sizeOfs;
@@ -548,7 +551,7 @@ void Archetype::convert(Archetype *srcArchetype, Chunk *srcChunk, uint32_t srcIn
         {
             srcI = sourceTypesToDealloc[iDealloc];
             uint32_t srcStride = srcSizeOfs[srcI];
-            TypeManager::DefaultFunction dFunc = TypeManager::GetTypeInfo(srcTypes[srcI]).defaultDestruct;
+            TypeManager::DefaultFunction dFunc = srcDDes[srcI];
             uint8_t *src = srcChunkBuffer + srcOffsets[srcI] + srcIndex * srcStride;
             for (uint32_t i = 0; i < count; i++)
             {
@@ -658,7 +661,7 @@ void Archetype::changeArchetypeInPlace(Archetype* srcArchetype, Chunk *srcChunk,
             entityComponentStore->sharedComponents.removeReference(srcSharedComponentValues[o]);
     }
 
-    uint32_t count = srcChunk->entityCount;
+    uint32_t count = srcChunk->count;
     bool hasEmptySlots = count < srcArchetype->chunkCapacity;
 
     if (hasEmptySlots)

@@ -2,18 +2,20 @@
 #include "ECS/EntityComponentStore.hpp"
 #include "ECS/Archetype.hpp"
 
+ECS::internal::ThreadPool ECS::JobsUtility;
 using namespace ECS;
-
+using namespace ECS::internal;
 
 uint32_t ThreadPool::threadCount(){
     return this->context.threadCount;
 }
-ThreadPool::ThreadPool(const uint8_t thread_count):worker(thread_count)
+void ThreadPool::INIT(uint32_t thread_count)
 {
+    worker.reserve(thread_count);
     resizeJobPool(32);
     this->context.threadCount = thread_count;
-    for(auto& t: this->worker)
-        t = std::thread{&ThreadPool::func,&this->context};
+    while(thread_count--)
+        worker.emplace_back(&ThreadPool::func,&this->context);
 }
 void ThreadPool::reset() {
     std::lock_guard lock(this->context.mutex);

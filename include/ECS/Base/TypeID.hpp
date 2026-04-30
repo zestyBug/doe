@@ -12,7 +12,11 @@ namespace ECS {
     struct IManagedComponentData {};
     struct TypeID final {
         TypeID()=default;
-        TypeID(uint32_t v):value{v}{};
+        /// @brief Just in case you know what you are doing
+        /// @details if you forget to include flags, the engine may behave unexpectedly.
+        inline static TypeID fromIndex(uint32_t v){
+            TypeID r;r.value = v;return r;
+        };
         TypeID(const TypeID&)=default;
         TypeID& operator = (const TypeID&)=default;
         TypeID(TypeID&&)=default;
@@ -61,7 +65,7 @@ namespace ECS {
         };
         typedef void(*DefaultFunction)(void*);
         struct TypeInfo {
-            TypeID       TypeIndex = 0;
+            TypeID       TypeIndex;
             /// @brief Blittable size of the component type.
             uint16_t     TypeSize = 0;
             /// @brief The number of bytes used in a Chunk to store an instance of this component.
@@ -92,9 +96,17 @@ namespace ECS {
             if(typeIndex.index() >= typeCount) throw std::bad_typeid();
             return sharedTypeInfos[typeIndex.index()];
         }
+        static const TypeInfo& GetTypeInfo(uint32_t index) {
+            if(index >= typeCount) throw std::bad_typeid();
+            return sharedTypeInfos[index];
+        }
         static const char* GetTypeName(TypeID typeIndex) {
             if(typeIndex.index() >= typeCount) throw std::bad_typeid();
             return sharedTypeNames[typeIndex.index()];
+        }
+        static const char* GetTypeName(uint32_t index) {
+            if(index >= typeCount) throw std::bad_typeid();
+            return sharedTypeNames[index];
         }
         static TypeID registerNull();
         static TypeID registerEntity();
@@ -116,7 +128,7 @@ namespace ECS {
                 value |= ManagedComponentTypeFlag;
             if(std::is_empty_v<T>)
                 value |= ZeroSizeInChunkTypeFlag;
-            sharedTypeInfos[index].TypeIndex = TypeID(value);
+            sharedTypeInfos[index].TypeIndex = TypeID::fromIndex(value);
 
             sharedTypeInfos[index].TypeSize = sizeof(T);
             sharedTypeInfos[index].SizeInChunk = std::is_empty_v<T> ? 0 : sizeof(T);

@@ -2,7 +2,7 @@
 #include "ECS/Base/TypeID.hpp"
 #include "ECS/Base/Entity.hpp"
 #include "cutil/HashHelper.hpp"
-#include "Base/Constants.hpp"
+#include "ECS/Base/Constants.hpp"
 
 namespace ECS {
 
@@ -12,24 +12,24 @@ const char*           TypeManager::sharedTypeNames[Constants::MaximumTypesCount]
 
 TypeID TypeManager::registerNull() {
     // MAGIC NUMBER
-    sharedTypeInfos[0].TypeIndex = TypeID(ZeroSizeInChunkTypeFlag);
+    sharedTypeInfos[0].TypeIndex = TypeID::fromIndex(ZeroSizeInChunkTypeFlag);
     sharedTypeInfos[0].TypeSize = sizeof(nullptr_t);
     sharedTypeInfos[0].SizeInChunk = 0;
     sharedTypeInfos[0].AlignmentInBytes = alignof(nullptr_t);
     sharedTypeInfos[0].Category = TypeCategory::IComponentData;
     sharedTypeNames[0]="nullptr_t";
-    return TypeID(ZeroSizeInChunkTypeFlag);
+    return TypeID::fromIndex(ZeroSizeInChunkTypeFlag);
 }
 TypeID TypeManager::registerEntity() {
     static_assert(sizeof(Entity) == 8);
     // MAGIC NUMBER
-    sharedTypeInfos[1].TypeIndex = TypeID(1);
+    sharedTypeInfos[1].TypeIndex = TypeID::fromIndex(1);
     sharedTypeInfos[1].TypeSize = sizeof(Entity);
     sharedTypeInfos[1].SizeInChunk = sizeof(Entity);
     sharedTypeInfos[1].AlignmentInBytes = alignof(Entity);
     sharedTypeInfos[1].Category = TypeCategory::Entity;
     sharedTypeNames[1]="Entity";
-    return TypeID(1);
+    return TypeID::fromIndex(1);
 }
 
 void TypeID::Debug() {
