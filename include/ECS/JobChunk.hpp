@@ -2,34 +2,30 @@
 #define JOBCHUNK_HPP
 
 #include "Base/IJobChunk.hpp"
-#include "Base/ArchetypeQuery.hpp"
+#include "Base/Query.hpp"
 #include "Base/Job.hpp"
 
 namespace ECS
 {
-    struct EntityComponentStore;
     struct Chunk;
     struct Archetype;
-    struct ThreadPool;
     struct ComponentDependencyManager;
-    struct JobChunkProducer {
-        static void execute(void *j, uint32_t, uint32_t, JobHandle);
-    };
     struct JobChunkWrapperBase {
-        virtual void execute(Chunk*) = 0;
-        ArchetypeQuery query;
-        EntityComponentStore *ecs;
-        void schedule(ComponentDependencyManager&,ThreadPool&);
-        JobChunkWrapperBase(EntityComponentStore *pecs):ecs{pecs}{}
+        JobHandle schedule(EntityQueryImpl query,ComponentDependencyManager &);
+    private:
+        /// @brief JobChunkProducer
+        static void execute(void *, uint32_t, uint32_t, JobHandle);
+        virtual void execute(const Chunk*, const_span<int32_t>) = 0;
+        const EntityQueryData *query = nullptr;
     };
     template<typename IJOB>
     struct JobChunkWrapper : JobChunkWrapperBase {
         static_assert(std::is_base_of_v<IJobChunk,IJOB>);
         IJOB jobData;
-        void execute(Chunk* arg){
-            jobData.execute(arg);
+    private:
+        void execute(const Chunk* arg, const_span<int32_t> index){
+            jobData.execute(arg, index);
         }
-        JobChunkWrapper(EntityComponentStore *pecs):JobChunkWrapperBase{pecs}{}
     };
 } // namespace ECS
 

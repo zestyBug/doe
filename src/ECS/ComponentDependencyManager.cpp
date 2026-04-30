@@ -1,85 +1,93 @@
 #include "ECS/ComponentDependencyManager.hpp"
-#include "ECS/Base/ArchetypeQuery.hpp"
+#include "ECS/Base/Query.hpp"
 #include "ECS/ThreadPool.hpp"
+#include "ECS/Base/Constants.hpp"
 #include "cutil/set.hpp"
 #include "cutil/range.hpp"
-#include "ECS/Base/Constants.hpp"
+#include "ECS/EntityQueryManager.hpp"
 using namespace ECS;
 
 #ifndef ENABLE_SIMPLE_SYSTEM_DEPENDENCIES
 
-JobHandle ComponentDependencyManager::getRO(uint32_t index){
-    return jobRW[index];
-}
-JobHandle ComponentDependencyManager::getRW(uint32_t index){
-    JobHandle temp = JobHandle();
-    if(jobsROCount[index] > 0){
-        return threadPool->combineDependencies({jobsRO[index],jobsROCount[index]});
-    }else{
-        return jobRW[index];
-    }
-}
-void ComponentDependencyManager::insertRO(JobHandle job,uint32_t index){
-    jobsRO[index][jobsROCount[index]++] = job;
-    if(jobsROCount[index] >= MaximumReaderPerType){
-        jobRW[index] = threadPool->combineDependencies({jobsRO[index],jobsROCount[index]});
-        jobsROCount[index] = 0;
-    }
-}
-void ComponentDependencyManager::insertRW(JobHandle job,uint32_t index){
-    jobRW[index] = job;
-    jobsROCount[index] = 0;
-}
-JobHandle ComponentDependencyManager::getDependency(ArchetypeQuery &query)
+
+uint32_t ComponentDependencyManager::getTypeArrayIndex(TypeID type)
 {
-    const uint32_t counter = query.count[1] + query.count[2];
-    if(counter < 1)
+    uint32_t arrayIndex = typeArrayIndices[type.index()];
+    if (arrayIndex != NullTypeIndex)
+        return arrayIndex;
+    if(type.isZeroSized())
+        throw std::runtime_error("getTypeArrayIndex(): dependancy on zero sized component is not allowed");
+    arrayIndex = dependencyHandlesCount++;
+    typeArrayIndices[type.index()] = (uint16_t)arrayIndex;
+    dependencyHandles[arrayIndex].type = type;
+    dependencyHandles[arrayIndex].numReadFences = 0;
+    dependencyHandles[arrayIndex].writeFence = JobHandle();
+
+    return arrayIndex;
+}
+JobHandle ComponentDependencyManager::getDependency(const EntityQueryData &query)
+{
+    const uint32_t counter = query.firstNoneIndex;
+    const EntityQueryData::TypeQuery *queries = query.queries.get();
+    const EntityQueryData::TypeQuery *queries_end = queries + counter;
+    if(queries == queries_end)
         return JobHandle();
-    JobHandle dependancies[counter];
-    uint32_t dependanciesIndex = 0;
+    // wish we dont stack overflow
+    JobHandle allHandles[counter * MaximumReadJobHandle];
+    uint32_t allHandleCount = 0;
 
-    for (uint32_t i = 0; i < query.count[1]; i++){
-        uint16_t type = query._all[i];
-        if(type & ArchetypeQuery::WriteFlag)
-            dependancies[dependanciesIndex++] = getRW(type & ArchetypeQuery::IndexMask);
-        else
-            dependancies[dependanciesIndex++] = getRO(type & ArchetypeQuery::IndexMask);
+    while(queries != queries_end){
+        if(queries->flags & EntityQueryData::TypeQuery::WriteFlag) {
+            uint32_t typeArrayIndex = typeArrayIndices[queries->type.index()];
+            if (typeArrayIndex == NullTypeIndex)
+                continue;
+            JobHandle *readFences = readJobFences[typeArrayIndex];
+            uint32_t numReadFences = dependencyHandles[typeArrayIndex].numReadFences;
+            allHandles[allHandleCount++] = dependencyHandles[typeArrayIndex].writeFence;
+            while(numReadFences--)
+                allHandles[allHandleCount++] = readFences[numReadFences];
+        } else{
+            uint32_t typeArrayIndex = typeArrayIndices[queries->type.index()];
+            if (typeArrayIndex != NullTypeIndex)
+                allHandles[allHandleCount++] = dependencyHandles[typeArrayIndex].writeFence;
+        }
+        queries++;
     }
-    for (uint32_t i = 0; i < query.count[2]; i++){
-        uint16_t type = query._any[i];
-        if(type & ArchetypeQuery::WriteFlag)
-            dependancies[dependanciesIndex++] = getRW(type & ArchetypeQuery::IndexMask);
-        else
-            dependancies[dependanciesIndex++] = getRO(type & ArchetypeQuery::IndexMask);
-    }
-    threadPool->combineDependencies({dependancies, dependanciesIndex});
+    return JobsUtility.combineDependencies(const_span<JobHandle>{allHandles, allHandleCount});
 }
-void ComponentDependencyManager::addDependency(JobHandle job, ArchetypeQuery &query)
+JobHandle ComponentDependencyManager::addDependency(JobHandle dependency, const EntityQueryData &query)
 {
-    const uint32_t counter = query.count[1] + query.count[2];
-    if(counter < 1)
-        return;
+    const EntityQueryData::TypeQuery *queries = query.queries.get();
+    const EntityQueryData::TypeQuery *queries_end = queries + query.firstNoneIndex;
+    if(queries == queries_end)
+        return dependency;
 
-    for (uint32_t i = 0; i < query.count[1]; i++){
-        uint16_t type = query._all[i];
-        if(type & ArchetypeQuery::WriteFlag)
-            insertRW(job, type & ArchetypeQuery::IndexMask);
-        else
-            insertRO(job, type & ArchetypeQuery::IndexMask);
+    while(queries != queries_end){
+        if(queries->flags & EntityQueryData::TypeQuery::WriteFlag){
+            dependencyHandles[getTypeArrayIndex(queries->type)].writeFence = dependency;
+        }else{
+            uint32_t reader = getTypeArrayIndex(queries->type);
+            readJobFences[reader][dependencyHandles[reader].numReadFences++] = dependency;
+            if (dependencyHandles[reader].numReadFences == MaximumReadJobHandle)
+                combineReadDependencies(reader);
+        }
+        queries++;
     }
-    for (uint32_t i = 0; i < query.count[2]; i++){
-        uint16_t type = query._any[i];
-        if(type & ArchetypeQuery::WriteFlag)
-            insertRW(job, type & ArchetypeQuery::IndexMask);
-        else
-            insertRO(job, type & ArchetypeQuery::IndexMask);
-    }
+    return dependency;
+}
+JobHandle ComponentDependencyManager::combineReadDependencies(uint32_t typeArrayIndex)
+{
+    JobHandle combined = JobsUtility.combineDependencies({readJobFences[typeArrayIndex], dependencyHandles[typeArrayIndex].numReadFences});
+
+    readJobFences[typeArrayIndex][0] = combined;
+    dependencyHandles[typeArrayIndex].numReadFences = 1;
+
+    return combined;
 }
 void ComponentDependencyManager::clear(){
-    for (uint32_t i = 0; i < Constants::MaximumTypesCount; i++)
-        this->jobsROCount[i] = 0;
-    for (uint32_t i = 0; i < Constants::MaximumTypesCount; i++)
-        this->jobRW[i] = JobHandle();
+    for (uint32_t i = 0; i < dependencyHandlesCount; ++i)
+        typeArrayIndices[dependencyHandles[i].type.index()] = NullTypeIndex;
+    dependencyHandlesCount = 0;
 }
 
 #endif

@@ -21,7 +21,6 @@ struct Test {
 };
 CLASS_TEST(Test,Test1){
     using namespace ECS;
-    ThreadPool tp(8);
     JobParameter data = JobParameter{
         .function = &Test::Test2,
         .context = nullptr,
@@ -30,38 +29,39 @@ CLASS_TEST(Test,Test1){
     };
     ECS::JobHandle js[10];
 
-    js[0] = tp.schedule(data);
+    js[0] = JobsUtility.schedule(data);
 
     data.dependsOn = js[0];
     data.batchCount = 20;
-    js[1] = tp.schedule(data);
+    js[1] = JobsUtility.schedule(data);
 
     data.dependsOn = js[1];
     data.batchCount = 20;
-    js[2] = tp.schedule(data);
+    js[2] = JobsUtility.schedule(data);
 
     data.dependsOn = js[2];
     data.batchCount = 20;
-    js[3] = tp.schedule(data);
+    js[3] = JobsUtility.schedule(data);
 
     data.dependsOn = js[0];
     data.batchCount = 20;
-    js[4] = tp.schedule(data);
+    js[4] = JobsUtility.schedule(data);
 
     data.dependsOn = js[4];
     data.batchCount = 20;
-    js[5] = tp.schedule(data);
+    js[5] = JobsUtility.schedule(data);
 
-    data.dependsOn = tp.combineDependencies({js,6});;
+    data.dependsOn = JobsUtility.combineDependencies({js,6});;
     data.batchCount = 20;
-    js[6] = tp.schedule(data);
+    js[6] = JobsUtility.schedule(data);
 
-    tp.prepareJobs();
-    tp.signalStart();
-    while(!tp.isFinished())
+    JobsUtility.prepareJobs();
+    JobsUtility.signalStart();
+    while(!JobsUtility.isFinished())
         std::this_thread::yield();
 }
 
 int main(){
+    ECS::JobsUtility.INIT(8);
     mtest::run_all();return 0;
 }

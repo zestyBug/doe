@@ -22,7 +22,7 @@ namespace ECS
     struct EntityComponentStore final {
         friend class ::Test;
         friend struct Archetype;
-        friend struct JobChunkProducer;
+        friend struct EntityQueryManager;
     private:
         // array of entities value,
         // contains index of it archetype and it index in that archetype
@@ -38,17 +38,7 @@ namespace ECS
         /// @brief used by EntityQueryManager
         uint32_t previousArchetypeCount = 0;
 
-        void cleanChangeList()
-        {
-            Archetype *archetype = chunkListChangesTracker.head;
-            while(archetype != nullptr)
-            {
-                Archetype *nextArchetype = archetype->nextChangedArchetype;
-                archetype->nextChangedArchetype = nullptr;
-                archetype = nextArchetype;
-            }
-            chunkListChangesTracker.head = nullptr;
-        }
+        void cleanChangeList();
 
         //int m_UnmanagedSharedComponentCount;
         //std::vector<ComponentTypeList> m_UnmanagedSharedComponentsByType;

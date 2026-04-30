@@ -1,57 +1,73 @@
 #if !defined(DEPENDENCYMANAGER_HPP)
 #define DEPENDENCYMANAGER_HPP
 
+#include <array>
 #include "cutil/basics.hpp"
 #include "Base/Version.hpp"
+#include "Base/TypeID.hpp"
 #include "Base/Job.hpp"
 #include "Base/Constants.hpp"
 
 namespace ECS
 {
-struct ThreadPool;
-struct ArchetypeQuery;
-#define ENABLE_SIMPLE_SYSTEM_DEPENDENCIES 1
+struct EntityQueryData;
+//#define ENABLE_SIMPLE_SYSTEM_DEPENDENCIES 1
+
 #ifdef ENABLE_SIMPLE_SYSTEM_DEPENDENCIES
 struct ComponentDependencyManager {
-    ThreadPool *threadPool;
-    JobHandle dependency;
+    JobHandle dependency;struct DependencyHandle
+        {
+            public JobHandle WriteFence;
+            public int       NumReadFences;
+            public TypeIndex TypeIndex;
+        }
 
-    ComponentDependencyManager(ThreadPool *tp):threadPool{tp}{}
+    ComponentDependencyManager() = default;
     ComponentDependencyManager(const ComponentDependencyManager&) = default;
     void clear(){
         dependency = JobHandle();
     }
-    JobHandle getDependency(ArchetypeQuery &){return dependency;}
+    JobHandle getDependency(const EntityQueryData &){return dependency;}
     // Schedules a job with dependencies
-    void addDependency(JobHandle job,ArchetypeQuery &){dependency = job;}
+    void addDependency(JobHandle job,const EntityQueryData &){dependency = job;}
 private:
 };
 }
 #else
 /// @brief job schedule buffer
 struct ComponentDependencyManager {
-    ThreadPool *threadPool;
-    static const uint32_t MaximumReaderPerType = 16;
-    std::array<JobHandle                      ,Constants::MaximumTypesCount> jobRW;
-    std::array<uint32_t                       ,Constants::MaximumTypesCount> jobsROCount;
-    std::array<JobHandle[MaximumReaderPerType],Constants::MaximumTypesCount> jobsRO;
+    struct DependencyHandle
+    {
+        JobHandle writeFence;
+        uint32_t  numReadFences;
+        TypeID    type;
+    };
+    static const uint32_t MaximumReadJobHandle = 16;
+    static const uint16_t NullTypeIndex = 0xFFFF;
+    uint32_t                                                                 dependencyHandlesCount = 0;
+    std::array<DependencyHandle               ,Constants::MaximumTypesCount> dependencyHandles;
+    /// @brief Indexed by TypeID, contains index of that TypeID in the dependencyHandles and readJobFences arrays.
+    std::array<uint16_t                       ,Constants::MaximumTypesCount> typeArrayIndices;
+    std::array<JobHandle[MaximumReadJobHandle],Constants::MaximumTypesCount> readJobFences;
 
-    ComponentDependencyManager(ThreadPool *tp):threadPool{tp}{}
+    ComponentDependencyManager() = default;
     ComponentDependencyManager(const ComponentDependencyManager&) = default;
     void clear();
     JobHandle getDependency(
-        ArchetypeQuery &query
+        const EntityQueryData &query
     );
     // Schedules a job with dependencies
-    void addDependency(
+    JobHandle addDependency(
         JobHandle job,
-        ArchetypeQuery &query
+        const EntityQueryData &query
     );
+    JobHandle combineReadDependencies(uint32_t typeArrayIndex);
 private:
-    void insertRO(JobHandle job,uint32_t index);
-    void insertRW(JobHandle job,uint32_t index);
-    JobHandle getRO(uint32_t index);
-    JobHandle getRW(uint32_t index);
+    uint32_t getTypeArrayIndex(TypeID type);
+    void insertRO(JobHandle job,TypeID type);
+    void insertRW(JobHandle job,TypeID type);
+    JobHandle getRO(TypeID type);
+    JobHandle getRW(TypeID type);
 };
 }
 #endif
