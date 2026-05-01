@@ -5,6 +5,7 @@
 #include "ECS/ThreadPool.hpp"
 #include "ECS/Archetype.hpp"
 #include "cutil/mini_test.hpp"
+#include "uv.h"
 using namespace ECS;
 
 struct Position : IComponentData {
@@ -46,6 +47,7 @@ struct Test {
     static void Test1();
 };
 CLASS_TEST(Test,Test1){
+    uv_loop_t *loop = uv_default_loop();
     JobsUtility.INIT(2);
     align_ptr<DOE> e = make_align<DOE>();
     align_ptr<SpeedSystem> system = make_align<SpeedSystem>(e.get());
@@ -65,8 +67,10 @@ CLASS_TEST(Test,Test1){
         JobsUtility.signalStart();
         while(!JobsUtility.isFinished())
             std::this_thread::yield();
+        uv_run(loop, UV_RUN_DEFAULT);
         JobsUtility.reset();
     } while(--counter);
+    uv_loop_close(loop);
 }
 
 int main(){

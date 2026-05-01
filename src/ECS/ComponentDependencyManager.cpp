@@ -7,7 +7,7 @@
 #include "ECS/EntityQueryManager.hpp"
 using namespace ECS;
 
-#ifndef ENABLE_SIMPLE_SYSTEM_DEPENDENCIES
+#if !ENABLE_SIMPLE_SYSTEM_DEPENDENCIES
 
 
 uint32_t ComponentDependencyManager::getTypeArrayIndex(TypeID type)
