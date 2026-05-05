@@ -109,10 +109,6 @@ INLINE static void uv__process_endgames(uv_loop_t* loop) {
         uv__tcp_endgame(loop, (uv_tcp_t*) handle);
         break;
 
-      case UV_NAMED_PIPE:
-        uv__pipe_endgame(loop, (uv_pipe_t*) handle);
-        break;
-
       case UV_UDP:
         uv__udp_endgame(loop, (uv_udp_t*) handle);
         break;
@@ -134,14 +130,6 @@ INLINE static void uv__process_endgames(uv_loop_t* loop) {
 
       case UV_ASYNC:
         uv__async_endgame(loop, (uv_async_t*) handle);
-        break;
-
-      case UV_SIGNAL:
-        uv__signal_endgame(loop, (uv_signal_t*) handle);
-        break;
-
-      case UV_PROCESS:
-        uv__process_endgame(loop, (uv_process_t*) handle);
         break;
 
       case UV_FS_EVENT:

@@ -319,7 +319,7 @@ void EntityComponentStore::destroyEntities(const_span<Entity> entities){
         entities += batch.count;
     }
 }
-void EntityComponentStore::allocateEntities(Archetype* arch, Chunk *chunk, uint32_t baseIndex, uint count, Entity* outputEntities)
+void EntityComponentStore::allocateEntities(Archetype* arch, Chunk *chunk, uint32_t baseIndex, uint32_t count, Entity* outputEntities)
 {
     if(arch->_types[0] != TypeID::fromIndex(1) || arch->_offsets[0] != 64)
         throw std::invalid_argument("allocateEntities(): invalid archetype");

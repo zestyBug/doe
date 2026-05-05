@@ -185,7 +185,7 @@ int uv__socket_sockopt(uv_handle_t* handle, int optname, int* value) {
   if (handle == NULL || value == NULL)
     return UV_EINVAL;
 
-  if (handle->type == UV_TCP || handle->type == UV_NAMED_PIPE)
+  if (handle->type == UV_TCP)
     fd = uv__stream_fd((uv_stream_t*) handle);
   else if (handle->type == UV_UDP)
     fd = ((uv_udp_t *) handle)->io_watcher.fd;
@@ -280,7 +280,6 @@ static void uv__finish_close(uv_handle_t* handle) {
       }
       break;
 
-    case UV_NAMED_PIPE:
     case UV_TCP:
       uv__stream_destroy((uv_stream_t*)handle);
       break;
@@ -740,7 +739,6 @@ int uv_fileno(const uv_handle_t* handle, uv_os_fd_t* fd) {
 
   switch (handle->type) {
   case UV_TCP:
-  case UV_NAMED_PIPE:
     fd_out = uv__stream_fd((uv_stream_t*) handle);
     break;
 

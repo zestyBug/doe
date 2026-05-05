@@ -115,39 +115,7 @@ void uv__udp_close(uv_loop_t* loop, uv_udp_t* handle);
 void uv__udp_endgame(uv_loop_t* loop, uv_udp_t* handle);
 
 
-/*
- * Pipes
- */
-int uv__create_stdio_pipe_pair(uv_loop_t* loop,
-    uv_pipe_t* parent_pipe, HANDLE* child_pipe_ptr, unsigned int flags);
 
-int uv__pipe_listen(uv_pipe_t* handle, int backlog, uv_connection_cb cb);
-int uv__pipe_accept(uv_pipe_t* server, uv_stream_t* client);
-int uv__pipe_read_start(uv_pipe_t* handle, uv_alloc_cb alloc_cb,
-    uv_read_cb read_cb);
-void uv__pipe_read_stop(uv_pipe_t* handle);
-int uv__pipe_write(uv_loop_t* loop,
-                   uv_write_t* req,
-                   uv_pipe_t* handle,
-                   const uv_buf_t bufs[],
-                   size_t nbufs,
-                   uv_stream_t* send_handle,
-                   uv_write_cb cb);
-void uv__pipe_shutdown(uv_loop_t* loop, uv_pipe_t* handle, uv_shutdown_t* req);
-
-void uv__process_pipe_read_req(uv_loop_t* loop, uv_pipe_t* handle,
-    uv_req_t* req);
-void uv__process_pipe_write_req(uv_loop_t* loop, uv_pipe_t* handle,
-    uv_write_t* req);
-void uv__process_pipe_accept_req(uv_loop_t* loop, uv_pipe_t* handle,
-    uv_req_t* raw_req);
-void uv__process_pipe_connect_req(uv_loop_t* loop, uv_pipe_t* handle,
-    uv_connect_t* req);
-void uv__process_pipe_shutdown_req(uv_loop_t* loop, uv_pipe_t* handle,
-    uv_shutdown_t* req);
-
-void uv__pipe_close(uv_loop_t* loop, uv_pipe_t* handle);
-void uv__pipe_endgame(uv_loop_t* loop, uv_pipe_t* handle);
 
 
 /*
@@ -180,27 +148,6 @@ void uv__async_endgame(uv_loop_t* loop, uv_async_t* handle);
 
 void uv__process_async_wakeup_req(uv_loop_t* loop, uv_async_t* handle,
     uv_req_t* req);
-
-
-/*
- * Signal watcher
- */
-void uv__signals_init(void);
-int uv__signal_dispatch(int signum);
-
-void uv__signal_close(uv_loop_t* loop, uv_signal_t* handle);
-void uv__signal_endgame(uv_loop_t* loop, uv_signal_t* handle);
-
-void uv__process_signal_req(uv_loop_t* loop, uv_signal_t* handle,
-    uv_req_t* req);
-
-
-/*
- * Spawn
- */
-void uv__process_proc_exit(uv_loop_t* loop, uv_process_t* handle);
-void uv__process_close(uv_loop_t* loop, uv_process_t* handle);
-void uv__process_endgame(uv_loop_t* loop, uv_process_t* handle);
 
 
 /*

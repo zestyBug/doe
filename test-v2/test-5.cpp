@@ -33,13 +33,17 @@ struct SpeedSystem : ISystem {
     JobChunkWrapper<SpeedJob> wrapper;
     EntityQueryImpl qd;
     SpeedSystem(DOE*e){
+        Archetype *arch = sharedEngine->ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
+        Entity entities[200];
+        sharedEngine->ecs.createEntities(arch,{entities,200});\
+
         EntityQueryBuilder qb;
         qb.withAllRW(getTypeID<Position>());
         qb.withAll(getTypeID<Speed>());
-        qd = e->eqm.createEntityQuery(qb);
+        qd = sharedEngine->eqm.createEntityQuery(qb);
     }
     void OnUpdate(DOE*e){
-        wrapper.schedule(qd,e->dpm);
+        wrapper.schedule(qd,sharedEngine->dpm);
     }
 };
 
@@ -50,9 +54,6 @@ CLASS_TEST(Test,Test1){
     uv_loop_t *loop = uv_default_loop();
     align_ptr<SpeedSystem> system = make_align<SpeedSystem>(sharedEngine.get());
     sharedEngine->sys.emplace_back((ISystem*)system.release());
-    Archetype *arch = sharedEngine->ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
-    Entity entities[200];
-    sharedEngine->ecs.createEntities(arch,{entities,200});
     JobsUtility::init();
     do {
         uv_run(loop, UV_RUN_DEFAULT);

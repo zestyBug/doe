@@ -119,12 +119,6 @@ INLINE static void uv__insert_pending_req(uv_loop_t* loop, uv_req_t* req) {
                                       (uv_tcp_t*) ((req)->handle_at),         \
                                       req);                                   \
         break;                                                                \
-                                                                              \
-      case UV_NAMED_PIPE:                                                     \
-        uv__process_pipe_##method##_req(loop,                                 \
-                                       (uv_pipe_t*) ((req)->handle_at),       \
-                                       req);                                  \
-        break;                                                                \
       default:                                                                \
         assert(0);                                                            \
     }                                                                         \
@@ -182,16 +176,8 @@ INLINE static void uv__process_reqs(uv_loop_t* loop) {
         uv__process_async_wakeup_req(loop, (uv_async_t*) req->data, req);
         break;
 
-      case UV_SIGNAL_REQ:
-        uv__process_signal_req(loop, (uv_signal_t*) req->data, req);
-        break;
-
       case UV_POLL_REQ:
         uv__process_poll_req(loop, (uv_poll_t*) req->data, req);
-        break;
-
-      case UV_PROCESS_EXIT:
-        uv__process_proc_exit(loop, (uv_process_t*) req->data);
         break;
 
       case UV_FS_EVENT_REQ:

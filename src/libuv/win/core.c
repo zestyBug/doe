@@ -210,11 +210,8 @@ static void uv__init(void) {
   /* Initialize FS */
   uv__fs_init();
 
-  /* Initialize signal stuff */
-  uv__signals_init();
-
   /* Initialize console */
-  uv__console_init();
+  //uv__console_init();
 
   /* Initialize utilities */
   uv__util_init();
@@ -666,10 +663,6 @@ int uv_fileno(const uv_handle_t* handle, uv_os_fd_t* fd) {
   switch (handle->type) {
   case UV_TCP:
     fd_out = (uv_os_fd_t)((uv_tcp_t*) handle)->socket;
-    break;
-
-  case UV_NAMED_PIPE:
-    fd_out = ((uv_pipe_t*) handle)->handle;
     break;
 
   case UV_UDP:

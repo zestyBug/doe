@@ -574,7 +574,6 @@ int uv_accept(uv_stream_t* server, uv_stream_t* client) {
     return UV_EAGAIN;
 
   switch (client->type) {
-    case UV_NAMED_PIPE:
     case UV_TCP:
       err = uv__stream_open(client,
                             server->accepted_fd,
@@ -767,7 +766,6 @@ static void uv__write_req_finish(uv_write_t* req) {
 
 static int uv__handle_fd(uv_handle_t* handle) {
   switch (handle->type) {
-    case UV_NAMED_PIPE:
     case UV_TCP:
       return ((uv_stream_t*) handle)->io_watcher.fd;
 
@@ -1087,7 +1085,7 @@ static void uv__read(uv_stream_t* stream) {
    */
   count = 32;
 
-  is_ipc = stream->type == UV_NAMED_PIPE && ((uv_pipe_t*) stream)->ipc;
+  is_ipc = 0 && ((uv_pipe_t*) stream)->ipc;
 
   /* XXX: Maybe instead of having UV_HANDLE_READING we just test if
    * tcp->read_cb is NULL or not?
@@ -1140,7 +1138,7 @@ static void uv__read(uv_stream_t* stream) {
         }
         stream->read_cb(stream, 0, &buf);
 #if defined(__CYGWIN__) || defined(__MSYS__)
-      } else if (errno == ECONNRESET && stream->type == UV_NAMED_PIPE) {
+      } else if (errno == ECONNRESET && 0) {
         uv__stream_eof(stream, &buf);
         return;
 #endif
@@ -1215,8 +1213,7 @@ static void uv__read(uv_stream_t* stream) {
 
 
 int uv_shutdown(uv_shutdown_t* req, uv_stream_t* stream, uv_shutdown_cb cb) {
-  assert(stream->type == UV_TCP ||
-         stream->type == UV_NAMED_PIPE);
+  assert(stream->type == UV_TCP);
 
   if (!(stream->flags & UV_HANDLE_WRITABLE) ||
       stream->flags & UV_HANDLE_SHUT ||
@@ -1248,8 +1245,7 @@ static void uv__stream_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 
   stream = container_of(w, uv_stream_t, io_watcher);
 
-  assert(stream->type == UV_TCP ||
-         stream->type == UV_NAMED_PIPE);
+  assert(stream->type == UV_TCP);
   assert(!(stream->flags & UV_HANDLE_CLOSING));
 
   if (stream->connect_req) {
@@ -1304,7 +1300,7 @@ static void uv__stream_connect(uv_stream_t* stream) {
   uv_connect_t* req = stream->connect_req;
   socklen_t errorsize = sizeof(int);
 
-  assert(stream->type == UV_TCP || stream->type == UV_NAMED_PIPE);
+  assert(stream->type == UV_TCP);
   assert(req);
 
   if (stream->delayed_error) {
@@ -1352,8 +1348,7 @@ static int uv__check_before_write(uv_stream_t* stream,
                                   unsigned int nbufs,
                                   uv_stream_t* send_handle) {
   assert(nbufs > 0);
-  assert((stream->type == UV_TCP ||
-          stream->type == UV_NAMED_PIPE) &&
+  assert((stream->type == UV_TCP) &&
          "uv_write (unix) does not yet support other types of streams");
 
   if (uv__stream_fd(stream) < 0)
@@ -1363,7 +1358,7 @@ static int uv__check_before_write(uv_stream_t* stream,
     return UV_EPIPE;
 
   if (send_handle != NULL) {
-    if (stream->type != UV_NAMED_PIPE || !((uv_pipe_t*)stream)->ipc)
+    if (1 || !((uv_pipe_t*)stream)->ipc)
       return UV_EINVAL;
 
     /* XXX We abuse uv_write2() to send over UDP handles to child processes.
@@ -1494,7 +1489,7 @@ int uv_try_write2(uv_stream_t* stream,
 int uv__read_start(uv_stream_t* stream,
                    uv_alloc_cb alloc_cb,
                    uv_read_cb read_cb) {
-  assert(stream->type == UV_TCP || stream->type == UV_NAMED_PIPE);
+  assert(stream->type == UV_TCP);
 
   /* The UV_HANDLE_READING flag is irrelevant of the state of the stream - it
    * just expresses the desired state of the user. */
@@ -1545,8 +1540,7 @@ int uv_is_writable(const uv_stream_t* stream) {
 int uv___stream_fd(const uv_stream_t* handle) {
   const uv__stream_select_t* s;
 
-  assert(handle->type == UV_TCP ||
-         handle->type == UV_NAMED_PIPE);
+  assert(handle->type == UV_TCP);
 
   s = handle->select;
   if (s != NULL)

@@ -246,8 +246,6 @@ int uv__tcp_listen(uv_tcp_t* tcp, int backlog, uv_connection_cb cb);
 int uv__tcp_nodelay(int fd, int on);
 int uv__tcp_keepalive(int fd, int on, unsigned int delay);
 
-/* pipe */
-int uv__pipe_listen(uv_pipe_t* handle, int backlog, uv_connection_cb cb);
 
 /* signal */
 void uv__signal_close(uv_signal_t* handle);
@@ -268,7 +266,6 @@ void uv__async_close(uv_async_t* handle);
 void uv__check_close(uv_check_t* handle);
 void uv__fs_event_close(uv_fs_event_t* handle);
 void uv__idle_close(uv_idle_t* handle);
-void uv__pipe_close(uv_pipe_t* handle);
 void uv__poll_close(uv_poll_t* handle);
 void uv__prepare_close(uv_prepare_t* handle);
 void uv__stream_close(uv_stream_t* handle);

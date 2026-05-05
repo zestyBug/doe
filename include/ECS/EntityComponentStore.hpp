@@ -111,7 +111,7 @@ namespace ECS
         /// @param baseIndex 
         /// @param count 
         /// @param outputEntities 
-        void allocateEntities(Archetype* arch, Chunk *chunk, uint32_t baseIndex, uint count, Entity* outputEntities = nullptr);
+        void allocateEntities(Archetype* arch, Chunk *chunk, uint32_t baseIndex, uint32_t count, Entity* outputEntities = nullptr);
         /// @brief A wrapper to deallocate components, entites and fill the space
         /// @details EntityComponentStore::deallocateManagedComponents, EntityStore::deallocateEntities, Archetype::copy
         void deallocateDataEntitiesInChunk(EntityBatchInChunk batch);

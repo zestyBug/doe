@@ -41,13 +41,13 @@ uv_handle_type uv_guess_handle(uv_file file) {
   switch (GetFileType(handle)) {
     case FILE_TYPE_CHAR:
       if (GetConsoleMode(handle, &mode)) {
-        assert(false && "Unexpectred")
+        assert(0 && "Unexpected TTY");
       } else {
         return UV_FILE;
       }
 
     case FILE_TYPE_PIPE:
-      return UV_NAMED_PIPE;
+      assert(0);
 
     case FILE_TYPE_DISK:
       return UV_FILE;
@@ -78,10 +78,6 @@ void uv_close(uv_handle_t* handle, uv_close_cb cb) {
   switch (handle->type) {
     case UV_TCP:
       uv__tcp_close(loop, (uv_tcp_t*)handle);
-      return;
-
-    case UV_NAMED_PIPE:
-      uv__pipe_close(loop, (uv_pipe_t*) handle);
       return;
 
     case UV_UDP:
@@ -118,14 +114,6 @@ void uv_close(uv_handle_t* handle, uv_close_cb cb) {
 
     case UV_ASYNC:
       uv__async_close(loop, (uv_async_t*) handle);
-      return;
-
-    case UV_SIGNAL:
-      uv__signal_close(loop, (uv_signal_t*) handle);
-      return;
-
-    case UV_PROCESS:
-      uv__process_close(loop, (uv_process_t*) handle);
       return;
 
     case UV_FS_EVENT:

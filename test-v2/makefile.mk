@@ -3,7 +3,6 @@ CC = gcc
 
 WARNS=-Wall -Wconversion -Wextra -Wfatal-errors -Wshadow
 INCLUDE=-Iexternal -Iinclude
-#LOADLIBES ?=
 
 
 
@@ -51,7 +50,7 @@ $(OBJ)/$(cutilDir)/%.o: $(cutilDir)/%.cpp
 	$(CXX) $(CPPFLAGS) -c $< -o $@
 $(OBJ)/$(testDir)/test-%.o: $(testDir)/test-%.cpp
 	mkdir -p $(@D)
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -c $(CPPFLAGS) $< -o $@
 
 
 libuv_la_CFLAGS=-I$(srcDir)/libuv
@@ -72,6 +71,7 @@ ifdef WINNT
 libuv_la_CFLAGS += -I$(top_srcdir)/src/win \
                -DWIN32_LEAN_AND_MEAN \
                -D_WIN32_WINNT=0x0602
+LDFLAGS += -lws2_32 -lwsock32 -lgdi32 -liphlpapi -luserenv
 libuv_la_SOURCES += \
 	$(OBJ)/$(srcDir)/libuv/win/async.o \
 	$(OBJ)/$(srcDir)/libuv/win/core.o \
@@ -85,9 +85,6 @@ libuv_la_SOURCES += \
 	$(OBJ)/$(srcDir)/libuv/win/handle.o \
 	$(OBJ)/$(srcDir)/libuv/win/loop-watcher.o \
 	$(OBJ)/$(srcDir)/libuv/win/poll.o \
-	$(OBJ)/$(srcDir)/libuv/win/process-stdio.o \
-	$(OBJ)/$(srcDir)/libuv/win/process.o \
-	$(OBJ)/$(srcDir)/libuv/win/signal.o \
 	$(OBJ)/$(srcDir)/libuv/win/stream.o \
 	$(OBJ)/$(srcDir)/libuv/win/tcp.o \
 	$(OBJ)/$(srcDir)/libuv/win/thread.o \
@@ -95,8 +92,11 @@ libuv_la_SOURCES += \
 	$(OBJ)/$(srcDir)/libuv/win/util.o \
 	$(OBJ)/$(srcDir)/libuv/win/winapi.o \
 	$(OBJ)/$(srcDir)/libuv/win/winsock.o
+# $(OBJ)/$(srcDir)/libuv/win/signal.o \
+# $(OBJ)/$(srcDir)/libuv/win/process.o
+# $(OBJ)/$(srcDir)/libuv/win/process-stdio.o
 
-else  # WINNT
+else  # !WINNT
 
 libuv_la_SOURCES += \
 	$(OBJ)/$(srcDir)/libuv/unix/async.o \
@@ -144,9 +144,9 @@ DEPS = $(OBJS:.o=.d)
 DEPS += $(libuv_la_SOURCES:.o=.d)
 -include $(DEPS)
 
-$(BIN)/test-%: $(OBJ)/$(testDir)/test-%.o $(OBJS) $(libuv_la_SOURCES)
+$(BIN)/test-5: $(OBJ)/$(testDir)/test-5.o $(OBJS) $(libuv_la_SOURCES)
 	mkdir -p $(@D)
-	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
+	$(CXX) $^ $(LDFLAGS) -o $@
 
 
 test-1: $(BIN)/test-1
