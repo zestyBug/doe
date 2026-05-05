@@ -260,6 +260,8 @@ class align_ptr
     void reset(Type *__p = nullptr) noexcept
     {
         if (_M_t != nullptr){
+            if(!std::is_trivial_v<Type>)
+                _M_t->~Type();
             allocator().deallocate(_M_t);
         }
         _M_t = __p;
@@ -342,7 +344,7 @@ class align_ptr<Type[]>
 
     // Observers.
 
-    operator pointer()
+    inline operator pointer() noexcept
     {
         if(unlikely(_M_t == nullptr))
             throw std::runtime_error("operator*(): cant obtain invalid pointer");
@@ -380,9 +382,6 @@ class align_ptr<Type[]>
             return nullptr;
         return _M_t;
     }
-
-    /// Return @c true if the stored pointer is not null.
-    explicit inline operator bool() const noexcept { return get() == nullptr ? false : true; }
 
     // Modifiers.
 
