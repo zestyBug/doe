@@ -5,12 +5,10 @@
 
 namespace ECS
 {
-    namespace internal {
-        struct ThreadPool;
-    }
     struct Chunk;
     struct JobHandle {
-        friend struct internal::ThreadPool;
+        friend struct JobsUtility;
+        friend struct JobDataChunk;
         // default value is the invalid value
         JobHandle() = default;
         inline operator bool   () const {return this->id>=0;}
@@ -26,11 +24,12 @@ namespace ECS
         inline bool operator >= (const JobHandle& o) const {return this->id >= o.id;}
         int32_t id = -1;
     };
-    typedef void(*JobFunctionSignature)(void*,uint32_t,uint32_t,JobHandle);
+    typedef void(*JobFunctionSignature)(void*,uint32_t,uint32_t);
     struct JobParameter {
         JobFunctionSignature function;
         void *context = nullptr;
         uint32_t batchCount = 1;
+        uint32_t batchStepSize = 1;
         JobHandle dependsOn = JobHandle();
     };
 }

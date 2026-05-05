@@ -15,6 +15,7 @@ namespace ECS
         std::vector<align_ptr<ISystem>,allocator<align_ptr<ISystem>>> sys;
         DOE() = default;
     };
+    extern align_ptr<DOE> sharedEngine;
 } // namespace ECS
 
 

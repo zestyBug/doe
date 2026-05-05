@@ -48,33 +48,24 @@ struct Test {
 };
 CLASS_TEST(Test,Test1){
     uv_loop_t *loop = uv_default_loop();
-    JobsUtility.INIT(2);
-    align_ptr<DOE> e = make_align<DOE>();
-    align_ptr<SpeedSystem> system = make_align<SpeedSystem>(e.get());
-    e->sys.emplace_back((ISystem*)system.release());
-    Archetype *arch = e->ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
+    align_ptr<SpeedSystem> system = make_align<SpeedSystem>(sharedEngine.get());
+    sharedEngine->sys.emplace_back((ISystem*)system.release());
+    Archetype *arch = sharedEngine->ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
     Entity entities[200];
-    e->ecs.createEntities(arch,{entities,200});
-    uint32_t counter=100000;
+    sharedEngine->ecs.createEntities(arch,{entities,200});
+    JobsUtility::init();
     do {
-        e->eqm.updateNewArchetypes();
-        e->dpm.clear();
-
-        for(uint32_t i=0;i<e->sys.size();i++)
-            e->sys[i]->OnUpdate(e.get());
-
-        JobsUtility.prepareJobs();
-        JobsUtility.signalStart();
-        while(!JobsUtility.isFinished())
-            std::this_thread::yield();
         uv_run(loop, UV_RUN_DEFAULT);
-        JobsUtility.reset();
-    } while(--counter);
-    uv_loop_close(loop);
+    } while(uv_loop_alive(loop));
 }
 
-int main(){
+int main(int argc, char*argv[]){
+    uv_setup_args(argc,argv);
+    uv_loop_t *loop = uv_default_loop();
+    sharedEngine = make_align<DOE>();
     mtest::run_all();
+    uv_loop_close(loop);
+    sharedEngine.reset();
 #ifdef DEBUG
     if(allocator_counter){
         printf("Memory leak count %li\n",allocator_counter);

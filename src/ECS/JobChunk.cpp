@@ -13,25 +13,23 @@ JobHandle JobChunkWrapperBase::schedule(EntityQueryImpl _query,ComponentDependen
     param.context = this;
     param.dependsOn = dependsOn;
     param.function = &execute;
-    JobHandle handle = JobsUtility.schedule(param);
+    JobHandle handle = JobsUtility::schedule(param);
     cdm.addDependency(handle,*this->query); 
     return handle;
 }
-void JobChunkWrapperBase::execute(void *j, uint32_t from, uint32_t, JobHandle){
-    if(from!=0) return;
-
+void JobChunkWrapperBase::execute(void *j, uint32_t from, uint32_t to){
     JobChunkWrapperBase *base = reinterpret_cast<JobChunkWrapperBase*>(j);
     const EntityQueryData *query = base->query;
     const int32_t                *typesIndex = query->typesIndex;
-    const EntityQueryData::ChunkCache *cache = query->cache.get();
+    const EntityQueryData::ChunkCache *cacheFrom = query->cache.get() + from;
+    const EntityQueryData::ChunkCache *cacheTo = query->cache.get() + to;
     uint32_t                      cacheCount = query->cacheCount;
     uint32_t                      typesCount = query->firstNoneIndex;
-
-    while(cacheCount--){
+    while(cacheFrom < cacheTo){
         base->execute(
-            cache->value,
-            const_span<int32_t>{typesIndex + (typesCount * cache->archetypeIndex),typesCount}
+            cacheFrom->value,
+            const_span<int32_t>{typesIndex + (typesCount * cacheFrom->archetypeIndex),typesCount}
         );
-        cache++;
+        cacheFrom++;
     }
 }

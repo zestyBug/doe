@@ -923,13 +923,14 @@ struct uv_work_s {
   UV_WORK_PRIVATE_FIELDS
 };
 
+UV_EXTERN void uv_queue_work_slow(uv_work_t* req);
 UV_EXTERN int uv_queue_work(uv_loop_t* loop,
                             uv_work_t* req,
                             uv_work_cb work_cb,
                             uv_after_work_cb after_work_cb);
-UV_EXTERN int uv_queue_work2(uv_loop_t* loop,
-                            uv_work_t* req);
-
+UV_EXTERN unsigned int uv_num_threads();
+// slow_work_thread_threshold
+UV_EXTERN unsigned int uv_num_worker_threads();
 UV_EXTERN int uv_cancel(uv_req_t* req);
 
 

@@ -11,9 +11,12 @@
 namespace ECS
 {
 struct EntityQueryData;
-//#define ENABLE_SIMPLE_SYSTEM_DEPENDENCIES 1
 
-#ifdef ENABLE_SIMPLE_SYSTEM_DEPENDENCIES
+#if !defined(ENABLE_SIMPLE_SYSTEM_DEPENDENCIES)
+#define ENABLE_SIMPLE_SYSTEM_DEPENDENCIES 0
+#endif
+
+#if ENABLE_SIMPLE_SYSTEM_DEPENDENCIES
 struct ComponentDependencyManager {
     JobHandle dependency;struct DependencyHandle
         {
@@ -64,10 +67,6 @@ struct ComponentDependencyManager {
     JobHandle combineReadDependencies(uint32_t typeArrayIndex);
 private:
     uint32_t getTypeArrayIndex(TypeID type);
-    void insertRO(JobHandle job,TypeID type);
-    void insertRW(JobHandle job,TypeID type);
-    JobHandle getRO(TypeID type);
-    JobHandle getRW(TypeID type);
 };
 }
 #endif

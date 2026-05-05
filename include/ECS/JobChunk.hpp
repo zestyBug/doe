@@ -14,7 +14,7 @@ namespace ECS
         JobHandle schedule(EntityQueryImpl query,ComponentDependencyManager &);
     private:
         /// @brief JobChunkProducer
-        static void execute(void *, uint32_t, uint32_t, JobHandle);
+        static void execute(void *, uint32_t, uint32_t);
         virtual void execute(const Chunk*, const_span<int32_t>) = 0;
         const EntityQueryData *query = nullptr;
     };

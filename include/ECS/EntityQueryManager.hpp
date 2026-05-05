@@ -29,13 +29,14 @@ namespace ECS {
         /// @brief matching archetypes
         align_ptr<ArchetypeCache[]> archetypes;
         /// @brief typesIndex[archetypeIndex * firstNoneIndex + typeIndex]
-        /// -1 means not found
+        /// @details -1 means not found
         int32_t             *typesIndex = nullptr;
         uint32_t             archetypesCapacity = 0;
         uint32_t             archetypesCount = 0;
         /// @brief matching chunks cache
         struct ChunkCache {
             const Chunk *value;
+            /// @brief Archetype index in archetypes
             uint32_t archetypeIndex;
         };
         align_ptr<ChunkCache[]>  cache;
