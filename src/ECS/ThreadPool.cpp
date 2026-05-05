@@ -118,11 +118,10 @@ void JobDataChunk::resizeJobPool(uint32_t capacity){
     if(sharedData.capacity >= capacity)
         throw std::invalid_argument("resizeJobPool(): can't resize to smaller array");
     uint32_t size_temp[5];
-    size_temp[0] = sizeof(JobDataChunk);
-    size_temp[1] =                alignTo64(sizeof(JobData)  *capacity);
-    size_temp[2] = size_temp[0] + alignTo64(sizeof(uint32_t) *capacity);
-    size_temp[3] = size_temp[1] + alignTo64(sizeof(JobHandle)*capacity);
-    size_temp[4] = size_temp[2] + alignTo64(sizeof(JobEntry) *capacity);
+    size_temp[0] =                alignTo64(sizeof(JobData)  *capacity);
+    size_temp[1] = size_temp[0] + alignTo64(sizeof(uint32_t) *capacity);
+    size_temp[2] = size_temp[1] + alignTo64(sizeof(JobHandle)*capacity);
+    size_temp[3] = size_temp[2] + alignTo64(sizeof(JobEntry) *capacity);
     align_ptr<JobDataChunk> ptr2{(JobDataChunk*)allocator().allocate(size_temp[3])};
     if(sharedData.jobs.get())
         memcpy(ptr2.get(), sharedData.jobs.get(), sizeof(JobData)*sharedData.capacity);
