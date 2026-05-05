@@ -10,7 +10,7 @@ void Archetype::addToChunkList(Chunk* chunk, SharedComponentValues sharedCompone
     chunk->listIndex = chunks._count;
     if (chunks._count == chunks.capacity())
     {
-        uint32_t newCapacity = (chunks.capacity() < 1) ? 4 : (chunks.capacity() * 2);
+        uint32_t newCapacity = (chunks.capacity() < 1) ? Constants::InitialChunkListSize : (chunks.capacity() * 2);
 
         // The shared component indices we are inserting belong to the same archetype so they need to be adjusted after reallocation
         if (chunks.insideAllocation(sharedComponentIndices.firstIndex))

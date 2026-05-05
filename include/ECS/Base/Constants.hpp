@@ -22,6 +22,11 @@ namespace ECS {
         static constexpr uint16_t MaximumTypesCount = 1 << 12;
         static constexpr uint32_t MaximumChunkCount = 0x10000;
         static constexpr uint32_t MaxJobCount = 0xFFFFF;
+        static constexpr uint32_t InitialArchetypeArraySize = 0x80;
+        static constexpr uint32_t InitialChunkListSize = 0x80;
+        static constexpr uint32_t InitialEmptyChunkListSize = 0x80;
+        static constexpr uint32_t InitialArchetypeCacheSize = 0x80;
+        static constexpr uint32_t InitialChunkCacheSize = 0x100;
     };
 }
 

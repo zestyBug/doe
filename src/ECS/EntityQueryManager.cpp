@@ -158,16 +158,16 @@ EntityQueryImpl EntityQueryManager::createEntityQuery(const EntityQueryBuilder& 
         while (queryArray[--qcount].flags & EntityQueryData::TypeQuery::AnyFlag);
     }
 
-    size[0] =           (uint32_t)sizeof(EntityQueryData::ArchetypeCache) * 32;
-    size[1] = size[0] + (uint32_t)sizeof(uint32_t) * 32 * queryData->firstNoneIndex;
+    size[0] =           (uint32_t)sizeof(EntityQueryData::ArchetypeCache) * Constants::InitialArchetypeCacheSize;
+    size[1] = size[0] + (uint32_t)sizeof(uint32_t)                        * Constants::InitialArchetypeCacheSize * queryData->firstNoneIndex;
     ptr = allocator().allocate(size[1]);
     queryData->archetypes.reset((EntityQueryData::ArchetypeCache*)ptr);
     queryData->typesIndex = (int32_t*)(ptr + size[0]);
-    queryData->archetypesCapacity = 32;
+    queryData->archetypesCapacity = Constants::InitialArchetypeCacheSize;
     queryData->archetypesCount = 0;
 
-    queryData->cache = nullptr;
-    queryData->cacheCapacity = 0;
+    queryData->cache = make_align<EntityQueryData::ChunkCache[]>(Constants::InitialChunkCacheSize);
+    queryData->cacheCapacity = Constants::InitialChunkCacheSize;
     queryData->cacheCount = 0;
     queryData->validCache = false;
     queryData->ID = id;
@@ -226,7 +226,7 @@ void EntityQueryManager::rebuildMatchingChunkCache(EntityQueryData &query){
     EntityQueryData::ArchetypeCache *archs = query.archetypes.get();
     uint32_t total_count=0;
     uint32_t archetypeCount = query.archetypesCount;
-    while(archetypeCount){
+    while(archetypeCount > 0){
         archetypeCount--;
         total_count += archs[archetypeCount]->getChunks().size();
     }

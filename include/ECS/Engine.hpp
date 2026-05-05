@@ -13,7 +13,9 @@ namespace ECS
         ComponentDependencyManager dpm;
         EntityQueryManager eqm{&ecs};
         std::vector<align_ptr<ISystem>,allocator<align_ptr<ISystem>>> sys;
-        DOE() = default;
+        DOE() {
+            sys.reserve(Constants::InitialArchetypeArraySize);
+        };
     };
     extern align_ptr<DOE> sharedEngine;
 } // namespace ECS

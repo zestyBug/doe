@@ -21,8 +21,8 @@ span<Archetype*> EntityComponentStore::getArchetypes(){
 }
 EntityComponentStore::EntityComponentStore(){
     this->componentTypeOrderVersion = make_align<Version[]>(Constants::MaximumTypesCount);
-    this->typeLookup.init(16);
-    this->archetypes.reserve(16);
+    this->typeLookup.init   (Constants::InitialEmptyChunkListSize);
+    this->archetypes.reserve(Constants::InitialEmptyChunkListSize);
 }
 uint32_t EntityComponentStore::calculateSpaceRequirement(const_span<uint16_t> componentSizes, uint32_t entityCount)
 {
@@ -83,10 +83,11 @@ Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
         offsets[6] = offsets[5] + alignTo64(sizeof(TypeManager::DefaultFunction),types.size());
         arch.reset((Archetype*)allocator().allocate(offsets[6]));
         new (&arch->chunks) ArchetypeChunkData(types.size(),numSharedComponents);
+        // arch->chunks.grow(Constants::InitialChunkListSize);
         new (&arch->chunksWithEmptySlots) std::vector<Chunk*,allocator<Chunk*>>();
-        arch->chunksWithEmptySlots.reserve(16);
+        arch->chunksWithEmptySlots.reserve(Constants::InitialChunkListSize);
         new (&arch->freeChunksBySharedComponents) ChunkListMap();
-        arch->freeChunksBySharedComponents.init(arch.get());
+        arch->freeChunksBySharedComponents.init(arch.get(), Constants::InitialChunkListSize);
         arch->_types        = (TypeID*)  ((uint8_t*)(arch.get()) + offsets[0]);
         arch->_realIndecies = (uint16_t*)((uint8_t*)(arch.get()) + offsets[1]);
         arch->_offsets      = (uint32_t*)((uint8_t*)(arch.get()) + offsets[2]);
