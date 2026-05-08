@@ -10,18 +10,17 @@ ifndef DEBUG
 
 OBJ=obj/release
 BIN=bin/release
-LDFLAGS=-m64 -s
-# -fsanitize=address 
-#LDLIBS=-static-libasan
-CPPFLAGS=-std=c++17 -g0 -O3 -m64 -fno-rtti -fexceptions $(WARNS) $(INCLUDE) -MMD -MP
-CFLAGS=-std=c17 -g0 -O3 -m64 $(WARNS) $(INCLUDE) -MMD -MP
-# -fsanitize=address
+LDFLAGS=-m64 -s -march=native
+CPPFLAGS=-DNDEBUG -std=c++17 -g0 -O3 -m64 -fno-rtti -fexceptions $(WARNS) $(INCLUDE) -MMD -MP -march=native
+CFLAGS=-std=c17 -g0 -O3 -m64 $(WARNS) $(INCLUDE) -MMD -MP -march=native
 
 else
 
 OBJ=obj/test-v2
 BIN=bin/test-v2
+# -fsanitize=address -static-libasan
 LDFLAGS=-m64
+# -fsanitize=address
 CPPFLAGS=-DDEBUG -DVERBOSE -std=c++17 -g3 -O0 -m64 -fno-rtti -fexceptions $(WARNS) $(INCLUDE) -MMD -MP
 CFLAGS=-std=c17 -g3 -O0 -m64 -fexceptions $(WARNS) $(INCLUDE) -MMD -MP
 
@@ -51,6 +50,52 @@ $(OBJ)/$(cutilDir)/%.o: $(cutilDir)/%.cpp
 $(OBJ)/$(testDir)/test-%.o: $(testDir)/test-%.cpp
 	mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $< -o $@
+$(OBJ)/$(srcDir)/glfw/%.o: $(srcDir)/glfw/%.c
+	mkdir -p $(@D)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+$(OBJ)/$(srcDir)/glcorearb.o: $(srcDir)/glfw/glcorearb.c
+	mkdir -p $(@D)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+
+
+
+
+
+
+OBJS_GLFW= \
+    $(OBJ)/$(srcDir)/glfw/context.o \
+	$(OBJ)/$(srcDir)/glfw/init.o \
+	$(OBJ)/$(srcDir)/glfw/input.o \
+	$(OBJ)/$(srcDir)/glfw/monitor.o \
+	$(OBJ)/$(srcDir)/glfw/platform.o \
+	$(OBJ)/$(srcDir)/glfw/window.o \
+	$(OBJ)/$(srcDir)/glcorearb.o
+ifeq ($(OS),Windows_NT)
+	OBJS_GLFW+= \
+		$(OBJ)/$(srcDir)/glfw/win32_init.o \
+		$(OBJ)/$(srcDir)/glfw/win32_module.o \
+		$(OBJ)/$(srcDir)/glfw/win32_monitor.o \
+		$(OBJ)/$(srcDir)/glfw/win32_time.o \
+		$(OBJ)/$(srcDir)/glfw/win32_window.o
+	CPPFLAGS+=-D_GLFW_WIN32 -DIS_WINDOWS_OS
+# LDLIBS+=-lgdi32
+else
+	OBJS_GLFW+= \
+		$(OBJ)/$(srcDir)/glfw/posix_module.o \
+		$(OBJ)/$(srcDir)/glfw/posix_poll.o \
+		$(OBJ)/$(srcDir)/glfw/posix_time.o \
+		$(OBJ)/$(srcDir)/glfw/x11_init.o \
+		$(OBJ)/$(srcDir)/glfw/x11_monitor.o \
+		$(OBJ)/$(srcDir)/glfw/x11_window.o \
+		$(OBJ)/$(srcDir)/glfw/xkb_unicode.o
+	CPPFLAGS+=-D_GLFW_X11
+	LDLIBS+=-lGL
+# libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev 
+endif
+
+
+
+
 
 
 libuv_la_CFLAGS=-I$(srcDir)/libuv
@@ -66,7 +111,7 @@ libuv_la_SOURCES= \
 	$(OBJ)/$(srcDir)/libuv/uv-data-getter-setters.o \
 	$(OBJ)/$(srcDir)/libuv/version.o
 
-ifdef WINNT
+ifeq ($(OS),Windows_NT)
 
 libuv_la_CFLAGS += -I$(top_srcdir)/src/win \
                -DWIN32_LEAN_AND_MEAN \
@@ -113,9 +158,6 @@ libuv_la_SOURCES += \
 	$(OBJ)/$(srcDir)/libuv/unix/thread.o \
 	$(OBJ)/$(srcDir)/libuv/unix/udp.o
 
-endif  # WINNT
-
-ifdef LINUX
 libuv_la_CFLAGS += -D_GNU_SOURCE
 libuv_la_SOURCES += \
 	$(OBJ)/$(srcDir)/libuv/unix/linux-core.o \
@@ -124,7 +166,12 @@ libuv_la_SOURCES += \
 	$(OBJ)/$(srcDir)/libuv/unix/procfs-exepath.o \
 	$(OBJ)/$(srcDir)/libuv/unix/proctitle.o \
 	$(OBJ)/$(srcDir)/libuv/unix/epoll.o
-endif
+
+endif  # WINNT
+
+
+
+
 
 OBJS= \
 	$(OBJ)/$(srcDir)/ECS/Archetype.o \
