@@ -155,6 +155,13 @@ static void post(QUEUE* q, enum uv__work_kind kind) {
     uv_cond_signal(&cond);
   uv_mutex_unlock(&mutex);
 }
+void uv_queue_exit() {
+  uv_mutex_lock(&mutex);
+  QUEUE_INSERT_TAIL(&wq, &exit_message);
+  if (idle_threads > 0)
+    uv_cond_signal(&cond);
+  uv_mutex_unlock(&mutex);
+}
 
 
 #ifdef __MVS__

@@ -922,7 +922,7 @@ struct uv_work_s {
   uv_after_work_cb after_work_cb;
   UV_WORK_PRIVATE_FIELDS
 };
-
+UV_EXTERN void uv_queue_exit();
 UV_EXTERN void uv_queue_work_slow(uv_work_t* req);
 UV_EXTERN int uv_queue_work(uv_loop_t* loop,
                             uv_work_t* req,

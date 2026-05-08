@@ -17,7 +17,6 @@ namespace ECS
             sys.reserve(Constants::InitialArchetypeArraySize);
         };
     };
-    extern align_ptr<DOE> sharedEngine;
 } // namespace ECS
 
 

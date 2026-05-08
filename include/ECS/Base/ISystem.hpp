@@ -8,7 +8,8 @@ namespace ECS
     struct DOE;
     struct ISystem {
         virtual void OnUpdate(DOE*){};
-        virtual void OnUpdatePhysic(DOE*){};
+        virtual void OnFixedUpdate(DOE*){};
+        virtual void OnDestroy(DOE*){};
         virtual ~ISystem(){}
     };
 }

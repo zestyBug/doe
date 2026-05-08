@@ -9,7 +9,9 @@ using namespace ECS;
 
 #if !ENABLE_SIMPLE_SYSTEM_DEPENDENCIES
 
-
+ComponentDependencyManager::ComponentDependencyManager(){
+    memset(typeArrayIndices.data(),0xFFFFFFFF,sizeof(typeArrayIndices));
+}
 uint32_t ComponentDependencyManager::getTypeArrayIndex(TypeID type)
 {
     uint32_t arrayIndex = typeArrayIndices[type.index()];
@@ -28,6 +30,8 @@ uint32_t ComponentDependencyManager::getTypeArrayIndex(TypeID type)
 JobHandle ComponentDependencyManager::getDependency(const EntityQueryData &query)
 {
     const uint32_t counter = query.firstNoneIndex;
+    if(counter >= Constants::MaximumQueryTypesCount)
+        throw std::invalid_argument("getDependency(): too big of a query, stack may overflow");
     const EntityQueryData::TypeQuery *queries = query.queries.get();
     const EntityQueryData::TypeQuery *queries_end = queries + counter;
     if(queries == queries_end)
@@ -39,8 +43,10 @@ JobHandle ComponentDependencyManager::getDependency(const EntityQueryData &query
     while(queries != queries_end){
         if(queries->flags & EntityQueryData::TypeQuery::WriteFlag) {
             uint32_t typeArrayIndex = typeArrayIndices[queries->type.index()];
-            if (typeArrayIndex == NullTypeIndex)
+            if (typeArrayIndex == NullTypeIndex){
+                queries++;
                 continue;
+            }
             JobHandle *readFences = readJobFences[typeArrayIndex];
             uint32_t numReadFences = dependencyHandles[typeArrayIndex].numReadFences;
             allHandles[allHandleCount++] = dependencyHandles[typeArrayIndex].writeFence;

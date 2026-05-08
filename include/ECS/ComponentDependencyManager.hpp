@@ -53,7 +53,7 @@ struct ComponentDependencyManager {
     std::array<uint16_t                       ,Constants::MaximumTypesCount> typeArrayIndices;
     std::array<JobHandle[MaximumReadJobHandle],Constants::MaximumTypesCount> readJobFences;
 
-    ComponentDependencyManager() = default;
+    ComponentDependencyManager();
     ComponentDependencyManager(const ComponentDependencyManager&) = default;
     void clear();
     JobHandle getDependency(

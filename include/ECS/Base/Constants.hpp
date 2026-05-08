@@ -8,6 +8,7 @@ namespace ECS {
     struct Constants {
         /// @details Considerations: must be power of 2
         static constexpr uint32_t MaximumQueryCount = 1024;
+        static constexpr uint32_t MaximumQueryTypesCount = 32;
         /// @details Considerations: 1 bit flag for invalid entities.
         static constexpr uint32_t MaximumEntityCount = INT32_MAX;
         /// @brief maximum number of type an archetype can manage, any number higher than this may lead to overflow

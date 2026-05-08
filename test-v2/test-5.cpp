@@ -8,6 +8,8 @@
 #include "uv.h"
 using namespace ECS;
 
+extern align_ptr<DOE> sharedEngine;
+
 struct Position : IComponentData {
     float x;
 };
@@ -32,18 +34,23 @@ struct SpeedJob : IJobChunk {
 struct SpeedSystem : ISystem {
     JobChunkWrapper<SpeedJob> wrapper;
     EntityQueryImpl qd;
+    uint32_t counter=0;
     SpeedSystem(DOE*e){
-        Archetype *arch = sharedEngine->ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
+        Archetype *arch = e->ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
         Entity entities[200];
-        sharedEngine->ecs.createEntities(arch,{entities,200});\
-
+        e->ecs.createEntities(arch,{entities,200});
         EntityQueryBuilder qb;
         qb.withAllRW(getTypeID<Position>());
         qb.withAll(getTypeID<Speed>());
-        qd = sharedEngine->eqm.createEntityQuery(qb);
+        qd = e->eqm.createEntityQuery(qb);
     }
-    void OnUpdate(DOE*e){
-        wrapper.schedule(qd,sharedEngine->dpm);
+    void OnFixedUpdate(DOE*e){
+        counter++;
+        if(counter>5000){
+            JobsUtility::signalQuit();
+            return;
+        }
+        wrapper.schedule(qd,e->dpm);
     }
 };
 
@@ -55,9 +62,7 @@ CLASS_TEST(Test,Test1){
     align_ptr<SpeedSystem> system = make_align<SpeedSystem>(sharedEngine.get());
     sharedEngine->sys.emplace_back((ISystem*)system.release());
     JobsUtility::init();
-    do {
-        uv_run(loop, UV_RUN_DEFAULT);
-    } while(uv_loop_alive(loop));
+    uv_run(loop, UV_RUN_DEFAULT);
 }
 
 int main(int argc, char*argv[]){
@@ -66,9 +71,11 @@ int main(int argc, char*argv[]){
     sharedEngine = make_align<DOE>();
     mtest::run_all();
     uv_loop_close(loop);
+    uv_library_shutdown();
     sharedEngine.reset();
 #ifdef DEBUG
-    if(allocator_counter){
+    // one for the threadpool
+    if(allocator_counter != 1){
         printf("Memory leak count %li\n",allocator_counter);
     }
 #endif

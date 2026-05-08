@@ -12,6 +12,7 @@ namespace ECS
     struct ComponentDependencyManager;
     struct JobChunkWrapperBase {
         JobHandle schedule(EntityQueryImpl query,ComponentDependencyManager &);
+        JobHandle scheduleParallel(EntityQueryImpl query,ComponentDependencyManager &);
     private:
         /// @brief JobChunkProducer
         static void execute(void *, uint32_t, uint32_t);

@@ -2,20 +2,8 @@
 #include "ECS/Engine.hpp"
 #include "uv.h"
 
-align_ptr<ECS::DOE> ECS::sharedEngine;
+align_ptr<ECS::DOE> sharedEngine;
 using namespace ECS;
-
-
-void empty_work(uv_work_t* req);
-void initialize_work(uv_work_t* req, int status);
-void do_nothing  (uv__work *context, int status);
-/// @brief wake threads to do the created works
-void wake_threads();
-/// @brief call system update to create some new works
-void call_systems();
-void work        (uv__work *context);
-void work_systems(uv__work *context);
-
 
 struct JobEntry {
     JobHandle handle;
@@ -33,6 +21,11 @@ struct JobData {
     uint32_t batchStepSize = 1;
     uint32_t level = 0;
 };
+enum Request : uint32_t {
+    Exit = 1,
+    Render = 2,
+    Timer = 4
+};
 struct ECS::JobDataChunk {
     void resizeJobPool(uint32_t);
     void prepareJobs();
@@ -43,25 +36,25 @@ struct ECS::JobDataChunk {
             w.work_req.loop = uv_default_loop();
         }
     }
+
     uint32_t               writeIndex = 0;
     std::atomic<uint32_t>  readIndex = 0;
     std::atomic<uint32_t>  readerLevel = 0;
     std::atomic<uint32_t>  activeThreads = 0;
     uint32_t               capacity = 0;
-    uv_work_t              works[640];
+    std::atomic<uint32_t>  bitmask;
     /// @brief batch begin index to start with
     align_ptr<JobData[]>   jobs = NULL;
-    std::atomic<uint32_t> *beginIndex = NULL;
+    std::atomic<uint32_t>  *beginIndex = NULL;
     /// @brief sorted by dependency. use the handle to find the real index.
-    JobHandle             *jobsArray = NULL;
-    JobEntry              *buffer = NULL;
+    JobHandle              *jobsArray = NULL;
+    JobEntry               *buffer = NULL;
+
+    alignas(64) uv_timer_t fixedTimer;
+    uv_work_t  works[2];
 };
 JobDataChunk sharedData;
 
-
-void JobsUtility::init(){
-    uv_queue_work(uv_default_loop(),sharedData.works,&empty_work,&initialize_work);
-}
 JobHandle JobsUtility::schedule(const JobParameter& data){
     if(sharedData.writeIndex >= sharedData.capacity)
         sharedData.resizeJobPool(sharedData.capacity * 2);
@@ -86,17 +79,17 @@ JobHandle JobsUtility::schedule(const JobParameter& data){
     return JobHandle((int32_t)index);
 }
 void JobDataChunk::prepareJobs(){
-    JobEntry *buffer = sharedData.buffer;
+    JobEntry *bufferPtr = sharedData.buffer;
     uint32_t count = sharedData.writeIndex;
-    JobData *jobs = sharedData.jobs.get();
+    JobData *jobsPtr = sharedData.jobs.get();
     if(count < 1)
         return;
     memset(sharedData.beginIndex, 0, sizeof(std::atomic<uint32_t>)*count);
     for(uint32_t i=0;i<count;i++)
-        buffer[i] = JobEntry{JobHandle(i), jobs[i].level};
-    std::sort(buffer,buffer+count);
+        bufferPtr[i] = JobEntry{JobHandle(i), jobsPtr[i].level};
+    std::sort(bufferPtr,bufferPtr+count);
     for(uint32_t i=0;i<count;i++)
-        sharedData.jobsArray[i] = buffer[i].handle;
+        sharedData.jobsArray[i] = bufferPtr[i].handle;
 }
 JobHandle JobsUtility::combineDependencies(const_span<JobHandle> jobs){
     JobHandle max = JobHandle();
@@ -135,109 +128,211 @@ void JobDataChunk::resizeJobPool(uint32_t capacity){
 
 
 
-void empty_work(uv_work_t* req){}
-void initialize_work(uv_work_t* req, int){
-    sharedData.works->loop = uv_default_loop();
-    sharedData.works->data = NULL;
-    sharedData.works->work_req.loop = uv_default_loop();
-    sharedData.works->work_req.done = &do_nothing;
-    sharedData.works->work_req.work = &work_systems;
+
+
+
+
+
+
+/**
+ * a
+ * b
+ * c
+ */
+
+
+
+void initialize_work(uv_work_t* req);
+void initialize_after_work(uv_work_t* req, int);
+void on_fixed_timer(uv_timer_t *);
+/// @brief Evokes either iterate_systems+queue_jobs or queue_jobs if only if all threads are sleeping
+void wakeThread();
+/// @brief iterate systems and call a event function depending on the bitmap or do nothing
+/// @warning must be running alone, requires full access engine
+void iterate_systems(uv__work *);
+/// @brief doing nothing
+/// @details may be called after iterate_systems
+void do_nothing(uv__work *,int);
+/// @brief slow stoping the threadpool
+/// @warning must be running alone and in the main thread
+void on_exit(uv__work *,int);
+/// @brief a wrapper to call queue_jobs();
+/// @see queue_jobs
+/// @details is called after iterate_systems
+void queue_jobs(uv__work *,int);
+/// @brief prepares works array to be queued into the threadpool
+/// @warning must be running alone and in the main thread, requires full access to works list
+void queue_jobs();
+/// @brief the actual function jobs are handled in.
+void work_jobs(uv__work *);
+/// @brief ensures that (only) the last worker thread will wake other threads if needed.
+/// @details is called after work_jobs, simply calling wakeThread
+void after_work_jobs(uv__work *,int);
+
+
+
+
+
+
+
+
+
+void JobsUtility::init(){
     sharedData.activeThreads++;
-    uv_queue_work_slow(sharedData.works);
+    uv_queue_work(uv_default_loop(),sharedData.works,&initialize_work,&initialize_after_work);
 }
-void do_nothing(uv__work *context, int status){
-    unsigned int *count = &((uv_work_t *) ((uint8_t*)(context) - offsetof(uv_work_t, work_req)))->loop->active_reqs.count;
+void initialize_work(uv_work_t* req){
+    std::vector<void* (*)(DOE *)> &list = JobsUtility::_get_initialize_list();
+    auto &sys = sharedEngine->sys;
+    sys.reserve(list.size());
+    for(auto func:list){
+        sys.emplace_back( (ISystem*)func(sharedEngine.get()) );
+    }
+}
+void initialize_after_work(uv_work_t* req, int){
+    uv_timer_init(uv_default_loop(), &sharedData.fixedTimer);
+    uv_timer_start(&sharedData.fixedTimer, on_fixed_timer, 0, 20);
+    sharedData.activeThreads--;
+    //queue_fixed_update();
+}
+void on_fixed_timer(uv_timer_t *) {
+    sharedData.bitmask |= Request::Timer;
+    wakeThread();
+}
+void JobsUtility::signalQuit(){
+    sharedData.bitmask |= Request::Exit;
+    wakeThread();
+}
+void JobsUtility::signalRender(){
+    sharedData.bitmask |= Request::Render;
+    wakeThread();
+}
+void wakeThread(){
+    uint32_t expected = 0;
+    if(sharedData.activeThreads.compare_exchange_weak(expected,1)){
+        if(sharedData.writeIndex <= sharedData.readIndex.load()){
+            sharedData.works[0].loop = uv_default_loop();
+            sharedData.works[0].data = NULL;
+            sharedData.works[0].work_req.loop = uv_default_loop();
+            sharedData.works[0].work_req.done = &queue_jobs;
+            sharedData.works[0].work_req.work = &iterate_systems;
+            uv_queue_work_slow(sharedData.works);
+        }else{
+            queue_jobs();
+        }
+    }
+}
+void iterate_systems(uv__work *w){
+    sharedData.writeIndex = 0;
+    sharedData.readIndex = 0;
+    sharedData.readerLevel = 0;
+    sharedEngine->eqm.updateNewArchetypes();
+    sharedEngine->dpm.clear();
+    align_ptr<ISystem> *begin =         sharedEngine->sys.data();
+    align_ptr<ISystem> *end   = begin + sharedEngine->sys.size();
+    if(unlikely(sharedData.bitmask & Request::Exit)) {
+        while (begin != end){
+            (*begin)->OnDestroy(sharedEngine.get());
+            begin++;
+        }
+        w->done = on_exit;
+    } else if(sharedData.bitmask & Request::Timer) {
+        while (begin != end){
+            (*begin)->OnFixedUpdate(sharedEngine.get());
+            begin++;
+        }
+        if(sharedData.writeIndex == 0)
+            w->done = do_nothing;
+        else
+            sharedData.prepareJobs();
+        sharedData.bitmask &= ~Request::Timer;
+    } else if(sharedData.bitmask & Request::Render) {
+        while (begin != end){
+            (*begin)->OnUpdate(sharedEngine.get());
+            begin++;
+        }
+        if(sharedData.writeIndex == 0)
+            w->done = do_nothing;
+        else
+            sharedData.prepareJobs();
+        sharedData.bitmask &= ~Request::Render;
+    } else {
+        w->done = do_nothing;
+    }
+}
+void on_exit(uv__work *w,int) {
+    unsigned int *count = &((uv_work_t *) ((uint8_t*)(w) - offsetof(uv_work_t, work_req)))->loop->active_reqs.count;
     if(*count <= 0)
         throw std::runtime_error("");
     (*count)--;
-
-    if(unlikely(sharedData.activeThreads.fetch_sub(1) == 1)){
-        if(status == UV_ECANCELED)
-            return;
-        uint32_t readIndex = sharedData.readIndex.load();
-        // no more job
-        if(sharedData.writeIndex <= readIndex)
-            call_systems();
-        else
-            wake_threads();
-    }
-}
-static uint32_t counter=0;
-void call_systems(){
-    if(counter > 10000)
-        return;
-    counter++;
-    sharedData.works->loop = uv_default_loop();
-    sharedData.works->data = NULL;
-    sharedData.works->work_req.loop = uv_default_loop();
-    sharedData.works->work_req.done = &do_nothing;
-    sharedData.works->work_req.work = &work_systems;
+    // dead locking the JobsUtility for ever
     sharedData.activeThreads++;
-    uv_queue_work_slow(sharedData.works);
+    uv_timer_stop(&sharedData.fixedTimer);
 }
-void wake_threads(){
-    uv_work_t *begin = sharedData.works + 4;
-    uint32_t numWorkerThread = std::min<uint32_t>(uv_num_worker_threads(),60);
-    uv_work_t *end = sharedData.works + 4 + numWorkerThread;
-    sharedData.activeThreads += numWorkerThread;
+void do_nothing(uv__work *w,int){
+    unsigned int *count = &((uv_work_t *) ((uint8_t*)(w) - offsetof(uv_work_t, work_req)))->loop->active_reqs.count;
+    if(*count <= 0)
+        throw std::runtime_error("");
+    (*count)--;
+    sharedData.activeThreads--;
+}
+void queue_jobs()
+{
+    const uint32_t numWorkerThread = std::min<uint32_t>(
+        uv_num_worker_threads(),
+        sizeof(sharedData.works)/sizeof(sharedData.works[0])
+    );
+    uint32_t expected = 1;
+    if(unlikely(!sharedData.activeThreads.compare_exchange_weak(expected,numWorkerThread,std::memory_order_relaxed)))
+        throw std::runtime_error("queue_jobs(): thread internal error");
+
+    uv_work_t *begin = sharedData.works;
+    uv_work_t *end   = sharedData.works + numWorkerThread;
     while(begin < end){
         begin->loop = uv_default_loop();
         begin->data = &sharedData;
         begin->work_req.loop = uv_default_loop();
-        begin->work_req.done = &do_nothing;
-        begin->work_req.work = &work;
+        begin->work_req.done = &after_work_jobs;
+        begin->work_req.work = &work_jobs;
         begin++;
     }
-    begin = sharedData.works + 4;
+    begin = sharedData.works;
     while(begin < end){
         uv_queue_work_slow(begin);
         begin++;
     }
 }
-void work_systems(uv__work*)
+void queue_jobs(uv__work *w,int)
 {
-    sharedData.writeIndex = 0;
-    sharedData.readIndex = 0;
-    sharedData.readerLevel = 0;
-
-    sharedEngine->eqm.updateNewArchetypes();
-    sharedEngine->dpm.clear();
-    align_ptr<ISystem> *begin = sharedEngine->sys.data();
-    align_ptr<ISystem> *end = begin + sharedEngine->sys.size();
-    while (begin != end)
-    {
-        begin->get()->OnUpdate(sharedEngine.get());
-        begin++;
-    }
-    sharedData.prepareJobs();
+    unsigned int *count = &((uv_work_t *) ((uint8_t*)(w) - offsetof(uv_work_t, work_req)))->loop->active_reqs.count;
+    if(*count <= 0)
+        throw std::runtime_error("");
+    (*count)--;
+    queue_jobs();
 }
-void work(uv__work *w)
+void work_jobs(uv__work *)
 {
-    uv_work_t* arg = (uv_work_t *) ((uint8_t*)(w) - offsetof(uv_work_t, work_req));
-    JobDataChunk *chunkPtr = (JobDataChunk*)arg->data;
+    //uv_work_t* arg = (uv_work_t *) ((uint8_t*)(w) - offsetof(uv_work_t, work_req));
+    //JobDataChunk &sharedData = *(JobDataChunk*)arg->data;
     while (true)
     {
-        uint32_t readIndex = chunkPtr->readIndex.load();
+        uint32_t readIndex = sharedData.readIndex.load();
         // no more job
-        if(chunkPtr->writeIndex <= readIndex)
+        if(unlikely(sharedData.writeIndex <= readIndex))
             return;
 
-        JobEntry job;
-
-        // copy the job to the stack
-        memcpy(&job, chunkPtr->jobsArray+readIndex, sizeof(JobEntry));
-
-        std::atomic<uint32_t> &beginIndexPtr = chunkPtr->beginIndex[job.handle.index()];
+        JobHandle job = sharedData.jobsArray[readIndex];
+        std::atomic<uint32_t> &beginIndexPtr = sharedData.beginIndex[job.index()];
         JobData jobData;
-        memcpy(&jobData, chunkPtr->jobs.get() + job.handle.index(), sizeof(JobData));
+        memcpy(&jobData, sharedData.jobs.get() + job.index(), sizeof(JobData));
 
         // dependency check
-        if(jobData.level > chunkPtr->readerLevel)
+        if(jobData.level > sharedData.readerLevel)
             return;
-        uint32_t batchBegin = beginIndexPtr.fetch_add(1);
         // if(likely(jobData.function != NULL)){}
         while(true)
         {
+            uint32_t batchBegin = beginIndexPtr.fetch_add(1);
             if(batchBegin >= jobData.batchCount)
                 break;
             batchBegin *= jobData.batchStepSize;
@@ -246,8 +341,23 @@ void work(uv__work *w)
                 batchBegin,
                 batchBegin+jobData.batchStepSize
             );
-            batchBegin = beginIndexPtr.fetch_add(1);
         }
-        chunkPtr->readIndex.compare_exchange_weak(readIndex,readIndex+1);
+        sharedData.readIndex.compare_exchange_weak(readIndex,readIndex+1);
+    }
+}
+void after_work_jobs(uv__work *w,int status){
+    unsigned int *count = &((uv_work_t *) ((uint8_t*)(w) - offsetof(uv_work_t, work_req)))->loop->active_reqs.count;
+    if(*count <= 0)
+        throw std::runtime_error("");
+    (*count)--;
+    if(status)
+        JobsUtility::signalQuit();
+    if(sharedData.activeThreads.fetch_sub(1) == 1){
+        if(sharedData.writeIndex <= sharedData.readIndex.load()){
+            if(sharedData.bitmask)
+                wakeThread();
+        }else{
+            wakeThread();
+        }
     }
 }
