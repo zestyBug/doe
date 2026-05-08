@@ -181,7 +181,7 @@ void JobsUtility::init(){
     sharedData.activeThreads++;
     uv_queue_work(uv_default_loop(),sharedData.works,&initialize_work,&initialize_after_work);
 }
-void initialize_work(uv_work_t* req){
+void initialize_work(uv_work_t*){
     std::vector<void* (*)(DOE *)> &list = JobsUtility::_get_initialize_list();
     auto &sys = sharedEngine->sys;
     sys.reserve(list.size());
@@ -189,7 +189,7 @@ void initialize_work(uv_work_t* req){
         sys.emplace_back( (ISystem*)func(sharedEngine.get()) );
     }
 }
-void initialize_after_work(uv_work_t* req, int){
+void initialize_after_work(uv_work_t*, int){
     uv_timer_init(uv_default_loop(), &sharedData.fixedTimer);
     uv_timer_start(&sharedData.fixedTimer, on_fixed_timer, 0, 20);
     sharedData.activeThreads--;

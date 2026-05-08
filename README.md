@@ -1,17 +1,29 @@
 # Data Oriented Engine
-A template framework. Suitable for data-oriented app design following the foundation of ECS.  
-The whole idea is to bring the performance of the DOD and the readability of other languages to C++.
+A rewriting of unity's entity module in C++ plus some improvements as a hoby project. It is for **educational purpose** only. Not to be used in any production.
+
+#### diffrents:
+Its not an exact copy, there are some differents. ChunkIndex is not used, for performance reason. Chunks header has different application. threadpool is implimented with libuv, and other small details.
+
+
+### What is not implimented? (dont ask for it)
+- Enable bits, and enableable components
+- Aspect
+- Lookup cache
+- Baker
+- SystemAPI, thread safty
+- Journaling
+- Serialization
+- stable hash, memory order
+- Cleanup and meta archetype
+- Buffer, cleanup, managed and chunk components
+- EntityCommandBuffer
+
 
 ### TODO
-- ECS memory safty (ownership + barrow model)
 - 32 bit systems compatibility
 - a better README and documentation
-- gcc Ofast compatibility
-- currect version-ing
-- EntityCommandBuffer
-- Garbage collection and recource managment
-- rewrite tests
-- remove unused includes
-- simple systems (transform/hierarchy)
-- job chunks buffering
-- minimal os-specific main loop (to executing systems, reading system inputs)
+- changing pointers to references as possible
+- better encapsulation
+- write some tests
+- assets manager
+- glfw + vulkan + imgui

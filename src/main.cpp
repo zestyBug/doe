@@ -1,48 +1,28 @@
-#include "ECS/SystemManager.hpp"
-#include "system/example.hpp"
-#include "glcorearb.h"
-#define _GLFW_X11 1
-#include "glfw/glfw3.h"
-#include "glfw/glfw3native.h"
+#include "ECS/Engine.hpp"
+#include "ECS/JobChunk.hpp"
+#include "ECS/Base/ISystem.hpp"
+#include "ECS/Base/Query.hpp"
+#include "ECS/ThreadPool.hpp"
+#include "ECS/Archetype.hpp"
+#include "uv.h"
+using namespace ECS;
 
-int main(){
-    if (!glfwInit()) return 1;
-    GLFWwindow* window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
-	if (!window) return 1;
-    glfwMakeContextCurrent(window);
-    glwInitialize(0x304);
-    puts((char*)glGetString(GL_VENDOR));
-    puts((char*)glGetString(GL_RENDERER));
-    puts((char*)glGetString(GL_VERSION));
+extern align_ptr<DOE> sharedEngine;
 
-    glfwSetWindowSizeLimits(window, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
-    {
-        ECS::SystemState engine;
-        engine.context = window;
-
-        while (!glfwWindowShouldClose(window))
-        {
-            glClearColor(0.4f,0.1f,0,0.5);
-            glClearDepth(0.0);
-            glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-            glfwSwapBuffer(window);
-            //glfwPollEvents();
-            //glfwWaitEventsTimeout(0.7);
-            glfwWaitEvents();
-            auto view = engine.systems.view();
-            for (const auto value:view)
-                if(ECS::System &s = view.get(value);s.onUpdate)
-                    if(s.onUpdate(s.ctx,engine))
-                        break;
-        }
-        {
-            auto view = engine.systems.view();
-            for (const auto value:view)
-                if(ECS::System &s = view.get(value);s.onDestroy)
-                    s.onDestroy(s.ctx,engine);
-        }
+int main(int argc, char*argv[]){
+    uv_setup_args(argc,argv);
+    uv_loop_t *loop = uv_default_loop();
+    sharedEngine = make_align<DOE>();
+    JobsUtility::init();
+    uv_run(loop, UV_RUN_DEFAULT);
+    uv_loop_close(loop);
+    uv_library_shutdown();
+    sharedEngine.reset();
+#ifdef DEBUG
+    // one for the threadpool jobs
+    if(allocator_counter != 1){
+        printf("Memory leak count %li\n",allocator_counter);
     }
-    glfwDestroyWindow(window);
-    glfwTerminate();
+#endif
     return 0;
 }
