@@ -2175,99 +2175,6 @@ static void fs__access(uv_fs_t* req) {
 }
 
 
-static void fs__chmod(uv_fs_t* req) {
-  int result = _wchmod(req->file.pathw, req->fs.info.mode);
-  if (result == -1)
-    SET_REQ_WIN32_ERROR(req, _doserrno);
-  else
-    SET_REQ_RESULT(req, 0);
-}
-
-
-static void fs__fchmod(uv_fs_t* req) {
-  int fd = req->file.fd;
-  int clear_archive_flag;
-  HANDLE handle;
-  NTSTATUS nt_status;
-  IO_STATUS_BLOCK io_status;
-  FILE_BASIC_INFORMATION file_info;
-
-  VERIFY_FD(fd, req);
-
-  handle = ReOpenFile(uv__get_osfhandle(fd), FILE_WRITE_ATTRIBUTES, 0, 0);
-  if (handle == INVALID_HANDLE_VALUE) {
-    SET_REQ_WIN32_ERROR(req, GetLastError());
-    return;
-  }
-
-  nt_status = pNtQueryInformationFile(handle,
-                                      &io_status,
-                                      &file_info,
-                                      sizeof file_info,
-                                      FileBasicInformation);
-
-  if (!NT_SUCCESS(nt_status)) {
-    SET_REQ_WIN32_ERROR(req, pRtlNtStatusToDosError(nt_status));
-    goto fchmod_cleanup;
-  }
-
-  /* Test if the Archive attribute is cleared */
-  if ((file_info.FileAttributes & FILE_ATTRIBUTE_ARCHIVE) == 0) {
-      /* Set Archive flag, otherwise setting or clearing the read-only
-         flag will not work */
-      file_info.FileAttributes |= FILE_ATTRIBUTE_ARCHIVE;
-      nt_status = pNtSetInformationFile(handle,
-                                        &io_status,
-                                        &file_info,
-                                        sizeof file_info,
-                                        FileBasicInformation);
-      if (!NT_SUCCESS(nt_status)) {
-        SET_REQ_WIN32_ERROR(req, pRtlNtStatusToDosError(nt_status));
-        goto fchmod_cleanup;
-      }
-      /* Remeber to clear the flag later on */
-      clear_archive_flag = 1;
-  } else {
-      clear_archive_flag = 0;
-  }
-
-  if (req->fs.info.mode & _S_IWRITE) {
-    file_info.FileAttributes &= ~FILE_ATTRIBUTE_READONLY;
-  } else {
-    file_info.FileAttributes |= FILE_ATTRIBUTE_READONLY;
-  }
-
-  nt_status = pNtSetInformationFile(handle,
-                                    &io_status,
-                                    &file_info,
-                                    sizeof file_info,
-                                    FileBasicInformation);
-
-  if (!NT_SUCCESS(nt_status)) {
-    SET_REQ_WIN32_ERROR(req, pRtlNtStatusToDosError(nt_status));
-    goto fchmod_cleanup;
-  }
-
-  if (clear_archive_flag) {
-      file_info.FileAttributes &= ~FILE_ATTRIBUTE_ARCHIVE;
-      if (file_info.FileAttributes == 0) {
-          file_info.FileAttributes = FILE_ATTRIBUTE_NORMAL;
-      }
-      nt_status = pNtSetInformationFile(handle,
-                                        &io_status,
-                                        &file_info,
-                                        sizeof file_info,
-                                        FileBasicInformation);
-      if (!NT_SUCCESS(nt_status)) {
-        SET_REQ_WIN32_ERROR(req, pRtlNtStatusToDosError(nt_status));
-        goto fchmod_cleanup;
-      }
-  }
-
-  SET_REQ_SUCCESS(req);
-fchmod_cleanup:
-  CloseHandle(handle);
-}
 
 
 INLINE static int fs__utime_handle(HANDLE handle, double atime, double mtime) {
@@ -2695,19 +2602,6 @@ static void fs__realpath(uv_fs_t* req) {
 }
 
 
-static void fs__chown(uv_fs_t* req) {
-  SET_REQ_RESULT(req, 0);
-}
-
-
-static void fs__fchown(uv_fs_t* req) {
-  SET_REQ_RESULT(req, 0);
-}
-
-
-static void fs__lchown(uv_fs_t* req) {
-  SET_REQ_RESULT(req, 0);
-}
 
 
 static void fs__statfs(uv_fs_t* req) {
@@ -2815,8 +2709,6 @@ static void uv__fs_work(struct uv__work* w) {
     XX(FUTIME, futime)
     XX(LUTIME, lutime)
     XX(ACCESS, access)
-    XX(CHMOD, chmod)
-    XX(FCHMOD, fchmod)
     XX(FSYNC, fsync)
     XX(FDATASYNC, fdatasync)
     XX(UNLINK, unlink)
@@ -2824,6 +2716,7 @@ static void uv__fs_work(struct uv__work* w) {
     XX(MKDIR, mkdir)
     XX(MKDTEMP, mkdtemp)
     XX(MKSTEMP, mkstemp)
+    XX(RENAME, rename)
     XX(SCANDIR, scandir)
     XX(READDIR, readdir)
     XX(OPENDIR, opendir)
@@ -2832,9 +2725,6 @@ static void uv__fs_work(struct uv__work* w) {
     XX(SYMLINK, symlink)
     XX(READLINK, readlink)
     XX(REALPATH, realpath)
-    XX(CHOWN, chown)
-    XX(FCHOWN, fchown)
-    XX(LCHOWN, lchown)
     XX(STATFS, statfs)
     default:
       assert(!"bad uv_fs_type");
@@ -3185,41 +3075,6 @@ int uv_fs_realpath(uv_loop_t* loop, uv_fs_t* req, const char* path,
 }
 
 
-int uv_fs_chown(uv_loop_t* loop, uv_fs_t* req, const char* path, uv_uid_t uid,
-    uv_gid_t gid, uv_fs_cb cb) {
-  int err;
-
-  INIT(UV_FS_CHOWN);
-  err = fs__capture_path(req, path, NULL, cb != NULL);
-  if (err) {
-    SET_REQ_WIN32_ERROR(req, err);
-    return req->result;
-  }
-
-  POST;
-}
-
-
-int uv_fs_fchown(uv_loop_t* loop, uv_fs_t* req, uv_file fd, uv_uid_t uid,
-    uv_gid_t gid, uv_fs_cb cb) {
-  INIT(UV_FS_FCHOWN);
-  POST;
-}
-
-
-int uv_fs_lchown(uv_loop_t* loop, uv_fs_t* req, const char* path, uv_uid_t uid,
-    uv_gid_t gid, uv_fs_cb cb) {
-  int err;
-
-  INIT(UV_FS_LCHOWN);
-  err = fs__capture_path(req, path, NULL, cb != NULL);
-  if (err) {
-    SET_REQ_WIN32_ERROR(req, err);
-    return req->result;
-  }
-
-  POST;
-}
 
 
 int uv_fs_stat(uv_loop_t* loop, uv_fs_t* req, const char* path, uv_fs_cb cb) {
@@ -3256,6 +3111,19 @@ int uv_fs_fstat(uv_loop_t* loop, uv_fs_t* req, uv_file fd, uv_fs_cb cb) {
   POST;
 }
 
+int uv_fs_rename(uv_loop_t* loop, uv_fs_t* req, const char* path,
+    const char* new_path, uv_fs_cb cb) {
+  int err;
+
+  INIT(UV_FS_RENAME);
+  err = fs__capture_path(req, path, new_path, cb != NULL);
+  if (err) {
+    SET_REQ_WIN32_ERROR(req, err);
+    return req->result;
+  }
+
+  POST;
+}
 
 
 int uv_fs_fsync(uv_loop_t* loop, uv_fs_t* req, uv_file fd, uv_fs_cb cb) {
@@ -3339,29 +3207,6 @@ int uv_fs_access(uv_loop_t* loop,
 }
 
 
-int uv_fs_chmod(uv_loop_t* loop, uv_fs_t* req, const char* path, int mode,
-    uv_fs_cb cb) {
-  int err;
-
-  INIT(UV_FS_CHMOD);
-  err = fs__capture_path(req, path, NULL, cb != NULL);
-  if (err) {
-    SET_REQ_WIN32_ERROR(req, err);
-    return req->result;
-  }
-
-  req->fs.info.mode = mode;
-  POST;
-}
-
-
-int uv_fs_fchmod(uv_loop_t* loop, uv_fs_t* req, uv_file fd, int mode,
-    uv_fs_cb cb) {
-  INIT(UV_FS_FCHMOD);
-  req->file.fd = fd;
-  req->fs.info.mode = mode;
-  POST;
-}
 
 
 int uv_fs_utime(uv_loop_t* loop, uv_fs_t* req, const char* path, double atime,

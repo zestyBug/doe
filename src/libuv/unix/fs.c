@@ -176,6 +176,8 @@ static int uv__fs_close(int fd) {
   return rc;
 }
 
+int rename(const char *oldpath, const char *newpath);
+
 
 static ssize_t uv__fs_fsync(uv_fs_t* req) {
 #if defined(__APPLE__)
@@ -1712,13 +1714,8 @@ static void uv__fs_work(struct uv__work* w) {
 
     switch (req->fs_type) {
     X(ACCESS, access(req->path, req->flags));
-    X(CHMOD, chmod(req->path, req->mode));
-    X(CHOWN, chown(req->path, req->uid, req->gid));
     X(CLOSE, uv__fs_close(req->file));
     X(COPYFILE, uv__fs_copyfile(req));
-    X(FCHMOD, fchmod(req->file, req->mode));
-    X(FCHOWN, fchown(req->file, req->uid, req->gid));
-    X(LCHOWN, lchown(req->path, req->uid, req->gid));
     X(FDATASYNC, uv__fs_fdatasync(req));
     X(FSTAT, uv__fs_fstat(req->file, &req->statbuf));
     X(FSYNC, uv__fs_fsync(req));
@@ -1738,6 +1735,7 @@ static void uv__fs_work(struct uv__work* w) {
     X(CLOSEDIR, uv__fs_closedir(req));
     X(READLINK, uv__fs_readlink(req));
     X(REALPATH, uv__fs_realpath(req));
+    X(RENAME, rename(req->path, req->new_path));
     X(RMDIR, rmdir(req->path));
     X(SENDFILE, uv__fs_sendfile(req));
     X(STAT, uv__fs_stat(req->path, &req->statbuf));
@@ -1791,30 +1789,6 @@ int uv_fs_access(uv_loop_t* loop,
 }
 
 
-int uv_fs_chmod(uv_loop_t* loop,
-                uv_fs_t* req,
-                const char* path,
-                int mode,
-                uv_fs_cb cb) {
-  INIT(CHMOD);
-  PATH;
-  req->mode = mode;
-  POST;
-}
-
-
-int uv_fs_chown(uv_loop_t* loop,
-                uv_fs_t* req,
-                const char* path,
-                uv_uid_t uid,
-                uv_gid_t gid,
-                uv_fs_cb cb) {
-  INIT(CHOWN);
-  PATH;
-  req->uid = uid;
-  req->gid = gid;
-  POST;
-}
 
 
 int uv_fs_close(uv_loop_t* loop, uv_fs_t* req, uv_file file, uv_fs_cb cb) {
@@ -1824,44 +1798,6 @@ int uv_fs_close(uv_loop_t* loop, uv_fs_t* req, uv_file file, uv_fs_cb cb) {
 }
 
 
-int uv_fs_fchmod(uv_loop_t* loop,
-                 uv_fs_t* req,
-                 uv_file file,
-                 int mode,
-                 uv_fs_cb cb) {
-  INIT(FCHMOD);
-  req->file = file;
-  req->mode = mode;
-  POST;
-}
-
-
-int uv_fs_fchown(uv_loop_t* loop,
-                 uv_fs_t* req,
-                 uv_file file,
-                 uv_uid_t uid,
-                 uv_gid_t gid,
-                 uv_fs_cb cb) {
-  INIT(FCHOWN);
-  req->file = file;
-  req->uid = uid;
-  req->gid = gid;
-  POST;
-}
-
-
-int uv_fs_lchown(uv_loop_t* loop,
-                 uv_fs_t* req,
-                 const char* path,
-                 uv_uid_t uid,
-                 uv_gid_t gid,
-                 uv_fs_cb cb) {
-  INIT(LCHOWN);
-  PATH;
-  req->uid = uid;
-  req->gid = gid;
-  POST;
-}
 
 
 int uv_fs_fdatasync(uv_loop_t* loop, uv_fs_t* req, uv_file file, uv_fs_cb cb) {
@@ -2082,6 +2018,17 @@ int uv_fs_realpath(uv_loop_t* loop,
                   uv_fs_cb cb) {
   INIT(REALPATH);
   PATH;
+  POST;
+}
+
+
+int uv_fs_rename(uv_loop_t* loop,
+                 uv_fs_t* req,
+                 const char* path,
+                 const char* new_path,
+                 uv_fs_cb cb) {
+  INIT(RENAME);
+  PATH2;
   POST;
 }
 
