@@ -111,6 +111,8 @@ libuv_la_SOURCES= \
 	$(OBJ)/$(srcDir)/libuv/strtok.o \
 	$(OBJ)/$(srcDir)/libuv/threadpool.o \
 	$(OBJ)/$(srcDir)/libuv/uv-common.o \
+	$(OBJ)/$(srcDir)/libuv/snprintf.o \
+	$(OBJ)/$(srcDir)/libuv/sscanf.o \
 	$(OBJ)/$(srcDir)/libuv/timer.o \
 	$(OBJ)/$(srcDir)/libuv/uv-data-getter-setters.o \
 	$(OBJ)/$(srcDir)/libuv/version.o

@@ -22,7 +22,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #if defined(_MSC_VER) || defined(__MINGW64_VERSION_MAJOR)

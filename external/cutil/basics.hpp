@@ -5,8 +5,9 @@
 #if !defined(BASICS_HPP)
 #define BASICS_HPP
 
-// some global defenitions
+#ifdef VERBOSE
 #include <stdio.h>
+#endif
 //memory allocation
 #include <stdlib.h>
 // heavily dependant

@@ -15,7 +15,6 @@
  * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <stdio.h>
 #include <string.h>
 
 #if defined(_MSC_VER) && _MSC_VER < 1600
@@ -135,7 +134,7 @@ static int inet_ntop6(const unsigned char *src, char *dst, size_t size) {
       tp += strlen(tp);
       break;
     }
-    tp += sprintf(tp, "%x", words[i]);
+    tp += snprintf(tp, sizeof tmp - (tp - tmp), "%x", words[i]);
   }
   /* Was it a trailing run of 0x00's? */
   if (best.base != -1 && (best.base + best.len) == ARRAY_SIZE(words))

@@ -29,7 +29,6 @@
 #include <stdlib.h> /* abort */
 #include <string.h> /* strrchr */
 #include <fcntl.h>  /* O_CLOEXEC and O_NONBLOCK, if supported. */
-#include <stdio.h>
 #include <errno.h>
 #include <sys/socket.h>
 
@@ -214,7 +213,6 @@ void uv__io_feed(uv_loop_t* loop, uv__io_t* w);
 int uv__io_active(const uv__io_t* w, unsigned int events);
 int uv__io_check_fd(uv_loop_t* loop, int fd);
 void uv__io_poll(uv_loop_t* loop, int timeout); /* in milliseconds or -1 */
-int uv__io_fork(uv_loop_t* loop);
 int uv__fd_exists(uv_loop_t* loop, int fd);
 
 /* async */
@@ -272,7 +270,6 @@ void uv__tcp_close(uv_tcp_t* handle);
 size_t uv__thread_stack_size(void);
 void uv__udp_close(uv_udp_t* handle);
 void uv__udp_finish_close(uv_udp_t* handle);
-FILE* uv__open_file(const char* path);
 int uv__getpwuid_r(uv_passwd_t* pwd);
 int uv__search_path(const char* prog, char* buf, size_t* buflen);
 
@@ -313,10 +310,6 @@ UV_UNUSED(static char* uv__basename_r(const char* path)) {
 
   return s + 1;
 }
-
-#if defined(__linux__)
-int uv__inotify_fork(uv_loop_t* loop, void* old_watchers);
-#endif
 
 typedef int (*uv__peersockfunc)(int, struct sockaddr*, socklen_t*);
 

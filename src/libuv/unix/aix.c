@@ -22,7 +22,6 @@
 #include "uv.h"
 #include "internal.h"
 
-#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -103,14 +102,6 @@ void uv__platform_loop_delete(uv_loop_t* loop) {
     loop->backend_fd = -1;
   }
 }
-
-
-int uv__io_fork(uv_loop_t* loop) {
-  uv__platform_loop_delete(loop);
-
-  return uv__platform_loop_init(loop);
-}
-
 
 int uv__io_check_fd(uv_loop_t* loop, int fd) {
   struct poll_ctl pc;

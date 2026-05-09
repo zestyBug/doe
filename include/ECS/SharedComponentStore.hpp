@@ -94,9 +94,6 @@ namespace ECS
                 // the new capacity
                 const uint32_t buffer1 = buffer0 * 2;
                 SharedComponentChunk* ptr2;
-            #if VERBOSE
-                printf("SharedComponentStore::resize(): %u => %u\n", ptr->capacity, buffer1);
-            #endif
                 {
                     // buffer size
                     const uint32_t buffer2 = buffer1 * typeSize;
@@ -150,17 +147,11 @@ namespace ECS
         SharedComponentStore() {
         }
         ~SharedComponentStore() {
-        #if VERBOSE
-            printf("~SharedComponentStore(): %p\n",this);
-        #endif
             for (uint32_t i: range<uint32_t>(Constants::MaximumTypesCount))
             {
                 SharedComponentChunk *ptr = dataChunk[i].get();
                 if(ptr && TypeManager::GetTypeInfoPointer()[i].TypeIndex.isManagedComponent())
                 {
-                #if VERBOSE
-                    printf("\tType %s:\n",TypeManager::GetTypeName(i));
-                #endif
                     const uint32_t typesize = TypeManager::GetTypeInfo(i).TypeSize;
                     TypeManager::DefaultFunction dFunc = TypeManager::GetTypeInfo(i).defaultDestruct;
                     const SharedComponentInfo* infos = ptr->infos;
@@ -168,9 +159,6 @@ namespace ECS
                     for (uint32_t j = 0;j < ptr->count;j++)
                     {
                         if(infos[j].referenceCount > 0){
-                            #if VERBOSE
-                                //printf("\t\tValue %u %p, refCount \n", j, data, infos[j].refCount);
-                            #endif
                             dFunc(data);
                         }
                         data += typesize;

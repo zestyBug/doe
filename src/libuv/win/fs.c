@@ -28,7 +28,6 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/utime.h>
-#include <stdio.h>
 
 #include "uv.h"
 #include "internal.h"
@@ -1256,7 +1255,9 @@ void fs__mktemp(uv_fs_t* req, uv__fs_mktemp_func func) {
     SET_REQ_UV_ERROR(req, UV_EINVAL, ERROR_INVALID_PARAMETER);
     goto clobber;
   }
-
+#ifndef TMP_MAX
+#define TMP_MAX 128
+#endif
   tries = TMP_MAX;
   do {
     if (uv__random_rtlgenrandom((void *)&v, sizeof(v)) < 0) {
@@ -2110,6 +2111,9 @@ static void fs__sendfile(uv_fs_t* req) {
   if (!buf) {
     uv_fatal_error(ERROR_OUTOFMEMORY, "uv__malloc");
   }
+#ifndef	_STDIO_H		/* <stdio.h> has the same definitions.  */
+# define SEEK_SET	0	/* Seek from beginning of file.  */
+#endif
 
   if (offset != -1) {
     result_offset = _lseeki64(fd_in, offset, SEEK_SET);
@@ -2820,7 +2824,6 @@ static void uv__fs_work(struct uv__work* w) {
     XX(MKDIR, mkdir)
     XX(MKDTEMP, mkdtemp)
     XX(MKSTEMP, mkstemp)
-    XX(RENAME, rename)
     XX(SCANDIR, scandir)
     XX(READDIR, readdir)
     XX(OPENDIR, opendir)
@@ -3253,20 +3256,6 @@ int uv_fs_fstat(uv_loop_t* loop, uv_fs_t* req, uv_file fd, uv_fs_cb cb) {
   POST;
 }
 
-
-int uv_fs_rename(uv_loop_t* loop, uv_fs_t* req, const char* path,
-    const char* new_path, uv_fs_cb cb) {
-  int err;
-
-  INIT(UV_FS_RENAME);
-  err = fs__capture_path(req, path, new_path, cb != NULL);
-  if (err) {
-    SET_REQ_WIN32_ERROR(req, err);
-    return req->result;
-  }
-
-  POST;
-}
 
 
 int uv_fs_fsync(uv_loop_t* loop, uv_fs_t* req, uv_file fd, uv_fs_cb cb) {

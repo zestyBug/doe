@@ -27,7 +27,6 @@
 #include "atomic-ops.h"
 
 #include <errno.h>
-#include <stdio.h>  /* snprintf() */
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>

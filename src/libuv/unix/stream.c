@@ -22,7 +22,6 @@
 #include "uv.h"
 #include "internal.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -1026,8 +1025,9 @@ static int uv__stream_recv_cmsg(uv_stream_t* stream, struct msghdr* msg) {
     unsigned int count;
 
     if (cmsg->cmsg_type != SCM_RIGHTS) {
-      fprintf(stderr, "ignoring non-SCM_RIGHTS ancillary data: %d\n",
-          cmsg->cmsg_type);
+      const char * message = "ignoring non-SCM_RIGHTS ancillary data: %d\n";
+      //fprintf(stderr, message, cmsg->cmsg_type);
+      write(0,message,strlen(message));
       continue;
     }
 

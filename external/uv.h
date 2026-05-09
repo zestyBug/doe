@@ -54,7 +54,6 @@ extern "C" {
 #include "uv/errno.h"
 #include "uv/version.h"
 #include <stddef.h>
-#include <stdio.h>
 
 #if defined(_MSC_VER) && _MSC_VER < 1600
 # include "uv/stdint-msvc2008.h"
@@ -442,9 +441,11 @@ UV_EXTERN int uv_is_active(const uv_handle_t* handle);
 
 UV_EXTERN void uv_walk(uv_loop_t* loop, uv_walk_cb walk_cb, void* arg);
 
+#ifdef VERBOSE
 /* Helpers for ad hoc debugging, no API/ABI stability guaranteed. */
 UV_EXTERN void uv_print_all_handles(uv_loop_t* loop, FILE* stream);
 UV_EXTERN void uv_print_active_handles(uv_loop_t* loop, FILE* stream);
+#endif
 
 UV_EXTERN void uv_close(uv_handle_t* handle, uv_close_cb close_cb);
 
@@ -1079,7 +1080,6 @@ typedef enum {
   UV_FS_RMDIR,
   UV_FS_MKDIR,
   UV_FS_MKDTEMP,
-  UV_FS_RENAME,
   UV_FS_SCANDIR,
   UV_FS_LINK,
   UV_FS_SYMLINK,

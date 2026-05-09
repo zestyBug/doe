@@ -31,7 +31,6 @@
 
 #include <errno.h>
 #include <dlfcn.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h> /* PATH_MAX */
@@ -1739,7 +1738,6 @@ static void uv__fs_work(struct uv__work* w) {
     X(CLOSEDIR, uv__fs_closedir(req));
     X(READLINK, uv__fs_readlink(req));
     X(REALPATH, uv__fs_realpath(req));
-    X(RENAME, rename(req->path, req->new_path));
     X(RMDIR, rmdir(req->path));
     X(SENDFILE, uv__fs_sendfile(req));
     X(STAT, uv__fs_stat(req->path, &req->statbuf));
@@ -2084,17 +2082,6 @@ int uv_fs_realpath(uv_loop_t* loop,
                   uv_fs_cb cb) {
   INIT(REALPATH);
   PATH;
-  POST;
-}
-
-
-int uv_fs_rename(uv_loop_t* loop,
-                 uv_fs_t* req,
-                 const char* path,
-                 const char* new_path,
-                 uv_fs_cb cb) {
-  INIT(RENAME);
-  PATH2;
   POST;
 }
 

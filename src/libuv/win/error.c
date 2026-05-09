@@ -21,7 +21,6 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -48,11 +47,12 @@ void uv_fatal_error(const int errorno, const char* syscall) {
 
   /* FormatMessage messages include a newline character already, so don't add
    * another. */
-  if (syscall) {
-    fprintf(stderr, "%s: (%d) %s", syscall, errorno, errmsg);
-  } else {
-    fprintf(stderr, "(%d) %s", errorno, errmsg);
-  }
+  // if (syscall) {
+  //   fprintf(stderr, "%s: (%d) %s", syscall, errorno, errmsg);
+  // } else {
+  //   fprintf(stderr, "(%d) %s", errorno, errmsg);
+  // }
+  MessageBoxA(GetConsoleWindow(),syscall?syscall:"",errmsg,MB_OK);
 
   if (buf) {
     LocalFree(buf);

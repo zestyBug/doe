@@ -23,7 +23,6 @@
 #include "strtok.h"
 
 #include <stddef.h> /* NULL */
-#include <stdio.h> /* printf */
 #include <stdlib.h>
 #include <string.h> /* strerror */
 #include <errno.h>
@@ -454,22 +453,6 @@ int uv__socket(int domain, int type, int protocol) {
 #endif
 
   return sockfd;
-}
-
-/* get a file pointer to a file in read-only and close-on-exec mode */
-FILE* uv__open_file(const char* path) {
-  int fd;
-  FILE* fp;
-
-  fd = uv__open_cloexec(path, O_RDONLY);
-  if (fd < 0)
-    return NULL;
-
-   fp = fdopen(fd, "r");
-   if (fp == NULL)
-     uv__close(fd);
-
-   return fp;
 }
 
 
