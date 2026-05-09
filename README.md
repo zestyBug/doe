@@ -2,10 +2,10 @@
 A rewriting of unity's entity module in C++ plus some improvements as a hoby project. It is for **educational purpose** only. Not to be used in any production.
 
 #### diffrents:
-Its not an exact copy, there are some differents. ChunkIndex is not used, for performance reason. Chunks header has different application. threadpool is implimented with libuv, and other small details.
+Its not an exact copy, there are some differents. ChunkIndex is not used, for performance reason. Chunks header has different application. threadpool is implemented with libuv, and other small details.
 
 
-### What is not implimented? (dont ask for it)
+### What is not implemented? (dont ask for it)
 - Enable bits, and enableable components
 - Aspect
 - Lookup cache
