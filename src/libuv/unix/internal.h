@@ -264,7 +264,6 @@ void uv__platform_invalidate_fd(uv_loop_t* loop, int fd);
 /* various */
 void uv__async_close(uv_async_t* handle);
 void uv__check_close(uv_check_t* handle);
-void uv__fs_event_close(uv_fs_event_t* handle);
 void uv__idle_close(uv_idle_t* handle);
 void uv__poll_close(uv_poll_t* handle);
 void uv__prepare_close(uv_prepare_t* handle);
@@ -295,8 +294,6 @@ int uv__make_pipe(int fds[2], int flags);
 
 #if defined(__APPLE__)
 
-int uv__fsevents_init(uv_fs_event_t* handle);
-int uv__fsevents_close(uv_fs_event_t* handle);
 void uv__fsevents_loop_delete(uv_loop_t* loop);
 
 #endif /* defined(__APPLE__) */

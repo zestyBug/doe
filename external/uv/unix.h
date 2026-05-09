@@ -109,10 +109,6 @@ struct uv__io_s {
 # define UV_PLATFORM_LOOP_FIELDS /* empty */
 #endif
 
-#ifndef UV_PLATFORM_FS_EVENT_FIELDS
-# define UV_PLATFORM_FS_EVENT_FIELDS /* empty */
-#endif
-
 #ifndef UV_STREAM_PRIVATE_PLATFORM_FIELDS
 # define UV_STREAM_PRIVATE_PLATFORM_FIELDS /* empty */
 #endif
@@ -385,10 +381,6 @@ typedef struct {
   /* Use two counters here so we don have to fiddle with atomics. */          \
   unsigned int caught_signals;                                                \
   unsigned int dispatched_signals;
-
-#define UV_FS_EVENT_PRIVATE_FIELDS                                            \
-  uv_fs_event_cb cb;                                                          \
-  UV_PLATFORM_FS_EVENT_FIELDS                                                 \
 
 /* fs open() flags supported on this platform: */
 #if defined(O_APPEND)

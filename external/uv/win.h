@@ -362,7 +362,6 @@ typedef struct {
 #define UV_REQ_TYPE_PRIVATE                                                   \
   /* TODO: remove the req suffix */                                           \
   UV_ACCEPT,                                                                  \
-  UV_FS_EVENT_REQ,                                                            \
   UV_POLL_REQ,                                                                \
   UV_PROCESS_EXIT,                                                            \
   UV_READ,                                                                    \
@@ -605,18 +604,6 @@ typedef struct {
 
 #define UV_WORK_PRIVATE_FIELDS                                                \
   struct uv__work work_req;
-
-#define UV_FS_EVENT_PRIVATE_FIELDS                                            \
-  struct uv_fs_event_req_s {                                                  \
-    UV_REQ_FIELDS                                                             \
-  } req;                                                                      \
-  HANDLE dir_handle;                                                          \
-  int req_pending;                                                            \
-  uv_fs_event_cb cb;                                                          \
-  WCHAR* filew;                                                               \
-  WCHAR* short_filew;                                                         \
-  WCHAR* dirw;                                                                \
-  char* buffer;
 
 #define UV_SIGNAL_PRIVATE_FIELDS                                              \
   RB_ENTRY(uv_signal_s) tree_entry;                                           \

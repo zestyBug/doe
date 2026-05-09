@@ -157,21 +157,6 @@ void uv__fs_init(void);
 
 
 /*
- * FS Event
- */
-void uv__process_fs_event_req(uv_loop_t* loop, uv_req_t* req,
-    uv_fs_event_t* handle);
-void uv__fs_event_close(uv_loop_t* loop, uv_fs_event_t* handle);
-void uv__fs_event_endgame(uv_loop_t* loop, uv_fs_event_t* handle);
-
-
-/*
- * Stat poller.
- */
-void uv__fs_poll_endgame(uv_loop_t* loop, uv_fs_poll_t* handle);
-
-
-/*
  * Utilities.
  */
 void uv__util_init(void);

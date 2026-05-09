@@ -107,7 +107,6 @@ libuv_la_CFLAGS=-I$(srcDir)/libuv
 libuv_la_SOURCES= \
 	$(OBJ)/$(srcDir)/libuv/idna.o \
 	$(OBJ)/$(srcDir)/libuv/inet.o \
-	$(OBJ)/$(srcDir)/libuv/fs-poll.o \
 	$(OBJ)/$(srcDir)/libuv/strscpy.o \
 	$(OBJ)/$(srcDir)/libuv/strtok.o \
 	$(OBJ)/$(srcDir)/libuv/threadpool.o \
@@ -128,7 +127,6 @@ libuv_la_SOURCES += \
 	$(OBJ)/$(srcDir)/libuv/win/detect-wakeup.o \
 	$(OBJ)/$(srcDir)/libuv/win/dl.o \
 	$(OBJ)/$(srcDir)/libuv/win/error.o \
-	$(OBJ)/$(srcDir)/libuv/win/fs-event.o \
 	$(OBJ)/$(srcDir)/libuv/win/fs.o \
 	$(OBJ)/$(srcDir)/libuv/win/getaddrinfo.o \
 	$(OBJ)/$(srcDir)/libuv/win/getnameinfo.o \
@@ -166,7 +164,6 @@ libuv_la_SOURCES += \
 libuv_la_CFLAGS += -D_GNU_SOURCE
 libuv_la_SOURCES += \
 	$(OBJ)/$(srcDir)/libuv/unix/linux-core.o \
-	$(OBJ)/$(srcDir)/libuv/unix/linux-inotify.o \
 	$(OBJ)/$(srcDir)/libuv/unix/linux-syscalls.o \
 	$(OBJ)/$(srcDir)/libuv/unix/procfs-exepath.o \
 	$(OBJ)/$(srcDir)/libuv/unix/proctitle.o \

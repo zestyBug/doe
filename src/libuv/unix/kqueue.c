@@ -45,7 +45,7 @@
 #define EV_OOBAND  EV_FLAG1
 #endif
 
-static void uv__fs_event(uv_loop_t* loop, uv__io_t* w, unsigned int fflags);
+
 
 
 int uv__kqueue_init(uv_loop_t* loop) {
@@ -153,13 +153,6 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
       filter = EVFILT_READ;
       fflags = 0;
       op = EV_ADD;
-
-      if (w->cb == uv__fs_event) {
-        filter = EVFILT_VNODE;
-        fflags = NOTE_ATTRIB | NOTE_WRITE  | NOTE_RENAME
-               | NOTE_DELETE | NOTE_EXTEND | NOTE_REVOKE;
-        op = EV_ADD | EV_ONESHOT; /* Stop the event from firing repeatedly. */
-      }
 
       EV_SET(events + nevents, w->fd, filter, op, fflags, 0, 0);
 
@@ -445,148 +438,4 @@ void uv__platform_invalidate_fd(uv_loop_t* loop, int fd) {
   for (i = 0; i < nfds; i++)
     if ((int) events[i].ident == fd && events[i].filter != EVFILT_PROC)
       events[i].ident = -1;
-}
-
-
-static void uv__fs_event(uv_loop_t* loop, uv__io_t* w, unsigned int fflags) {
-  uv_fs_event_t* handle;
-  struct kevent ev;
-  int events;
-  const char* path;
-#if defined(F_GETPATH)
-  /* MAXPATHLEN == PATH_MAX but the former is what XNU calls it internally. */
-  char pathbuf[MAXPATHLEN];
-#endif
-
-  handle = container_of(w, uv_fs_event_t, event_watcher);
-
-  if (fflags & (NOTE_ATTRIB | NOTE_EXTEND))
-    events = UV_CHANGE;
-  else
-    events = UV_RENAME;
-
-  path = NULL;
-#if defined(F_GETPATH)
-  /* Also works when the file has been unlinked from the file system. Passing
-   * in the path when the file has been deleted is arguably a little strange
-   * but it's consistent with what the inotify backend does.
-   */
-  if (fcntl(handle->event_watcher.fd, F_GETPATH, pathbuf) == 0)
-    path = uv__basename_r(pathbuf);
-#endif
-  handle->cb(handle, path, events, 0);
-
-  if (handle->event_watcher.fd == -1)
-    return;
-
-  /* Watcher operates in one-shot mode, re-arm it. */
-  fflags = NOTE_ATTRIB | NOTE_WRITE  | NOTE_RENAME
-         | NOTE_DELETE | NOTE_EXTEND | NOTE_REVOKE;
-
-  EV_SET(&ev, w->fd, EVFILT_VNODE, EV_ADD | EV_ONESHOT, fflags, 0, 0);
-
-  if (kevent(loop->backend_fd, &ev, 1, NULL, 0, NULL))
-    abort();
-}
-
-
-int uv_fs_event_init(uv_loop_t* loop, uv_fs_event_t* handle) {
-  uv__handle_init(loop, (uv_handle_t*)handle, UV_FS_EVENT);
-  return 0;
-}
-
-
-int uv_fs_event_start(uv_fs_event_t* handle,
-                      uv_fs_event_cb cb,
-                      const char* path,
-                      unsigned int flags) {
-  int fd;
-#if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
-  struct stat statbuf;
-#endif
-
-  if (uv__is_active(handle))
-    return UV_EINVAL;
-
-  handle->cb = cb;
-  handle->path = uv__strdup(path);
-  if (handle->path == NULL)
-    return UV_ENOMEM;
-
-  /* TODO open asynchronously - but how do we report back errors? */
-  fd = open(handle->path, O_RDONLY);
-  if (fd == -1) {
-    uv__free(handle->path);
-    handle->path = NULL;
-    return UV__ERR(errno);
-  }
-
-#if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
-  /* Nullify field to perform checks later */
-  handle->cf_cb = NULL;
-  handle->realpath = NULL;
-  handle->realpath_len = 0;
-  handle->cf_flags = flags;
-
-  if (fstat(fd, &statbuf))
-    goto fallback;
-  /* FSEvents works only with directories */
-  if (!(statbuf.st_mode & S_IFDIR))
-    goto fallback;
-
-  if (0 == uv__load_relaxed(&uv__has_forked_with_cfrunloop)) {
-    int r;
-    /* The fallback fd is no longer needed */
-    uv__close_nocheckstdio(fd);
-    handle->event_watcher.fd = -1;
-    r = uv__fsevents_init(handle);
-    if (r == 0) {
-      uv__handle_start(handle);
-    } else {
-      uv__free(handle->path);
-      handle->path = NULL;
-    }
-    return r;
-  }
-fallback:
-#endif /* #if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070 */
-
-  uv__handle_start(handle);
-  uv__io_init(&handle->event_watcher, uv__fs_event, fd);
-  uv__io_start(handle->loop, &handle->event_watcher, POLLIN);
-
-  return 0;
-}
-
-
-int uv_fs_event_stop(uv_fs_event_t* handle) {
-  int r;
-  r = 0;
-
-  if (!uv__is_active(handle))
-    return 0;
-
-  uv__handle_stop(handle);
-
-#if defined(__APPLE__) && MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
-  if (0 == uv__load_relaxed(&uv__has_forked_with_cfrunloop))
-    if (handle->cf_cb != NULL)
-      r = uv__fsevents_close(handle);
-#endif
-
-  if (handle->event_watcher.fd != -1) {
-    uv__io_close(handle->loop, &handle->event_watcher);
-    uv__close(handle->event_watcher.fd);
-    handle->event_watcher.fd = -1;
-  }
-
-  uv__free(handle->path);
-  handle->path = NULL;
-
-  return r;
-}
-
-
-void uv__fs_event_close(uv_fs_event_t* handle) {
-  uv_fs_event_stop(handle);
 }

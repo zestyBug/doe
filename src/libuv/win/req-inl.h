@@ -180,10 +180,6 @@ INLINE static void uv__process_reqs(uv_loop_t* loop) {
         uv__process_poll_req(loop, (uv_poll_t*) req->data, req);
         break;
 
-      case UV_FS_EVENT_REQ:
-        uv__process_fs_event_req(loop, req, (uv_fs_event_t*) req->data);
-        break;
-
       default:
         assert(0);
     }

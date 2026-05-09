@@ -605,27 +605,6 @@ int uv_send_buffer_size(uv_handle_t* handle, int *value) {
   return uv__socket_sockopt(handle, SO_SNDBUF, value);
 }
 
-int uv_fs_event_getpath(uv_fs_event_t* handle, char* buffer, size_t* size) {
-  size_t required_len;
-
-  if (!uv__is_active(handle)) {
-    *size = 0;
-    return UV_EINVAL;
-  }
-
-  required_len = strlen(handle->path);
-  if (required_len >= *size) {
-    *size = required_len + 1;
-    return UV_ENOBUFS;
-  }
-
-  memcpy(buffer, handle->path, required_len);
-  *size = required_len;
-  buffer[required_len] = '\0';
-
-  return 0;
-}
-
 /* The windows implementation does not have the same structure layout as
  * the unix implementation (nbufs is not directly inside req but is
  * contained in a nested union/struct) so this function locates it.

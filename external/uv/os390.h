@@ -27,7 +27,4 @@
 #define UV_PLATFORM_LOOP_FIELDS                                               \
   void* ep;                                                                   \
 
-#define UV_PLATFORM_FS_EVENT_FIELDS                                           \
-  char rfis_rftok[8];                                                         \
-
 #endif /* UV_MVS_H */

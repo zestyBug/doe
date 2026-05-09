@@ -147,28 +147,10 @@ void uv_close(uv_handle_t* handle, uv_close_cb close_cb) {
     uv__timer_close((uv_timer_t*)handle);
     break;
 
-  case UV_FS_EVENT:
-    uv__fs_event_close((uv_fs_event_t*)handle);
-#if defined(__sun) || defined(__MVS__)
-    /*
-     * On Solaris, illumos, and z/OS we will not be able to dissociate the
-     * watcher for an event which is pending delivery, so we cannot always call
-     * uv__make_close_pending() straight away. The backend will call the
-     * function once the event has cleared.
-     */
-    return;
-#endif
-    break;
-
   case UV_POLL:
     uv__poll_close((uv_poll_t*)handle);
     break;
 
-  case UV_FS_POLL:
-    uv__fs_poll_close((uv_fs_poll_t*)handle);
-    /* Poll handles use file system requests, and one of them may still be
-     * running. The poll code will call uv__make_close_pending() for us. */
-    return;
 
   default:
     assert(0);
@@ -261,8 +243,6 @@ static void uv__finish_close(uv_handle_t* handle) {
     case UV_IDLE:
     case UV_ASYNC:
     case UV_TIMER:
-    case UV_FS_EVENT:
-    case UV_FS_POLL:
     case UV_POLL:
       break;
 

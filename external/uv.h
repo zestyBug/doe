@@ -156,8 +156,6 @@ extern "C" {
 #define UV_HANDLE_TYPE_MAP(XX)                                                \
   XX(ASYNC, async)                                                            \
   XX(CHECK, check)                                                            \
-  XX(FS_EVENT, fs_event)                                                      \
-  XX(FS_POLL, fs_poll)                                                        \
   XX(HANDLE, handle)                                                          \
   XX(IDLE, idle)                                                              \
   XX(NAMED_PIPE, pipe)                                                        \
@@ -220,8 +218,6 @@ typedef struct uv_prepare_s uv_prepare_t;
 typedef struct uv_check_s uv_check_t;
 typedef struct uv_idle_s uv_idle_t;
 typedef struct uv_async_s uv_async_t;
-typedef struct uv_fs_event_s uv_fs_event_t;
-typedef struct uv_fs_poll_s uv_fs_poll_t;
 typedef struct uv_signal_s uv_signal_t;
 
 /* Request types. */
@@ -359,15 +355,6 @@ typedef struct {
 } uv_stat_t;
 
 
-typedef void (*uv_fs_event_cb)(uv_fs_event_t* handle,
-                               const char* filename,
-                               int events,
-                               int status);
-
-typedef void (*uv_fs_poll_cb)(uv_fs_poll_t* handle,
-                              int status,
-                              const uv_stat_t* prev,
-                              const uv_stat_t* curr);
 
 typedef void (*uv_signal_cb)(uv_signal_t* handle, int signum);
 
@@ -730,24 +717,6 @@ struct uv_pipe_s {
   int ipc; /* non-zero if this pipe is used for passing handles */
   UV_PIPE_PRIVATE_FIELDS
 };
-
-UV_EXTERN int uv_pipe_init(uv_loop_t*, uv_pipe_t* handle, int ipc);
-UV_EXTERN int uv_pipe_open(uv_pipe_t*, uv_file file);
-UV_EXTERN int uv_pipe_bind(uv_pipe_t* handle, const char* name);
-UV_EXTERN void uv_pipe_connect(uv_connect_t* req,
-                               uv_pipe_t* handle,
-                               const char* name,
-                               uv_connect_cb cb);
-UV_EXTERN int uv_pipe_getsockname(const uv_pipe_t* handle,
-                                  char* buffer,
-                                  size_t* size);
-UV_EXTERN int uv_pipe_getpeername(const uv_pipe_t* handle,
-                                  char* buffer,
-                                  size_t* size);
-UV_EXTERN void uv_pipe_pending_instances(uv_pipe_t* handle, int count);
-UV_EXTERN int uv_pipe_pending_count(uv_pipe_t* handle);
-UV_EXTERN uv_handle_type uv_pipe_pending_type(uv_pipe_t* handle);
-UV_EXTERN int uv_pipe_chmod(uv_pipe_t* handle, int flags);
 
 
 struct uv_poll_s {
@@ -1370,38 +1339,7 @@ UV_EXTERN int uv_fs_statfs(uv_loop_t* loop,
                            uv_fs_cb cb);
 
 
-enum uv_fs_event {
-  UV_RENAME = 1,
-  UV_CHANGE = 2
-};
 
-
-struct uv_fs_event_s {
-  UV_HANDLE_FIELDS
-  /* private */
-  char* path;
-  UV_FS_EVENT_PRIVATE_FIELDS
-};
-
-
-/*
- * uv_fs_stat() based polling file watcher.
- */
-struct uv_fs_poll_s {
-  UV_HANDLE_FIELDS
-  /* Private, don't touch. */
-  void* poll_ctx;
-};
-
-UV_EXTERN int uv_fs_poll_init(uv_loop_t* loop, uv_fs_poll_t* handle);
-UV_EXTERN int uv_fs_poll_start(uv_fs_poll_t* handle,
-                               uv_fs_poll_cb poll_cb,
-                               const char* path,
-                               unsigned int interval);
-UV_EXTERN int uv_fs_poll_stop(uv_fs_poll_t* handle);
-UV_EXTERN int uv_fs_poll_getpath(uv_fs_poll_t* handle,
-                                 char* buffer,
-                                 size_t* size);
 
 
 struct uv_signal_s {
@@ -1422,47 +1360,6 @@ UV_EXTERN int uv_signal_stop(uv_signal_t* handle);
 
 UV_EXTERN void uv_loadavg(double avg[3]);
 
-
-/*
- * Flags to be passed to uv_fs_event_start().
- */
-enum uv_fs_event_flags {
-  /*
-   * By default, if the fs event watcher is given a directory name, we will
-   * watch for all events in that directory. This flags overrides this behavior
-   * and makes fs_event report only changes to the directory entry itself. This
-   * flag does not affect individual files watched.
-   * This flag is currently not implemented yet on any backend.
-   */
-  UV_FS_EVENT_WATCH_ENTRY = 1,
-
-  /*
-   * By default uv_fs_event will try to use a kernel interface such as inotify
-   * or kqueue to detect events. This may not work on remote filesystems such
-   * as NFS mounts. This flag makes fs_event fall back to calling stat() on a
-   * regular interval.
-   * This flag is currently not implemented yet on any backend.
-   */
-  UV_FS_EVENT_STAT = 2,
-
-  /*
-   * By default, event watcher, when watching directory, is not registering
-   * (is ignoring) changes in it's subdirectories.
-   * This flag will override this behaviour on platforms that support it.
-   */
-  UV_FS_EVENT_RECURSIVE = 4
-};
-
-
-UV_EXTERN int uv_fs_event_init(uv_loop_t* loop, uv_fs_event_t* handle);
-UV_EXTERN int uv_fs_event_start(uv_fs_event_t* handle,
-                                uv_fs_event_cb cb,
-                                const char* path,
-                                unsigned int flags);
-UV_EXTERN int uv_fs_event_stop(uv_fs_event_t* handle);
-UV_EXTERN int uv_fs_event_getpath(uv_fs_event_t* handle,
-                                  char* buffer,
-                                  size_t* size);
 
 UV_EXTERN int uv_ip4_addr(const char* ip, int port, struct sockaddr_in* addr);
 UV_EXTERN int uv_ip6_addr(const char* ip, int port, struct sockaddr_in6* addr);
@@ -1624,7 +1521,6 @@ UV_EXTERN void uv_loop_set_data(uv_loop_t*, void* data);
 #undef UV_GETNAMEINFO_PRIVATE_FIELDS
 #undef UV_FS_REQ_PRIVATE_FIELDS
 #undef UV_WORK_PRIVATE_FIELDS
-#undef UV_FS_EVENT_PRIVATE_FIELDS
 #undef UV_SIGNAL_PRIVATE_FIELDS
 #undef UV_LOOP_PRIVATE_FIELDS
 #undef UV_LOOP_PRIVATE_PLATFORM_FIELDS
