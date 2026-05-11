@@ -31,7 +31,7 @@ struct ECS::JobDataChunk {
     void prepareJobs();
     JobDataChunk()
     {
-        resizeJobPool(32);
+        resizeJobPool(Constants::InitialJobPoolCapacity);
         for(uv_work_t &w:works){
             w.work_req.loop = uv_default_loop();
         }
@@ -49,9 +49,8 @@ struct ECS::JobDataChunk {
     /// @brief sorted by dependency. use the handle to find the real index.
     JobHandle              *jobsArray = NULL;
     JobEntry               *buffer = NULL;
-
-    alignas(64) uv_timer_t fixedTimer;
-    uv_work_t  works[2];
+    uv_timer_t             fixedTimer;
+    alignas(64) uv_work_t  works[4];
 };
 JobDataChunk sharedData;
 
@@ -110,11 +109,11 @@ JobHandle JobsUtility::combineDependencies(const_span<JobHandle> jobs){
 void JobDataChunk::resizeJobPool(uint32_t capacity){
     if(sharedData.capacity >= capacity)
         throw std::invalid_argument("resizeJobPool(): can't resize to smaller array");
-    uint32_t size_temp[5];
-    size_temp[0] =                alignTo64(sizeof(JobData)  *capacity);
-    size_temp[1] = size_temp[0] + alignTo64(sizeof(uint32_t) *capacity);
-    size_temp[2] = size_temp[1] + alignTo64(sizeof(JobHandle)*capacity);
-    size_temp[3] = size_temp[2] + alignTo64(sizeof(JobEntry) *capacity);
+    uint32_t size_temp[4];
+    size_temp[0] =                sizeof(JobData)  *capacity;
+    size_temp[1] = size_temp[0] + sizeof(std::atomic<uint32_t>)*capacity;
+    size_temp[2] = size_temp[1] + sizeof(JobHandle)*capacity;
+    size_temp[3] = size_temp[2] + sizeof(JobEntry) *capacity;
     align_ptr<JobDataChunk> ptr2{(JobDataChunk*)allocator().allocate(size_temp[3])};
     if(sharedData.jobs.get())
         memcpy(ptr2.get(), sharedData.jobs.get(), sizeof(JobData)*sharedData.capacity);

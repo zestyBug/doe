@@ -54,12 +54,12 @@ namespace ECS
             SharedComponentChunk* ptr = dataChunk[typeIndex].get();
             if(unlikely(!ptr)){
                 // count
-                const uint32_t buffer1 =  32;
+                const uint32_t buffer1 =  Constants::InitialSharedComponentChunkCapacity;
                 // buffer size
-                const uint32_t buffer2 = alignTo64(buffer1*typeSize);
-                const uint32_t buffer3 = buffer2 + buffer1*sizeof(SharedComponentInfo);
-                const uint32_t buffer4 = buffer3 + buffer1*sizeof(uint32_t);
-                const uint32_t buffer5 = buffer4 + buffer1*sizeof(uint32_t);
+                const uint32_t buffer2 = alignCacheLineSize(          buffer1*typeSize);
+                const uint32_t buffer3 = alignCacheLineSize(buffer2 + buffer1*sizeof(SharedComponentInfo));
+                const uint32_t buffer4 = alignCacheLineSize(buffer3 + buffer1*sizeof(uint32_t));
+                const uint32_t buffer5 = alignCacheLineSize(buffer4 + buffer1*sizeof(uint32_t));
                 ptr = (SharedComponentChunk*) allocator().allocate(buffer5);
                 ptr->capacity = buffer1;
                 ptr->count = 1;

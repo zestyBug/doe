@@ -10,7 +10,7 @@
 #endif
 //memory allocation
 #include <stdlib.h>
-// heavily dependant
+// heavy dependancy
 #include <stdint.h>
 // memset and memcpy are part of this language :)
 #include <string.h>
@@ -18,7 +18,7 @@
 #include <stdexcept>
 // new () T() should be global
 #include <memory>
-#include <assert.h>
+#include "ECS/Base/Constants.hpp"
 
 #if defined(_WIN32) || (defined(__WIN32__) || defined(WIN32) || defined(__MINGW32__))
 #define DOE_WIN32 1
@@ -35,24 +35,10 @@
 #endif
 
 
-/// @brief alignes array size to 64 byte for cache, perfermance and resolving false sharing issues
-/// @param typeSize sizeof single entity
-/// @param count number of entities
-/// @return new array size
-inline uint32_t alignTo64(uint32_t typeSize, uint32_t count){
-    return (typeSize*count+0x3F)&0xFFFFFFC0;
-}
-inline uint32_t alignTo64(uint32_t size){
-    return (size+0x3F)&0xFFFFFFC0;
-}
-
-
-/// @brief alignes array size to 8 byte for performance in SoA and AoS
-/// @param typeSize sizeof single entity
-/// @param count number of entities
-/// @return new array size
-inline uint32_t alignTo8(uint32_t typeSize, uint32_t count){
-    return (typeSize*count+0x7)&0xFFFFFFF8;
+/// @brief alignes the size to "Constants::CacheLineSize" bytes for perfermance and resolving false sharing issues
+/// @warning Dont concider this as a solution to thread race condition.
+inline uint32_t alignCacheLineSize(uint32_t size){
+    return (size+ECS::Constants::CacheLineFit)&ECS::Constants::CacheLineMask;
 }
 #ifdef DEBUG
 extern ssize_t allocator_counter;
@@ -70,14 +56,14 @@ class allocator
 
     [[nodiscard]]
     _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) {
-        _Tp* ret = nullptr;
-        __n = alignTo64(sizeof(_Tp),(uint32_t)__n);
+        _Tp* ret;
+        __n = sizeof(_Tp) * __n;
         if(__n < 1)      return nullptr;
         if(__n>0x100000)  throw std::bad_alloc();
         #if DOE_WIN32
-            ret = (_Tp*) _aligned_malloc(__n,64);
+            ret = (_Tp*) _aligned_malloc(__n,ECS::Constants::CacheLineSize);
         #else
-            ret = (_Tp*) aligned_alloc(64,__n);
+            ret = (_Tp*) aligned_alloc(ECS::Constants::CacheLineSize,__n);
         #endif
             if(ret == nullptr) throw std::bad_alloc();
         #ifdef DEBUG

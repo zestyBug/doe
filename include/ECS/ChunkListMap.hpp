@@ -124,9 +124,9 @@ namespace ECS
             // listWithEmptySlotsIndex is a signed int
             if(count > INT32_MAX)
                 throw std::invalid_argument("init(): too large map");
-            const uint32_t size1 = alignTo64(sizeof(uint32_t),count);
-            const uint32_t size2 = alignTo64(sizeof(Chunk*),count);
-            uint8_t* ptr = allocator<>().allocate(size1+size2);
+            const uint32_t size1 = alignCacheLineSize(sizeof(uint32_t)*count);
+            const uint32_t size2 = sizeof(Chunk*)*count;
+            uint8_t* ptr = allocator().allocate(size1+size2);
             hashes.reset((uint32_t*)ptr);
             memset(hashes.get(),0,size1);
             chunks = (Chunk**)(ptr + size1);

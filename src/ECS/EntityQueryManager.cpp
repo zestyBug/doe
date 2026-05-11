@@ -231,7 +231,7 @@ void EntityQueryManager::rebuildMatchingChunkCache(EntityQueryData &query){
         total_count += archs[archetypeCount]->getChunks().size();
     }
     if(total_count > query.cacheCapacity){
-        total_count = alignTo64(total_count);
+        total_count = alignCacheLineSize(total_count);
         query.cacheCapacity = total_count;
         query.cache = make_align<EntityQueryData::ChunkCache[]>(total_count);
     }

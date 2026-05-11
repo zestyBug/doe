@@ -16,15 +16,16 @@ protected:
     static const uint32_t _AValidHashCode = 2;
     static const uint32_t _SkipCode = 1;
 
-    std::vector<uint32_t,Allocator> hashes{};
-    std::vector<Type,Allocator> values{};
+    align_ptr<uint32_t[]> hashes;
+    Type *values = nullptr;
+    uint32_t capacity;
     uint32_t unoccupied = 0;
 
     static uint32_t getHashCode(Type key)
     {
         uint32_t result;
         if(sizeof(Type) <= sizeof(uint32_t))   
-            result = static_cast<uint32_t>(key);
+            result = reinterpret_cast<uint32_t>(key);
         else
             result = HashHelper::FNV1A32(key);
 
@@ -41,15 +42,20 @@ public:
         // is power of 2?
         if(0 != (count & (count - 1)))
             throw std::invalid_argument("Init(): count must be power of 2");
-
-        hashes.resize(count);
-        values.resize(count);
-
+        
+        const uint32_t size1 = alignCacheLineSize(sizeof(uint32_t)*count);
+        const uint32_t size2 = sizeof(Type)*count;
+        uint8_t* ptr = allocator().allocate(size1+size2);
+        hashes.reset(ptr);
+        values = (Type*) ptr + size1
+        capacity = count;
         unoccupied = count;
     }
     set(const set&) = delete;
     set(set&& v): hashes{std::move(v.hashes)},values{std::move(v.values)} {
+        this->capacity = v.capacity;
         this->unoccupied = v.unoccupied;
+        v.capacity=0;
         v.unoccupied=0;
     }
     set& operator=(const set&) = delete;
@@ -57,22 +63,23 @@ public:
         if(this != &v){
             this->hashes = std::move(v.hashes);
             this->values = std::move(v.values);
+            this->capacity = v.capacity;
             this->unoccupied = v.unoccupied;
+            v.capacity=0;
             v.unoccupied=0;
         }
         return *this;
     }
-    inline uint32_t size() const { return (uint32_t) hashes.size(); }
     inline uint32_t unoccupiedNodes() const { return unoccupied; }
-    inline uint32_t occupiedNodes() const { return size() - unoccupiedNodes(); }
+    inline uint32_t occupiedNodes() const { return capacity - unoccupiedNodes(); }
     inline bool isEmpty() const { return occupiedNodes() == 0; }
     /// @brief ! suppose size is power of 2
-    inline uint32_t hashMask() const { return size() - 1; }
+    inline uint32_t hashMask() const { return capacity - 1; }
     inline uint32_t minimumSize() const { return 64 / sizeof(uint32_t); }
-    inline void possiblyGrow() { if (unoccupiedNodes() < size() / 3) resize(size() * 2); }
-    inline void possiblyShrink() { if (occupiedNodes() < size() / 3) resize(size() / 2); }
+    inline void possiblyGrow() { if (unoccupiedNodes() < capacity / 3) resize(capacity * 2); }
+    inline void possiblyShrink() { if (occupiedNodes() < capacity / 3) resize(capacity / 2); }
     void appendFrom(const set& src){
-        for (uint32_t offset = 0; offset < src.size(); ++offset)
+        for (uint32_t offset = 0; offset < capacity; ++offset)
         {
             uint32_t hash = src.hashes[offset];
             if (hash != 0 && hash != _SkipCode)
@@ -82,17 +89,11 @@ public:
     void resize(uint32_t size){
         if (size < minimumSize())
             size = minimumSize();
-        if (size == this->size())
+        if (size == capacity)
             return;
         set temp{size};
         temp.appendFrom(*this);
         *this = std::move(temp);
-    }
-    void setCapacity(uint32_t capacity){
-        if (capacity < minimumSize())
-            capacity = minimumSize();
-        hashes.resize(capacity);
-        values.resize(capacity);
     }
     void insert(Type value) {
         uint32_t desiredHash = getHashCode(value);
@@ -155,8 +156,9 @@ public:
     }
     // the whole popuse is to free space when object is unused but still in memory
     void reset(){
-        hashes = std::vector<uint32_t,Allocator>();
-        values = std::vector<Type,Allocator>();
+        hashes.reset();
+        values =nullptr;
+        capacity = 0;
         unoccupied=0;
     }
 };

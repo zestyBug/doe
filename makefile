@@ -24,7 +24,7 @@ BIN=bin/test-v2
 # -fsanitize=address -static-libasan
 LDFLAGS=-m64
 # -fsanitize=address
-CPPFLAGS=-DDEBUG -DVERBOSE -std=c++17 -g3 -O0 -m64 -fno-rtti -fexceptions $(WARNS) $(INCLUDE) -MMD -MP
+CPPFLAGS=-DDEBUG -std=c++17 -g3 -O0 -m64 -fno-rtti -fexceptions $(WARNS) $(INCLUDE) -MMD -MP
 CFLAGS=-std=c17 -g3 -O0 -m64 -fexceptions $(WARNS) $(INCLUDE) -MMD -MP
 
 endif
@@ -195,7 +195,13 @@ DEPS = $(OBJS:.o=.d)
 DEPS += $(libuv_la_SOURCES:.o=.d)
 -include $(DEPS)
 
+$(BIN)/test-6: $(OBJ)/$(testDir)/test-6.o $(libuv_la_SOURCES)
+	mkdir -p $(@D)
+	$(CXX) $^ $(LDFLAGS) -o $@
 $(BIN)/test-5: $(OBJ)/$(testDir)/test-5.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW)
+	mkdir -p $(@D)
+	$(CXX) $^ $(LDFLAGS) -o $@
+$(BIN)/test-%: $(OBJ)/$(testDir)/test-%.o $(OBJS)
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
 $(BIN)/main: $(OBJ)/main.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW)
@@ -207,6 +213,7 @@ test-2: $(BIN)/test-2
 test-3: $(BIN)/test-3
 test-4: $(BIN)/test-4
 test-5: $(BIN)/test-5
+test-6: $(BIN)/test-6
 main: $(BIN)/main
 
 clean:

@@ -21,14 +21,14 @@ span<Archetype*> EntityComponentStore::getArchetypes(){
 }
 EntityComponentStore::EntityComponentStore(){
     this->componentTypeOrderVersion = make_align<Version[]>(Constants::MaximumTypesCount);
-    this->typeLookup.init   (Constants::InitialEmptyChunkListSize);
-    this->archetypes.reserve(Constants::InitialEmptyChunkListSize);
+    this->typeLookup.init   (Constants::InitialArchetypeArraySize);
+    this->archetypes.reserve(Constants::InitialArchetypeArraySize);
 }
 uint32_t EntityComponentStore::calculateSpaceRequirement(const_span<uint16_t> componentSizes, uint32_t entityCount)
 {
     uint32_t size = 0;
     for (const auto& componentSize : componentSizes)
-        size += alignTo64(componentSize, entityCount);
+        size += alignCacheLineSize(componentSize * entityCount);
     return size;
 }
 uint32_t EntityComponentStore::calculateChunkCapacity(const_span<uint16_t> componentSizes, uint32_t bufferSize)
@@ -74,13 +74,13 @@ Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
         throw std::invalid_argument("validateArchetype(): too shareed components");
     {
         uint32_t offsets[7];
-        offsets[0] =              alignTo64(sizeof(Archetype),1);
-        offsets[1] = offsets[0] + alignTo64(sizeof(TypeID),types.size());
-        offsets[2] = offsets[1] + alignTo64(sizeof(uint16_t),types.size());
-        offsets[3] = offsets[2] + alignTo64(sizeof(uint32_t),types.size());
-        offsets[4] = offsets[3] + alignTo64(sizeof(uint16_t),types.size());
-        offsets[5] = offsets[4] + alignTo64(sizeof(TypeManager::DefaultFunction),types.size());
-        offsets[6] = offsets[5] + alignTo64(sizeof(TypeManager::DefaultFunction),types.size());
+        offsets[0] =              alignCacheLineSize(sizeof(Archetype));
+        offsets[1] = offsets[0] + alignCacheLineSize(sizeof(TypeID)*types.size());
+        offsets[2] = offsets[1] + alignCacheLineSize(sizeof(uint16_t)*types.size());
+        offsets[3] = offsets[2] + alignCacheLineSize(sizeof(uint32_t)*types.size());
+        offsets[4] = offsets[3] + alignCacheLineSize(sizeof(uint16_t)*types.size());
+        offsets[5] = offsets[4] + alignCacheLineSize(sizeof(TypeManager::DefaultFunction)*types.size());
+        offsets[6] = offsets[5] + alignCacheLineSize(sizeof(TypeManager::DefaultFunction)*types.size());
         arch.reset((Archetype*)allocator().allocate(offsets[6]));
         new (&arch->chunks) ArchetypeChunkData(types.size(),numSharedComponents);
         // arch->chunks.grow(Constants::InitialChunkListSize);
@@ -134,12 +134,12 @@ Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
     for (uint32_t i = 0,usedBytes = Chunk::MemoryOffset; i < types.size(); i++)
     {
         arch->_offsets[i] = usedBytes;
-        usedBytes += alignTo64(arch->_sizeOfs[i], arch->chunkCapacity);
+        usedBytes += alignCacheLineSize(arch->_sizeOfs[i] * arch->chunkCapacity);
     }
     for (uint32_t i = 0; i < arch->numNonZeroSizedTypes(); i++)
     {
         arch->instanceSize += arch->_sizeOfs[i];
-        arch->instanceSizeWithOverhead += alignTo64(arch->_sizeOfs[i], 1);
+        arch->instanceSizeWithOverhead += alignCacheLineSize(arch->_sizeOfs[i]);
     }
     this->archetypes.emplace_back(arch.get());
     this->typeLookup.add(arch.get());

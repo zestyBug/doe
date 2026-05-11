@@ -147,10 +147,10 @@ ResourceGC::ResourceGC(uint32_t count) {
         count = minimumSize();
 
     uint32_t offsets[4];
-    offsets[0] =              alignTo64(sizeof(Type),count);
-    offsets[1] = offsets[0] + alignTo64(sizeof(uint32_t),count);
-    offsets[2] = offsets[1] + alignTo64(sizeof(dtor_fn*),count);
-    offsets[3] = offsets[2] + alignTo64(sizeof(internal::GCFlag),count);
+    offsets[0] =              alignCacheLineSize(sizeof(Type)*count);
+    offsets[1] = offsets[0] + alignCacheLineSize(sizeof(uint32_t)*count);
+    offsets[2] = offsets[1] + alignCacheLineSize(sizeof(dtor_fn*)*count);
+    offsets[3] = offsets[2] + alignCacheLineSize(sizeof(internal::GCFlag)*count);
 
     align_ptr<uint8_t[]> ptr = make_align<uint8_t[]>(offsets[3]);
 
@@ -162,8 +162,8 @@ ResourceGC::ResourceGC(uint32_t count) {
     ptr.release();
     _size = unoccupied = count;
 
-    memset(this->hashes,0,alignTo64(sizeof(uint32_t),count));
-    memset(flags,       0,alignTo64(sizeof(internal::GCFlag),count));
+    memset(this->hashes,0,alignCacheLineSize(sizeof(uint32_t)*count));
+    memset(flags,       0,alignCacheLineSize(sizeof(internal::GCFlag)*count));
 }
 ResourceGC& ResourceGC::operator=(ResourceGC&& v) {
     if(this != &v) {

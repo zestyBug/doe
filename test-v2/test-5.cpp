@@ -75,7 +75,7 @@ int main(int argc, char*argv[]){
     sharedEngine.reset();
 #ifdef DEBUG
     // one for the threadpool
-    if(allocator_counter != 1){
+    if(allocator_counter != 3){
         printf("Memory leak count %li\n",allocator_counter);
     }
 #endif

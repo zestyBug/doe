@@ -1,11 +1,17 @@
 #if !defined(CONSTANTS_HPP)
 #define CONSTANTS_HPP
 
-#include "cutil/basics.hpp"
+#include <stdint.h>
 
 namespace ECS {
     /// @brief Set of constant values shared by multiple classes and the value can be changed to a valid value depending on situations.
     struct Constants {
+        /// @brief To align structures to cache line size to get performance by avoiding false sharing.
+        /// @note This value is only guarantied to be bigger equal than 32. (32 ~ 256)
+        /// @warning This value does not 100% guaranty multithread access safety!
+        static uint32_t CacheLineSize;
+        static uint32_t CacheLineFit;
+        static uint32_t CacheLineMask;
         // lower the number, the better component version-ing performs,
         /// @details Considerations: ArchetypeChunkData uses bitset as enabling bit per type for entities in a chunk so it must be multiply of 64.
         static constexpr uint32_t MaximumEntitiesPerChunk = 192;
@@ -26,11 +32,13 @@ namespace ECS {
         static constexpr uint16_t MaximumTypesCount = 1 << 12;
         static constexpr uint32_t MaximumChunkCount = 0x10000;
         static constexpr uint32_t MaxJobCount = 0xFFFFF;
+        static constexpr uint32_t InitialSystemCapacity = 0x80;
         static constexpr uint32_t InitialArchetypeArraySize = 0x80;
         static constexpr uint32_t InitialChunkListSize = 0x80;
-        static constexpr uint32_t InitialEmptyChunkListSize = 0x80;
         static constexpr uint32_t InitialArchetypeCacheSize = 0x80;
         static constexpr uint32_t InitialChunkCacheSize = 0x100;
+        static constexpr uint32_t InitialSharedComponentChunkCapacity = 0x20;
+        static constexpr uint32_t InitialJobPoolCapacity = 0x40;
         static constexpr uint32_t MaximumRefOffsetCount = 0x400;
     };
 }

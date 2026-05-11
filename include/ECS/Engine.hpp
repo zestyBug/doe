@@ -14,7 +14,7 @@ namespace ECS
         EntityQueryManager eqm{&ecs};
         std::vector<align_ptr<ISystem>,allocator<align_ptr<ISystem>>> sys;
         DOE() {
-            sys.reserve(Constants::InitialArchetypeArraySize);
+            sys.reserve(Constants::InitialSystemCapacity);
         };
     };
 } // namespace ECS

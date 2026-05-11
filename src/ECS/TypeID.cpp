@@ -4,6 +4,10 @@
 #include "cutil/HashHelper.hpp"
 #include "ECS/Base/Constants.hpp"
 
+uint32_t ECS::Constants::CacheLineSize = 0x40;
+uint32_t ECS::Constants::CacheLineFit = 0x3F;
+uint32_t ECS::Constants::CacheLineMask = 0xFFFFFFC0;
+
 namespace ECS {
 
 uint32_t              TypeManager::typeCount = 2;

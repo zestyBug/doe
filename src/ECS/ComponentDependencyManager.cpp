@@ -2,7 +2,6 @@
 #include "ECS/Base/Query.hpp"
 #include "ECS/ThreadPool.hpp"
 #include "ECS/Base/Constants.hpp"
-#include "cutil/set.hpp"
 #include "cutil/range.hpp"
 #include "ECS/EntityQueryManager.hpp"
 using namespace ECS;

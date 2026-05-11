@@ -89,12 +89,12 @@ namespace ECS
             if(0 != (count & (count - 1)))
                 throw std::invalid_argument("Init(): count must be power of 2");
 
-            const uint32_t size1 = alignTo64(sizeof(uint32_t),count);
-            const uint32_t size2 = alignTo64(sizeof(Archetype*),count);
-            uint8_t* ptr = allocator<>().allocate(size1+size2);
+            const uint32_t size1 = alignCacheLineSize(sizeof(Archetype*)*count);
+            const uint32_t size2 = sizeof(uint32_t)*count;
+            uint8_t* ptr = allocator().allocate(size1+size2);
             pointers.reset((Archetype**)ptr);
-            hashes = (uint32_t *)(ptr+size2);
-            memset(hashes,0,size1);
+            hashes = (uint32_t *)(ptr+size1);
+            memset(hashes,0,size2);
             _capacity = count;
             emptyNodes = count;
         }
