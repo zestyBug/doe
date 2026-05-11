@@ -30,6 +30,7 @@ namespace ECS {
         inline bool isSharedComponent() const;
         inline bool isZeroSized() const;
         inline bool isManagedComponent() const ;
+        inline bool hasAssetRef() const;
         static bool compare(const_span<TypeID> v1,const_span<TypeID> v2)
         {
             if (v1.size() != v2.size())
@@ -50,10 +51,11 @@ namespace ECS {
         /// @brief MAGIC NUMBER
         /// @details Considerations: SharedComponent must comes before ZeroSized components
         static constexpr uint32_t SharedComponentTypeFlag  = 1 << 29;
+        static constexpr uint32_t ZeroSizeInChunkTypeFlag  = 1 << 28;
         /// @brief MAGIC NUMBER, destruction is managed by the engine
         /// @details Considerations: SharedComponent must comes before ZeroSized components
         static constexpr uint32_t ManagedComponentTypeFlag = 1 << 17;
-        static constexpr uint32_t ZeroSizeInChunkTypeFlag  = 1 << 28;
+        static constexpr uint32_t AssetRefFlag             = 1 << 18;
         static constexpr uint32_t ClearFlagsMask = Constants::MaximumTypesCount-1;
         enum class TypeCategory : uint16_t {
             /// Implements IComponentData (can be either a struct or a class)
@@ -76,16 +78,25 @@ namespace ECS {
             /// @brief The alignment requirement for the component.
             uint16_t     AlignmentInBytes = 0;
             TypeCategory Category = TypeCategory::IComponentData;
+            uint32_t     AssetRefOffsetStartIndex = 0;
+            uint32_t     AssetRefOffsetCount = 0;
             DefaultFunction defaultConstruct = nullptr;
             DefaultFunction defaultDestruct = nullptr;
+            const char  *Name = nullptr;
             /// @brief Returns true if the component does not require space in Chunk memory
             bool         IsZeroSized() {return SizeInChunk==0;}
         };
     private:
+        static uint32_t    initialized;
         static uint32_t    typeCount;
-        static TypeInfo    sharedTypeInfos[Constants::MaximumTypesCount];
-        static const char *sharedTypeNames[Constants::MaximumTypesCount];
+        static uint32_t    assetRefOffsetIndex;
+        static align_ptr<TypeInfo[]> sharedTypeInfos;
+        static align_ptr<uint16_t[]> assetRefOffsetList;
     public:
+        static void Initialize();
+        static inline const_span<uint16_t> GetAssetRefOffsetsPointer(){
+            return {assetRefOffsetList, assetRefOffsetIndex};
+        }
         static inline const_span<TypeInfo> GetTypeInfoPointer(){
             return {sharedTypeInfos, typeCount};
         }
@@ -102,22 +113,22 @@ namespace ECS {
         }
         static const char* GetTypeName(TypeID typeIndex) {
             if(typeIndex.index() >= typeCount) throw std::bad_typeid();
-            return sharedTypeNames[typeIndex.index()];
+            return sharedTypeInfos[typeIndex.index()].Name;
         }
         static const char* GetTypeName(uint32_t index) {
             if(index >= typeCount) throw std::bad_typeid();
-            return sharedTypeNames[index];
+            return sharedTypeInfos[index].Name;
         }
-        static TypeID registerNull();
-        static TypeID registerEntity();
         template<typename T>
-        static TypeID registerType(const char* name) {
+        static TypeID registerType(const char* name, const_span<uint16_t> assetRefs = {}) {
+            if(!initialized)
+                Initialize();
             // MAGIC NUMBER
-            static_assert(sizeof(T) <= 0x800 && alignof(T) <= 0x1000);
+            static_assert(sizeof(T) <= 0x800 && alignof(T) <= 0x800);
             static_assert(std::is_class_v<T> && std::is_default_constructible_v<T>);
             static_assert(std::is_same_v<T,Entity> || std::is_base_of_v<IComponentData,T> || (std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>));
             if(unlikely(typeCount >= Constants::MaximumTypesCount))
-                throw std::runtime_error("Constants::MaximumTypesCount");
+                throw std::runtime_error("registerType(): Constants::MaximumTypesCount");
 
             uint32_t index = typeCount++;
 
@@ -128,6 +139,8 @@ namespace ECS {
                 value |= ManagedComponentTypeFlag;
             if(std::is_empty_v<T>)
                 value |= ZeroSizeInChunkTypeFlag;
+            if(!assetRefs.empty())
+                value |= AssetRefFlag;
             sharedTypeInfos[index].TypeIndex = TypeID::fromIndex(value);
 
             sharedTypeInfos[index].TypeSize = sizeof(T);
@@ -142,15 +155,34 @@ namespace ECS {
                 sharedTypeInfos[index].Category = TypeCategory::ISharedComponentData;
             else
                 throw std::bad_typeid();
+            
+            sharedTypeInfos[index].AssetRefOffsetStartIndex = assetRefOffsetIndex;
+            sharedTypeInfos[index].AssetRefOffsetCount = assetRefs.size();
+            if(!assetRefs.empty()){
+                uint16_t *begin_dst = assetRefOffsetList + assetRefOffsetIndex;
+                const uint16_t *begin_src = assetRefs.data();
+                const uint16_t *end_src   = assetRefs.data() + assetRefs.size();
+                assetRefOffsetIndex += assetRefs.size();
+                if(Constants::MaximumRefOffsetCount < assetRefOffsetIndex)
+                    throw std::runtime_error("registerType(): Constants::MaximumRefOffsetCount");
+                while(begin_src < end_src) {
+                    if(*begin_src >= sizeof(T))
+                        throw std::runtime_error("registerType(): invalid AssetRefOffset");
+                    *begin_dst = *begin_src;
+                    begin_src++;
+                    begin_dst++;
+                }
+            }
+
             sharedTypeInfos[index].defaultDestruct  = [](void* x){static_cast<T*>(x)->~T();};
             sharedTypeInfos[index].defaultConstruct = [](void* x){new (static_cast<T*>(x)) T();};
-            sharedTypeNames[index]=name;
+            sharedTypeInfos[index].Name = name;
             return sharedTypeInfos[index].TypeIndex;
         }
     };
 
     template<typename> TypeID __typeid__() = delete;
-    template<> TypeID __typeid__<nullptr_t>();
+    template<> TypeID __typeid__<std::nullptr_t>();
     template<> TypeID __typeid__<ECS::Entity>();
     #define DEF_TYPE(TYPE) template<> ECS::TypeID ECS::__typeid__<TYPE>(){static ECS::TypeID v = ECS::TypeManager::registerType<TYPE>(#TYPE);return v;}
 
@@ -159,6 +191,7 @@ namespace ECS {
     bool TypeID::isSharedComponent() const {return this->value & TypeManager::SharedComponentTypeFlag;}
     bool TypeID::isZeroSized() const {return this->value & TypeManager::ZeroSizeInChunkTypeFlag;}
     bool TypeID::isManagedComponent() const {return this->value & TypeManager::ManagedComponentTypeFlag;}
+    bool TypeID::hasAssetRef() const {return this->value & TypeManager::AssetRefFlag;}
 
     template<typename T>
     inline TypeID getTypeID() { return __typeid__<std::remove_const_t<std::remove_reference_t<T>>>(); }

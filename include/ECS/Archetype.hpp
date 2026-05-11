@@ -14,6 +14,19 @@ class Test;
 
 namespace ECS
 {
+    enum class ArchetypeFlags : uint16_t
+    {
+        Empty = 0,
+        HasAssetRefs = 1,
+    };
+    inline constexpr ArchetypeFlags operator&(ArchetypeFlags x, ArchetypeFlags y) {
+        return static_cast<ArchetypeFlags>(static_cast<uint8_t>(x) & static_cast<uint8_t>(y));
+    }
+    inline constexpr ArchetypeFlags operator|(ArchetypeFlags x, ArchetypeFlags y) {
+        return static_cast<ArchetypeFlags>(static_cast<uint8_t>(x) | static_cast<uint8_t>(y));
+    }
+    inline ArchetypeFlags & operator&=(ArchetypeFlags & x, ArchetypeFlags y){ x = x & y;return x; }
+    inline ArchetypeFlags & operator|=(ArchetypeFlags & x, ArchetypeFlags y) { x = x | y;return x; }
     struct EntityComponentStore;
     struct ChunkListChanges;
     struct Chunk;
@@ -70,6 +83,8 @@ namespace ECS
         uint32_t archetypeIndex=0;
         /// @brief used by EntityQueryManager
         uint32_t matchingQueryCount = 0;
+
+        ArchetypeFlags flags;
 
         EntityComponentStore *entityComponentStore;
         Archetype* nextChangedArchetype = nullptr;

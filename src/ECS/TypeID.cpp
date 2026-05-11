@@ -10,21 +10,26 @@ uint32_t ECS::Constants::CacheLineMask = 0xFFFFFFC0;
 
 namespace ECS {
 
+uint32_t              TypeManager::initialized = 0;
+uint32_t              TypeManager::assetRefOffsetIndex = 0;
 uint32_t              TypeManager::typeCount = 2;
-TypeManager::TypeInfo TypeManager::sharedTypeInfos[Constants::MaximumTypesCount];
-const char*           TypeManager::sharedTypeNames[Constants::MaximumTypesCount];
+align_ptr<TypeManager::TypeInfo[]> TypeManager::sharedTypeInfos = nullptr;
+align_ptr<uint16_t[]>              TypeManager::assetRefOffsetList = nullptr;
 
-TypeID TypeManager::registerNull() {
+
+void TypeManager::Initialize(){
+    TypeManager::initialized = 1;
+    TypeManager::sharedTypeInfos    = make_align<TypeManager::TypeInfo[]>(Constants::MaximumTypesCount);
+    TypeManager::assetRefOffsetList = make_align<uint16_t[]>(Constants::MaximumRefOffsetCount);
+    
     // MAGIC NUMBER
     sharedTypeInfos[0].TypeIndex = TypeID::fromIndex(ZeroSizeInChunkTypeFlag);
-    sharedTypeInfos[0].TypeSize = sizeof(nullptr_t);
+    sharedTypeInfos[0].TypeSize = sizeof(std::nullptr_t);
     sharedTypeInfos[0].SizeInChunk = 0;
-    sharedTypeInfos[0].AlignmentInBytes = alignof(nullptr_t);
+    sharedTypeInfos[0].AlignmentInBytes = alignof(std::nullptr_t);
     sharedTypeInfos[0].Category = TypeCategory::IComponentData;
-    sharedTypeNames[0]="nullptr_t";
-    return TypeID::fromIndex(ZeroSizeInChunkTypeFlag);
-}
-TypeID TypeManager::registerEntity() {
+    sharedTypeInfos[0].Name = "std::nullptr_t";
+
     static_assert(sizeof(Entity) == 8);
     // MAGIC NUMBER
     sharedTypeInfos[1].TypeIndex = TypeID::fromIndex(1);
@@ -32,31 +37,31 @@ TypeID TypeManager::registerEntity() {
     sharedTypeInfos[1].SizeInChunk = sizeof(Entity);
     sharedTypeInfos[1].AlignmentInBytes = alignof(Entity);
     sharedTypeInfos[1].Category = TypeCategory::Entity;
-    sharedTypeNames[1]="Entity";
-    return TypeID::fromIndex(1);
+    sharedTypeInfos[1].Name = "ECS::Entity";
 }
 
 void TypeID::Debug() {
     const TypeManager::TypeInfo& info = TypeManager::GetTypeInfo(*this);
     const char* name = TypeManager::GetTypeName(*this);
-    printf("Type: %s, index: %u, size: %u, size in chunk: %u\n",name, info.TypeIndex.index(), info.TypeSize, info.SizeInChunk);
-    printf("\tCategory: %s\n", 
+    printf("Type: %s, index: %u, size: %u, size in chunk: %u\n"
+                "\tCategory: %s\n"
+                "\tisSharedComponent: %i\n"
+                "\tisZeroSized: %i\n"
+                "\tisManaged: %i\n"
+        ,name, info.TypeIndex.index(), info.TypeSize, info.SizeInChunk,
         info.Category == TypeManager::TypeCategory::Entity ? "Entity" : 
-        info.Category == TypeManager::TypeCategory::IComponentData ? "IComponentData" : 
-        info.Category == TypeManager::TypeCategory::ISharedComponentData ? "ISharedComponentData" : 
-        "Unknown");
-    printf("\tisSharedComponent: %i\n", this->isSharedComponent());
-    printf("\tisZeroSized: %i\n", this->isZeroSized());
-    printf("\tisManaged: %i\n", this->isManagedComponent());
+         info.Category == TypeManager::TypeCategory::IComponentData ? "IComponentData" : 
+          info.Category == TypeManager::TypeCategory::ISharedComponentData ? "ISharedComponentData" : "Unknown",
+        this->isSharedComponent(),
+        this->isZeroSized(),
+        this->isManagedComponent());
 }
 
-template<> TypeID __typeid__<nullptr_t>(){
-    static TypeID id = TypeManager::registerNull();
-    return id;
+template<> TypeID __typeid__<std::nullptr_t>(){
+    return TypeID::fromIndex(0);
 }
 template<> TypeID __typeid__<ECS::Entity>(){
-    static TypeID id = TypeManager::registerEntity();
-    return id;
+    return TypeID::fromIndex(1);
 }
 
 }

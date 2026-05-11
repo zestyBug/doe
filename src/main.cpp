@@ -1,9 +1,5 @@
 #include "ECS/Engine.hpp"
-#include "ECS/JobChunk.hpp"
-#include "ECS/Base/ISystem.hpp"
-#include "ECS/Base/Query.hpp"
 #include "ECS/ThreadPool.hpp"
-#include "ECS/Archetype.hpp"
 #include "uv.h"
 #include "glfw/glfw3.h"
 #include "glfw/glfw3native.h"
@@ -18,6 +14,7 @@ int main(int argc, char*argv[]){
     GLFWwindow* window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
     //glwInitialize(0x304);
     sharedEngine = make_align<DOE>();
+    TypeManager::Initialize();
     JobsUtility::init();
     while (!glfwWindowShouldClose(window))
     {
@@ -33,8 +30,8 @@ int main(int argc, char*argv[]){
     uv_library_shutdown();
     sharedEngine.reset();
 #ifdef DEBUG
-    // one for the threadpool jobs
-    if(allocator_counter != 1){
+    // one for the Threadpool jobs + 2 for TypeManager
+    if(allocator_counter != 3){
         printf("Memory leak count %li\n",allocator_counter);
     }
 #endif
