@@ -129,7 +129,7 @@ Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
 
     arch->chunkCapacity = std::min(
         calculateChunkCapacity({arch->_sizeOfs,types.size()},Chunk::BufferSize),
-        Chunk::MaximumEntitiesPerChunk
+        Constants::MaximumEntitiesPerChunk
     );
     for (uint32_t i = 0,usedBytes = Chunk::MemoryOffset; i < types.size(); i++)
     {

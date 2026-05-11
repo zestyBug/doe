@@ -5,7 +5,7 @@
 #if !defined(BASICS_HPP)
 #define BASICS_HPP
 
-#ifdef VERBOSE
+#ifdef DEBUG
 #include <stdio.h>
 #endif
 //memory allocation
@@ -83,7 +83,7 @@ class allocator
         #ifdef DEBUG
             allocator_counter++;
         #endif
-    #ifdef VERBOSE
+    #ifdef DEBUG
         printf("allocator::allocate(): %u byte in %p\n",(uint32_t)__n,ret);
     #endif
         return ret;
@@ -93,7 +93,7 @@ class allocator
     void deallocate(void* __p, uint32_t __n=0) {
         (void)__n;
         if(likely(__p != nullptr)){
-        #ifdef VERBOSE
+        #ifdef DEBUG
             printf("allocator::deallocate(): %p\n",__p);
         #endif
         #if DOE_WIN32
@@ -162,7 +162,7 @@ class align_ptr
     explicit align_ptr(Type* __p) noexcept : _M_t(__p){ }
 
     /// @brief Creates a align_ptr that owns nothing.
-    constexpr align_ptr(nullptr_t) noexcept : _M_t(nullptr) { }
+    constexpr align_ptr(std::nullptr_t) noexcept : _M_t(nullptr) { }
 
     /// @brief Move constructor.
     align_ptr(align_ptr&&v){
@@ -196,7 +196,7 @@ class align_ptr
     }
 
     /// @brief Reset the %align_ptr to empty, invoking the deleter if necessary.
-    inline align_ptr& operator=(nullptr_t) noexcept
+    inline align_ptr& operator=(std::nullptr_t) noexcept
     {
         reset();
         return *this;
@@ -306,7 +306,7 @@ class align_ptr<Type[]>
     explicit align_ptr(Type* __p) noexcept : _M_t(__p){ }
 
     /// @brief Creates a align_ptr that owns nothing.
-    constexpr align_ptr(nullptr_t) noexcept : _M_t(nullptr) { }
+    constexpr align_ptr(std::nullptr_t) noexcept : _M_t(nullptr) { }
 
     /// @brief Move constructor.
     align_ptr(align_ptr&&v){
@@ -337,7 +337,7 @@ class align_ptr<Type[]>
     }
 
     /// @brief Reset the %align_ptr to empty, invoking the deleter if necessary.
-    inline align_ptr& operator=(nullptr_t) noexcept
+    inline align_ptr& operator=(std::nullptr_t) noexcept
     {
         reset();
         return *this;

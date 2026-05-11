@@ -6,6 +6,9 @@
 namespace ECS {
     /// @brief Set of constant values shared by multiple classes and the value can be changed to a valid value depending on situations.
     struct Constants {
+        // lower the number, the better component version-ing performs,
+        /// @details Considerations: ArchetypeChunkData uses bitset as enabling bit per type for entities in a chunk so it must be multiply of 64.
+        static constexpr uint32_t MaximumEntitiesPerChunk = 192;
         /// @details Considerations: must be power of 2
         static constexpr uint32_t MaximumQueryCount = 1024;
         static constexpr uint32_t MaximumQueryTypesCount = 32;
@@ -28,6 +31,7 @@ namespace ECS {
         static constexpr uint32_t InitialEmptyChunkListSize = 0x80;
         static constexpr uint32_t InitialArchetypeCacheSize = 0x80;
         static constexpr uint32_t InitialChunkCacheSize = 0x100;
+        static constexpr uint32_t MaximumRefOffsetCount = 0x400;
     };
 }
 

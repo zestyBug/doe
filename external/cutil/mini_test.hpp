@@ -1,7 +1,10 @@
 #if !defined(MINI_TEST_HPP)
 #define MINI_TEST_HPP
 
-#include <iostream>
+#ifdef DEBUG
+#include <stdio.h>
+#endif
+#include <iosfwd>
 #include <functional>
 #include <vector>
 #include <string>
@@ -30,14 +33,20 @@ namespace mtest {
         for (auto& test : get_tests()) {
             try {
                 test.func();
+            #ifdef DEBUG
                 printf("✔ %s\n", test.name);
+            #endif
                 ++passed;
             } catch (const std::exception& ex) {
+            #ifdef DEBUG
                 printf("✘ %s - %s\n", test.name, ex.what());
+            #endif
                 ++failed;
             }
         }
+    #ifdef DEBUG
         printf("\n=== SUMMARY ===\nPassed: %d\nFailed: %d\n", passed, failed);
+    #endif
     }
 
     // Assertion helpers

@@ -516,7 +516,7 @@ void uv_walk(uv_loop_t* loop, uv_walk_cb walk_cb, void* arg) {
   }
 }
 
-#ifdef VERBOSE
+#ifdef DEBUG
 static void uv__print_handles(uv_loop_t* loop, int only_active, FILE* stream) {
   const char* type;
   QUEUE* q;

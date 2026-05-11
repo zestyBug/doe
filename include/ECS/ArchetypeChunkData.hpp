@@ -6,10 +6,11 @@
 #include "Base/Chunk.hpp"
 #include "Base/SharedComponent.hpp"
 #include "Base/Version.hpp"
+#include "Base/Constants.hpp"
 #include <bitset>
 namespace ECS
 {
-    using EnabledBitset = std::bitset<Chunk::MaximumEntitiesPerChunk>;
+    using EnabledBitset = std::bitset<Constants::MaximumEntitiesPerChunk>;
     class Archetype;
     /** @brief there is a component version for each compopnent. 
      * any write access, whitout check for real value change, causes to update version to lastest version.

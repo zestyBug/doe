@@ -38,9 +38,6 @@ namespace ECS
         static constexpr uint32_t MemorySize = 16 * 1024;
         /// @brief Maximum usable memory size
         static constexpr uint32_t BufferSize = MemorySize - MemoryOffset;
-        // lower the number, the better component version-ing performs,
-        /// @details Considerations: ArchetypeChunkData uses bitset as enabling bit per type for entities in a chunk so it must be multiply of 64.
-        static constexpr uint32_t MaximumEntitiesPerChunk = 192;
         Archetype *archetype = nullptr;
         uint32_t count = 0;
         // index in chunksWithEmptySlots or freeChunksBySharedComponents
