@@ -47,9 +47,6 @@ PACK(struct end_of_central_dir_record {
     uint16_t ZIP_file_comment_length;
 });
 struct AssetsManager::RequestWork {
-    uv_fs_t *fs;
-    uv_work_t *work;
-
     AssetsManager *thiz;
     CBSignature cb = nullptr;
     Hash bundleHash = 0;
@@ -104,7 +101,7 @@ void AssetsManager::open(string_view bundleName,string_view entryName, CBSignatu
     Hash entryHash = HashHelper::FNV1A32(entryName);
     RequestWork *req = allocateWork();
     if(req){
-        uv_work_t *work = req->work;
+        uv_work_t *work = &req->___.work;
         work->data = work;
         work->work_req.loop = uv_default_loop();
         work->work_req.loop = uv_default_loop();
@@ -282,7 +279,7 @@ void AssetsManager::after_read(uv_fs_t* fs) {
     RequestWork* req = (RequestWork*)((char*)fs - offsetof(RequestWork, ___.fs));
     ssize_t result = fs->result;
     uv_fs_req_cleanup(fs);
-    uv_fs_close(fs->loop,req->fs, req->fd, &close_cb);
+    uv_fs_close(fs->loop,fs, req->fd, &close_cb);
     local_file_header *header;
     uint32_t actualSize;
     if(sizeof(local_file_header) > result)

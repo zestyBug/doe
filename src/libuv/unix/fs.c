@@ -1290,11 +1290,11 @@ static int uv__fs_fstat(uv_fs_t* req) {
   statbuf = (uv_stat_t*)uv__malloc(sizeof(uv_stat_t));
   req->ptr = statbuf;
 
-  ret = uv__fs_statx(req->fd, "", 1, 0, statbuf);
+  ret = uv__fs_statx(req->file, "", 1, 0, statbuf);
   if (ret != UV_ENOSYS)
     return ret;
 
-  ret = fstat(fd, &pbuf);
+  ret = fstat(req->file, &pbuf);
   if (ret == 0)
     uv__to_stat(&pbuf, statbuf);
 
