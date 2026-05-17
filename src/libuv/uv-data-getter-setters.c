@@ -102,10 +102,6 @@ const char* uv_fs_get_path(const uv_fs_t* req) {
   return req->path;
 }
 
-uv_stat_t* uv_fs_get_statbuf(uv_fs_t* req) {
-  return &req->statbuf;
-}
-
 void* uv_loop_get_data(const uv_loop_t* loop) {
   return loop->data;
 }

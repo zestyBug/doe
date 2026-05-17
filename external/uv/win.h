@@ -596,10 +596,6 @@ typedef struct {
       int64_t offset;                                                         \
       uv_buf_t bufsml[4];                                                     \
     } info;                                                                   \
-    struct {                                                                  \
-      double atime;                                                           \
-      double mtime;                                                           \
-    } time;                                                                   \
   } fs;
 
 #define UV_WORK_PRIVATE_FIELDS                                                \

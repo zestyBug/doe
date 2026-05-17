@@ -249,7 +249,7 @@ static void reset_once(void) {
 #endif
 
 
-static void init_once(void) {
+void uv_init_threadpool(void) {
 #ifndef _WIN32
   /* Re-initialize the threadpool after fork.
    * Note that this discards the global mutex and condition as well
@@ -258,7 +258,7 @@ static void init_once(void) {
   if (pthread_atfork(NULL, NULL, &reset_once))
     abort();
 #endif
-  init_threads();
+  uv_once(&once, init_threads);
 }
 
 
@@ -267,7 +267,6 @@ void uv__work_submit(uv_loop_t* loop,
                      enum uv__work_kind kind,
                      void (*work)(struct uv__work* w),
                      void (*done)(struct uv__work* w, int status)) {
-  uv_once(&once, init_once);
   w->loop = loop;
   w->work = work;
   w->done = done;
@@ -322,49 +321,14 @@ void uv__work_done(uv_async_t* handle) {
     w->done(w, err);
   }
 }
-
-
-static void uv__queue_work(struct uv__work* w) {
-  uv_work_t* req = container_of(w, uv_work_t, work_req);
-
-  req->work_cb(req);
-}
-
-
-static void uv__queue_done(struct uv__work* w, int err) {
-  uv_work_t* req;
-
-  req = container_of(w, uv_work_t, work_req);
-  uv__req_unregister(req->loop, req);
-
-  if (req->after_work_cb == NULL)
-    return;
-
-  req->after_work_cb(req, err);
-}
-
-
-int uv_queue_work(uv_loop_t* loop,
-                  uv_work_t* req,
-                  uv_work_cb work_cb,
-                  uv_after_work_cb after_work_cb) {
-  if (work_cb == NULL)
-    return UV_EINVAL;
-
-  uv__req_init(loop, req, UV_WORK);
-  req->loop = loop;
-  req->work_cb = work_cb;
-  req->after_work_cb = after_work_cb;
-  uv__work_submit(loop,
-                  &req->work_req,
-                  UV__WORK_CPU,
-                  uv__queue_work,
-                  uv__queue_done);
-  return 0;
+void uv_queue_work_quick(uv_work_t* req) {
+  assert(req->work_req.done && req->work_req.work && req->work_req.loop);
+  uv__req_init(req->work_req.loop, req, UV_WORK);
+  post(&req->work_req.wq, UV__WORK_CPU);
 }
 void uv_queue_work_slow(uv_work_t* req) {
-  assert(req->work_req.done && req->work_req.work);
-  uv__req_init(req->loop, req, UV_WORK);
+  assert(req->work_req.done && req->work_req.work && req->work_req.loop);
+  uv__req_init(req->work_req.loop, req, UV_WORK);
   post(&req->work_req.wq, UV__WORK_SLOW_IO);
 }
 unsigned int uv_num_threads() {
@@ -392,7 +356,7 @@ int uv_cancel(uv_req_t* req) {
     wreq = &((uv_getnameinfo_t*) req)->work_req;
     break;
   case UV_WORK:
-    loop =  ((uv_work_t*) req)->loop;
+    loop =  ((uv_work_t*) req)->work_req.loop;
     wreq = &((uv_work_t*) req)->work_req;
     break;
   default:

@@ -759,6 +759,8 @@ uv_loop_t* uv_default_loop(void) {
 
   if (uv_loop_init(&default_loop_struct))
     return NULL;
+  
+  uv_init_threadpool();
 
   default_loop_ptr = &default_loop_struct;
   return default_loop_ptr;

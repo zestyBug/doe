@@ -379,7 +379,6 @@ UV_EXTERN char* uv_err_name_r(int err, char* buf, size_t buflen);
   /* read-only */                                                             \
   uv_req_type type;                                                           \
   /* private */                                                               \
-  void* reserved[6];                                                          \
   UV_REQ_PRIVATE_FIELDS                                                       \
 
 /* Abstract base class of all requests. */
@@ -415,7 +414,6 @@ struct uv_shutdown_s {
   void* handle_queue[2];                                                      \
   union {                                                                     \
     int fd;                                                                   \
-    void* reserved[4];                                                        \
   } u;                                                                        \
   UV_HANDLE_PRIVATE_FIELDS                                                    \
 
@@ -887,17 +885,12 @@ UV_EXTERN int uv_getnameinfo(uv_loop_t* loop,
  */
 struct uv_work_s {
   UV_REQ_FIELDS
-  uv_loop_t* loop;
-  uv_work_cb work_cb;
-  uv_after_work_cb after_work_cb;
   UV_WORK_PRIVATE_FIELDS
 };
 UV_EXTERN void uv_queue_exit();
+UV_EXTERN void uv_init_threadpool(void);
 UV_EXTERN void uv_queue_work_slow(uv_work_t* req);
-UV_EXTERN int uv_queue_work(uv_loop_t* loop,
-                            uv_work_t* req,
-                            uv_work_cb work_cb,
-                            uv_after_work_cb after_work_cb);
+UV_EXTERN void uv_queue_work_quick(uv_work_t* req);
 UV_EXTERN unsigned int uv_num_threads();
 // slow_work_thread_threshold
 UV_EXTERN unsigned int uv_num_worker_threads();
@@ -1065,38 +1058,28 @@ typedef enum {
   UV_FS_READ,
   UV_FS_WRITE,
   UV_FS_SENDFILE,
-  UV_FS_STAT,
   UV_FS_LSTAT,
   UV_FS_FSTAT,
   UV_FS_FTRUNCATE,
-  UV_FS_UTIME,
-  UV_FS_FUTIME,
   UV_FS_ACCESS,
   UV_FS_FSYNC,
   UV_FS_FDATASYNC,
-  UV_FS_UNLINK,
-  UV_FS_RMDIR,
   UV_FS_MKDIR,
   UV_FS_MKDTEMP,
   UV_FS_RENAME,
   UV_FS_SCANDIR,
-  UV_FS_LINK,
-  UV_FS_SYMLINK,
-  UV_FS_READLINK,
   UV_FS_REALPATH,
   UV_FS_COPYFILE,
   UV_FS_OPENDIR,
   UV_FS_READDIR,
   UV_FS_CLOSEDIR,
   UV_FS_STATFS,
-  UV_FS_MKSTEMP,
-  UV_FS_LUTIME
+  UV_FS_MKSTEMP
 } uv_fs_type;
 
 struct uv_dir_s {
   uv_dirent_t* dirents;
   size_t nentries;
-  void* reserved[4];
   UV_DIR_PRIVATE_FIELDS
 };
 
@@ -1109,7 +1092,6 @@ struct uv_fs_s {
   ssize_t result;
   void* ptr;
   const char* path;
-  uv_stat_t statbuf;  /* Stores the result of uv_fs_stat() and uv_fs_fstat(). */
   UV_FS_PRIVATE_FIELDS
 };
 
@@ -1118,7 +1100,6 @@ UV_EXTERN ssize_t uv_fs_get_result(const uv_fs_t*);
 UV_EXTERN int uv_fs_get_system_error(const uv_fs_t*);
 UV_EXTERN void* uv_fs_get_ptr(const uv_fs_t*);
 UV_EXTERN const char* uv_fs_get_path(const uv_fs_t*);
-UV_EXTERN uv_stat_t* uv_fs_get_statbuf(uv_fs_t*);
 
 UV_EXTERN void uv_fs_req_cleanup(uv_fs_t* req);
 UV_EXTERN int uv_fs_close(uv_loop_t* loop,
@@ -1138,10 +1119,6 @@ UV_EXTERN int uv_fs_read(uv_loop_t* loop,
                          unsigned int nbufs,
                          int64_t offset,
                          uv_fs_cb cb);
-UV_EXTERN int uv_fs_unlink(uv_loop_t* loop,
-                           uv_fs_t* req,
-                           const char* path,
-                           uv_fs_cb cb);
 UV_EXTERN int uv_fs_write(uv_loop_t* loop,
                           uv_fs_t* req,
                           uv_file file,
@@ -1149,30 +1126,7 @@ UV_EXTERN int uv_fs_write(uv_loop_t* loop,
                           unsigned int nbufs,
                           int64_t offset,
                           uv_fs_cb cb);
-/*
- * This flag can be used with uv_fs_copyfile() to return an error if the
- * destination already exists.
- */
-#define UV_FS_COPYFILE_EXCL   0x0001
 
-/*
- * This flag can be used with uv_fs_copyfile() to attempt to create a reflink.
- * If copy-on-write is not supported, a fallback copy mechanism is used.
- */
-#define UV_FS_COPYFILE_FICLONE 0x0002
-
-/*
- * This flag can be used with uv_fs_copyfile() to attempt to create a reflink.
- * If copy-on-write is not supported, an error is returned.
- */
-#define UV_FS_COPYFILE_FICLONE_FORCE 0x0004
-
-UV_EXTERN int uv_fs_copyfile(uv_loop_t* loop,
-                             uv_fs_t* req,
-                             const char* path,
-                             const char* new_path,
-                             int flags,
-                             uv_fs_cb cb);
 UV_EXTERN int uv_fs_mkdir(uv_loop_t* loop,
                           uv_fs_t* req,
                           const char* path,
@@ -1186,10 +1140,6 @@ UV_EXTERN int uv_fs_mkstemp(uv_loop_t* loop,
                             uv_fs_t* req,
                             const char* tpl,
                             uv_fs_cb cb);
-UV_EXTERN int uv_fs_rmdir(uv_loop_t* loop,
-                          uv_fs_t* req,
-                          const char* path,
-                          uv_fs_cb cb);
 UV_EXTERN int uv_fs_scandir(uv_loop_t* loop,
                             uv_fs_t* req,
                             const char* path,
@@ -1209,14 +1159,18 @@ UV_EXTERN int uv_fs_closedir(uv_loop_t* loop,
                              uv_fs_t* req,
                              uv_dir_t* dir,
                              uv_fs_cb cb);
-UV_EXTERN int uv_fs_stat(uv_loop_t* loop,
-                         uv_fs_t* req,
-                         const char* path,
-                         uv_fs_cb cb);
 UV_EXTERN int uv_fs_fstat(uv_loop_t* loop,
                           uv_fs_t* req,
                           uv_file file,
                           uv_fs_cb cb);
+UV_EXTERN int uv_fs_lstat(uv_loop_t* loop,
+                          uv_fs_t* req,
+                          const char* path,
+                          uv_fs_cb cb);
+UV_EXTERN int uv_fs_statfs(uv_loop_t* loop,
+                           uv_fs_t* req,
+                           const char* path,
+                           uv_fs_cb cb);
 UV_EXTERN int uv_fs_rename(uv_loop_t* loop,
                            uv_fs_t* req,
                            const char* path,
@@ -1247,64 +1201,10 @@ UV_EXTERN int uv_fs_access(uv_loop_t* loop,
                            const char* path,
                            int mode,
                            uv_fs_cb cb);
-UV_EXTERN int uv_fs_utime(uv_loop_t* loop,
-                          uv_fs_t* req,
-                          const char* path,
-                          double atime,
-                          double mtime,
-                          uv_fs_cb cb);
-UV_EXTERN int uv_fs_futime(uv_loop_t* loop,
-                           uv_fs_t* req,
-                           uv_file file,
-                           double atime,
-                           double mtime,
-                           uv_fs_cb cb);
-UV_EXTERN int uv_fs_lutime(uv_loop_t* loop,
-                           uv_fs_t* req,
-                           const char* path,
-                           double atime,
-                           double mtime,
-                           uv_fs_cb cb);
-UV_EXTERN int uv_fs_lstat(uv_loop_t* loop,
-                          uv_fs_t* req,
-                          const char* path,
-                          uv_fs_cb cb);
-UV_EXTERN int uv_fs_link(uv_loop_t* loop,
-                         uv_fs_t* req,
-                         const char* path,
-                         const char* new_path,
-                         uv_fs_cb cb);
-
-/*
- * This flag can be used with uv_fs_symlink() on Windows to specify whether
- * path argument points to a directory.
- */
-#define UV_FS_SYMLINK_DIR          0x0001
-
-/*
- * This flag can be used with uv_fs_symlink() on Windows to specify whether
- * the symlink is to be created using junction points.
- */
-#define UV_FS_SYMLINK_JUNCTION     0x0002
-
-UV_EXTERN int uv_fs_symlink(uv_loop_t* loop,
-                            uv_fs_t* req,
-                            const char* path,
-                            const char* new_path,
-                            int flags,
-                            uv_fs_cb cb);
-UV_EXTERN int uv_fs_readlink(uv_loop_t* loop,
-                             uv_fs_t* req,
-                             const char* path,
-                             uv_fs_cb cb);
 UV_EXTERN int uv_fs_realpath(uv_loop_t* loop,
                              uv_fs_t* req,
                              const char* path,
                              uv_fs_cb cb);
-UV_EXTERN int uv_fs_statfs(uv_loop_t* loop,
-                           uv_fs_t* req,
-                           const char* path,
-                           uv_fs_cb cb);
 
 
 

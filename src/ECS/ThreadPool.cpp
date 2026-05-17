@@ -141,8 +141,8 @@ void JobDataChunk::resizeJobPool(uint32_t capacity){
 
 
 
-void initialize_work(uv_work_t* req);
-void initialize_after_work(uv_work_t* req, int);
+void initialize_work(uv__work*);
+void initialize_after_work(uv__work* req, int);
 void on_fixed_timer(uv_timer_t *);
 /// @brief Evokes either iterate_systems+queue_jobs or queue_jobs if only if all threads are sleeping
 void wakeThread();
@@ -177,18 +177,26 @@ void after_work_jobs(uv__work *,int);
 
 
 void JobsUtility::init(){
+    sharedData.works[0].data = NULL;
+    sharedData.works[0].work_req.loop = uv_default_loop();
+    sharedData.works[0].work_req.loop = uv_default_loop();
+    sharedData.works[0].work_req.done = &initialize_after_work;
+    sharedData.works[0].work_req.work = &initialize_work;
     sharedData.activeThreads++;
-    uv_queue_work(uv_default_loop(),sharedData.works,&initialize_work,&initialize_after_work);
+    uv_queue_work_slow(sharedData.works);
 }
-void initialize_work(uv_work_t*){
+void initialize_work(uv__work*){
     std::vector<void* (*)(DOE *)> &list = JobsUtility::_get_initialize_list();
     auto &sys = sharedEngine->sys;
     sys.reserve(list.size());
-    for(auto func:list){
+    for(auto func:list)
         sys.emplace_back( (ISystem*)func(sharedEngine.get()) );
-    }
 }
-void initialize_after_work(uv_work_t*, int){
+void initialize_after_work(uv__work*w, int){
+    unsigned int *count = &((uv_work_t *) ((uint8_t*)(w) - offsetof(uv_work_t, work_req)))->loop->active_reqs.count;
+    if(*count <= 0)
+        throw std::runtime_error("");
+    (*count)--;
     uv_timer_init(uv_default_loop(), &sharedData.fixedTimer);
     uv_timer_start(&sharedData.fixedTimer, on_fixed_timer, 0, 20);
     sharedData.activeThreads--;
