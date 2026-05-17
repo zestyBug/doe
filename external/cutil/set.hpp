@@ -7,9 +7,10 @@
 
 /**
  * @brief a hash set on vector, containing unique values
- * suitable for small structures (uses lots of copy constructor)
+ * suitable for small structures (uses lots of copy operations)
+ * @warning without calling destruction
  */
-template <typename Type,typename Allocator = std::allocator<Type>>
+template <typename Type>
 class set
 {
 protected:
@@ -18,21 +19,9 @@ protected:
 
     align_ptr<uint32_t[]> hashes;
     Type *values = nullptr;
-    uint32_t capacity;
+    uint32_t capacity = 0;
     uint32_t unoccupied = 0;
 
-    static uint32_t getHashCode(Type key)
-    {
-        uint32_t result;
-        if(sizeof(Type) <= sizeof(uint32_t))   
-            result = reinterpret_cast<uint32_t>(key);
-        else
-            result = HashHelper::FNV1A32(key);
-
-        if (result == 0 || result == _SkipCode)
-            result = _AValidHashCode;
-        return result;
-    }
 public:
 
     set(uint32_t count = 0) {
@@ -42,12 +31,13 @@ public:
         // is power of 2?
         if(0 != (count & (count - 1)))
             throw std::invalid_argument("Init(): count must be power of 2");
-        
-        const uint32_t size1 = alignCacheLineSize(sizeof(uint32_t)*count);
+
+        const uint32_t size1 = alignPointerSize(sizeof(uint32_t)*count);
         const uint32_t size2 = sizeof(Type)*count;
         uint8_t* ptr = allocator().allocate(size1+size2);
-        hashes.reset(ptr);
-        values = (Type*) ptr + size1
+        hashes.reset((uint32_t*)ptr);
+        values = (Type*) ptr + size1;
+        memset(ptr,0,size1);
         capacity = count;
         unoccupied = count;
     }
@@ -83,7 +73,7 @@ public:
         {
             uint32_t hash = src.hashes[offset];
             if (hash != 0 && hash != _SkipCode)
-                insert(src.values[offset]);
+                insert(hash, src.values[offset]);
         }
     }
     void resize(uint32_t size){
@@ -95,22 +85,19 @@ public:
         temp.appendFrom(*this);
         *this = std::move(temp);
     }
-    void insert(Type value) {
-        uint32_t desiredHash = getHashCode(value);
-        uint32_t offset = (int)(desiredHash & hashMask());
+    void insert(uint32_t hashValue, Type value) {
+        uint32_t offset = (int)(hashValue & hashMask());
         uint32_t attempts = 0;
         while (true)
         {
-            uint32_t hash = hashes.at(offset);
-            if(hash == desiredHash) {
-                if(value[offset] == value)
-                    return;
-            }
-            
+            uint32_t hash = hashes[offset];
+            if(hash == hashValue)
+                throw std::invalid_argument("insert(): hash already exists");
+
             if (hash == 0 || hash == _SkipCode)
             {
-                hashes[offset] = desiredHash;
-                values[offset] = value;
+                hashes[offset] = hashValue;
+                new (values+offset) Type(value);
                 unoccupied--;
                 possiblyGrow();
                 return;
@@ -118,48 +105,94 @@ public:
 
             offset = (offset + 1) & hashMask();
             ++attempts;
-            if(attempts >= size())
+            if(attempts >= capacity)
                 // we should nor reach here, a possiblyGrow() call must prevent it
                 throw std::runtime_error("add(): something went wrong");
         }
     }
-    void remove(Type value){
-        int32_t offset = indexOf(value);
+    void remove(uint32_t hash){
+        int32_t offset = indexOf(hash);
         if(offset < 0)
             throw std::runtime_error("remove(): value not found");
         hashes[offset] = _SkipCode;
+        values[offset].~Type();
         unoccupied++;
         possiblyShrink();
     }
-    int indexOf(Type value) const {
-        uint32_t desiredHash = getHashCode(value);
-        uint32_t offset = (desiredHash & hashMask());
+    Type get(uint32_t hashValue) const {
+        if(hashValue == 0 || hashValue == _SkipCode)
+            hashValue = _AValidHashCode;
+        uint32_t offset = (hashValue & hashMask());
+        uint32_t attempts = 0;
+        while (true)
+        {
+            uint32_t hash = hashes[offset];
+            if (hash == 0)
+                throw std::runtime_error("get(): not found");
+            if (hash == hashValue)
+                return values[offset];
+            offset = (offset + 1) & hashMask();
+            ++attempts;
+            if (attempts == capacity)
+                throw std::runtime_error("get(): not found");
+        }
+    }
+    Type getValue(uint32_t index) const {
+        if (index >= capacity)
+            throw std::out_of_range("getValue(): not found");
+        if (hashes[index] == 0 || hashes[index] == _SkipCode)
+            throw std::invalid_argument("getValue(): not found");
+        return values[index];
+    }
+    /// @brief index of an hash value or -1 if not found 
+    int indexOf(uint32_t hashValue) const {
+        if(hashValue == 0 || hashValue == _SkipCode)
+            hashValue = _AValidHashCode;
+        uint32_t offset = (hashValue & hashMask());
         uint32_t attempts = 0;
         while (true)
         {
             uint32_t hash = hashes[offset];
             if (hash == 0)
                 return -1;
-            if (hash == desiredHash)
+            if (hash == hashValue)
             {
-                if (values[offset] == value)
-                    return offset;
+                return offset;
             }
             offset = (offset + 1) & hashMask();
             ++attempts;
-            if (attempts == size())
+            if (attempts == capacity)
                 return -1;
         }
     }
-    bool contains(Type value) const {
-        return indexOf(value) != -1;
-    }
-    // the whole popuse is to free space when object is unused but still in memory
     void reset(){
         hashes.reset();
-        values =nullptr;
+        values = nullptr;
         capacity = 0;
         unoccupied=0;
+    }
+    struct Iterator {
+        uint32_t *hash;
+        Type *value;
+        Type operator*() const {
+            return *value;
+        }
+        operator bool() const {
+            return *hash != 0 && *hash != _SkipCode;
+        }
+        void operator++(){
+            hash++;
+            value++;
+        }
+        bool operator != (const Iterator& v) const {
+            return this->hash != v.hash;
+        }
+    };
+    Iterator begin(){
+        return Iterator{hashes,values};
+    }
+    const Iterator end() {
+        return Iterator{hashes.get()+capacity,values+capacity};
     }
 };
 

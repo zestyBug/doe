@@ -82,7 +82,7 @@ ifeq ($(OS),Windows_NT)
 		$(OBJ)/$(srcDir)/glfw/win32_monitor.o \
 		$(OBJ)/$(srcDir)/glfw/win32_time.o \
 		$(OBJ)/$(srcDir)/glfw/win32_window.o
-	CPPFLAGS+=-D_GLFW_WIN32 -DIS_WINDOWS_OS
+	CPPFLAGS+=-D_GLFW_WIN32
 # LDFLAGS+=-lgdi32
 else
 	OBJS_GLFW+= \

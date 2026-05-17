@@ -20,6 +20,14 @@
 #include <memory>
 #include "ECS/Base/Constants.hpp"
 
+#if defined(__GNUC__) || defined(__clang__)
+#define PACK(x) x __attribute__((__packed__))
+#elif defined(_MSC_VER)
+#define PACK(x) x __pragma(pack(push, 1)) x __pragma(pack(pop))
+#else
+#error Unsupported compiler
+#endif
+
 #if defined(_WIN32) || (defined(__WIN32__) || defined(WIN32) || defined(__MINGW32__))
 #define DOE_WIN32 1
 #define DOE_UNIX 0
@@ -35,10 +43,13 @@
 #endif
 
 
-/// @brief alignes the size to "Constants::CacheLineSize" bytes for perfermance and resolving false sharing issues
-/// @warning Dont concider this as a solution to thread race condition.
+/// @brief alignes the size to "Constants::CacheLineSize" bytes for perfermance, avoiding false sharing, same cache line race condition issues
+/// @attention see ECS::Constants::CacheLineMask for more details.
 inline uint32_t alignCacheLineSize(uint32_t size){
     return (size+ECS::Constants::CacheLineFit)&ECS::Constants::CacheLineMask;
+}
+inline uint32_t alignPointerSize(uint32_t size){
+    return (size+((uint32_t)sizeof(void*)-1))&(~((uint32_t)sizeof(void*)-1));
 }
 #ifdef DEBUG
 extern ssize_t allocator_counter;

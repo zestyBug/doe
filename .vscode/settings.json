@@ -82,4 +82,7 @@
     "editor.fontFamily": "'Courier New', Consolas, monospace",
     "makefile.configureOnOpen": false,
     "editor.fontSize": 20,
+    "C_Cpp.inlayHints.parameterNames.enabled": true,
+    "C_Cpp.inlayHints.parameterNames.suppressWhenArgumentContainsName": false,
+    "C_Cpp.inlayHints.referenceOperator.enabled": true,
 }

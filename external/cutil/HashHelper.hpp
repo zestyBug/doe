@@ -2,6 +2,7 @@
 #define HashHelper_HPP
 
 #include "span.hpp"
+#include "string_view.hpp"
 
 namespace HashHelper
 {
@@ -26,6 +27,11 @@ namespace HashHelper
     inline uint32_t FNV1A32(const_span<T> data)
     {
         return FNV1A32(data.data(),data.size_bytes());
+    }
+
+    inline uint32_t FNV1A32(string_view string)
+    {
+        return FNV1A32(string.data(),string.size());
     }
 
     inline uint32_t tgc_hash(uintptr_t v) {

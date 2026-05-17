@@ -7,7 +7,7 @@ namespace ECS {
     /// @brief Set of constant values shared by multiple classes and the value can be changed to a valid value depending on situations.
     struct Constants {
         /// @brief To align structures to cache line size to get performance by avoiding false sharing.
-        /// @note This value is only guarantied to be bigger equal than 32. (32 ~ 256)
+        /// @note This value is only guarantied to be bigger equal than sizeof(void*). (32 ~ 256)
         /// @warning This value does not 100% guaranty multithread access safety!
         static uint32_t CacheLineSize;
         static uint32_t CacheLineFit;
