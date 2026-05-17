@@ -22,8 +22,9 @@ Its not an exact copy, there are some differents. ChunkIndex is not used, for pe
 ### TODO
 - 32 bit systems compatibility
 - a better README and documentation
-- changing pointers to references as possible
+- changing pointers to references as possible (resource owener)
 - better encapsulation
 - write some tests
 - assets manager
 - glfw + vulkan + imgui
+- remove unnecesary aligned alloctions
