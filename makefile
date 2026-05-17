@@ -178,6 +178,7 @@ endif  # WINNT
 
 
 OBJS= \
+	$(OBJ)/$(srcDir)/ECS/AssetManager.o \
 	$(OBJ)/$(srcDir)/ECS/Archetype.o \
 	$(OBJ)/$(srcDir)/ECS/ArchetypeChunkData.o \
 	$(OBJ)/$(srcDir)/ECS/ArchetypeListMap.o \
@@ -193,15 +194,16 @@ OBJS= \
 
 DEPS = $(OBJS:.o=.d)
 DEPS += $(libuv_la_SOURCES:.o=.d)
+DEPS += $(OBJ)/$(testDir)/test-6.d
 -include $(DEPS)
 
-$(BIN)/test-6: $(OBJ)/$(testDir)/test-6.o $(libuv_la_SOURCES)
+$(BIN)/test-6: $(OBJ)/$(testDir)/test-6.o $(libuv_la_SOURCES) $(OBJ)/$(srcDir)/ECS/TypeID.o $(OBJ)/$(cutilDir)/HashHelper.o $(OBJ)/$(srcDir)/ECS/AssetManager.o
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
 $(BIN)/test-5: $(OBJ)/$(testDir)/test-5.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW)
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
-$(BIN)/test-%: $(OBJ)/$(testDir)/test-%.o $(OBJS)
+$(BIN)/test-%: $(OBJ)/$(testDir)/test-%.o $(OBJS) $(OBJ)/$(srcDir)/ECS/TypeID.o
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
 $(BIN)/main: $(OBJ)/main.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW)
