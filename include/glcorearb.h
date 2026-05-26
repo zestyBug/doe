@@ -53,8 +53,6 @@ typedef int64_t khronos_int64_t;
 #define GLAPI extern
 #endif
 
-int8_t  glwHasExtension(const char *e);
-int32_t glwGetVesion();
 int32_t glwDestroy(void);
 // must be called in the context currented thread in win32
 int32_t glwInitialize(int version);

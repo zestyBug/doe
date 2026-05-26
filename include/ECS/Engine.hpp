@@ -1,6 +1,8 @@
 #if !defined(ENGINE_HPP)
 #define ENGINE_HPP
 
+#include "AssetsManager.hpp"
+#include "ResourceManager.hpp"
 #include "EntityComponentStore.hpp"
 #include "ComponentDependencyManager.hpp"
 #include "EntityQueryManager.hpp"
@@ -20,6 +22,8 @@ namespace ECS
         EntityQueryManager eqm{&ecs};
         std::vector<std::unique_ptr<ISystem>> sys;
         std::vector<Schedule> scheduleQueue;
+        AssetsManager am;
+        ResourceManager rm;
         DOE() {
             sys.reserve(Constants::InitialSystemCapacity);
             scheduleQueue.reserve(Constants::InitialJobPoolCapacity);

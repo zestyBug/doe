@@ -1,8 +1,12 @@
-#if !defined(VULKAN_HPP)
-#define VULKAN_HPP
+#if !defined(EXAMPLE_HPP)
+#define EXAMPLE_HPP
 
-#include "ECS/SystemManager.hpp"
+#include "ECS/Base/ISystem.hpp"
 
-void initExampleSystem(ECS::SystemState&);
+struct ExampleSystem : ECS::ISystem{
+    int counter = 0;
+    ExampleSystem(ECS::DOE&);
+    void OnFixedUpdate(ECS::DOE&);
+};
 
-#endif // VULKAN_HPP
+#endif // EXAMPLE_HPP

@@ -75,7 +75,8 @@
         "charconv": "cpp",
         "variant": "cpp",
         "format": "cpp",
-        "text_encoding": "cpp"
+        "text_encoding": "cpp",
+        "queue": "cpp"
     },
     "C_Cpp.intelliSenseCachePath": "${workspaceFolder}/.vscode",
     "C_Cpp.intelliSenseMemoryLimit": 8192,
@@ -85,4 +86,7 @@
     "C_Cpp.inlayHints.parameterNames.enabled": true,
     "C_Cpp.inlayHints.parameterNames.suppressWhenArgumentContainsName": false,
     "C_Cpp.inlayHints.referenceOperator.enabled": true,
+    "C_Cpp.default.defines": [
+        "_GLFW_WIN32"
+    ],
 }

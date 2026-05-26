@@ -1,8 +1,7 @@
 #include "glcorearb.h"
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if IS_WINDOWS_OS
+#if defined(__CYGWIN32__) || defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(WINAPI_FAMILY)
 	#include <windows.h>
 	#define GLWLibraryName					"opengl32.dll"
 	#define GLWHandle						HMODULE
@@ -23,7 +22,7 @@
 	#define PROC(V)							retval|=(V=(__typeof__(V))GLWObtain(libgl,#V))==NULL
 	#define PROC_EXT(V)						if(V==NULL) V=(__typeof__(V))GLWObtain(libgl,#V "EXT");
 #endif
-#else
+#elif defined(__ANDROID__) || defined(__linux__)
 	#include <dlfcn.h>
 	#define GLWLibraryName					"libGL.so"
 	#define GLWHandle						void*
@@ -37,9 +36,11 @@
 	#define PROC(V)							retval|=(V=(__typeof__(V))GLWObtain(libgl,#V))==NULL
 	#define PROC_EXT(V)						if(V==NULL) V=(__typeof__(V))GLWObtain(libgl,#V "EXT");
 //#else#error "undefined compiler"
+#else
+#error undefined platform
 #endif
 
-#define DEBUG(...) printf(__VA_ARGS__)
+#define DEBUG(...) //printf(__VA_ARGS__)
 static GLWHandle libgl=NULL;
 
 int32_t glwDestroy()

@@ -40,7 +40,9 @@ systemDir=src/system
 
 
 
-
+$(OBJ)/$(srcDir)/system/%.o: $(srcDir)/system/%.cpp
+	mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 $(OBJ)/$(srcDir)/ECS/%.o: $(srcDir)/ECS/%.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
@@ -174,11 +176,12 @@ libuv_la_SOURCES += \
 endif  # WINNT
 
 
-
-
+SYSS= \
+	$(OBJ)/$(srcDir)/system/example.o \
 
 OBJS= \
-	$(OBJ)/$(srcDir)/ECS/AssetManager.o \
+	$(OBJ)/$(srcDir)/ECS/ResourceManager.o \
+	$(OBJ)/$(srcDir)/ECS/AssetsManager.o \
 	$(OBJ)/$(srcDir)/ECS/Archetype.o \
 	$(OBJ)/$(srcDir)/ECS/ArchetypeChunkData.o \
 	$(OBJ)/$(srcDir)/ECS/ArchetypeListMap.o \
@@ -193,11 +196,15 @@ OBJS= \
 	$(OBJ)/$(cutilDir)/HashHelper.o
 
 DEPS = $(OBJS:.o=.d)
+DEPS += $(SYSS:.o=.d)
 DEPS += $(libuv_la_SOURCES:.o=.d)
 DEPS += $(OBJ)/$(testDir)/test-6.d
 -include $(DEPS)
 
-$(BIN)/test-6: $(OBJ)/$(testDir)/test-6.o $(libuv_la_SOURCES) $(OBJ)/$(srcDir)/ECS/TypeID.o $(OBJ)/$(cutilDir)/HashHelper.o $(OBJ)/$(srcDir)/ECS/AssetManager.o
+$(BIN)/test-7: $(OBJ)/$(testDir)/test-7.o $(libuv_la_SOURCES) $(OBJ)/$(srcDir)/ECS/TypeID.o $(OBJ)/$(cutilDir)/HashHelper.o $(OBJ)/$(srcDir)/ECS/AssetsManager.o $(OBJ)/$(srcDir)/ECS/ResourceManager.o
+	mkdir -p $(@D)
+	$(CXX) $^ $(LDFLAGS) -o $@
+$(BIN)/test-6: $(OBJ)/$(testDir)/test-6.o $(libuv_la_SOURCES) $(OBJ)/$(srcDir)/ECS/TypeID.o $(OBJ)/$(cutilDir)/HashHelper.o $(OBJ)/$(srcDir)/ECS/AssetsManager.o
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
 $(BIN)/test-5: $(OBJ)/$(testDir)/test-5.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW)
@@ -206,7 +213,7 @@ $(BIN)/test-5: $(OBJ)/$(testDir)/test-5.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLF
 $(BIN)/test-%: $(OBJ)/$(testDir)/test-%.o $(OBJS) $(OBJ)/$(srcDir)/ECS/TypeID.o
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
-$(BIN)/main: $(OBJ)/main.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW)
+$(BIN)/main: $(OBJ)/main.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW) $(SYSS)
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
 
@@ -216,6 +223,7 @@ test-3: $(BIN)/test-3
 test-4: $(BIN)/test-4
 test-5: $(BIN)/test-5
 test-6: $(BIN)/test-6
+test-7: $(BIN)/test-7
 main: $(BIN)/main
 
 clean:
