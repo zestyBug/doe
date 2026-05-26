@@ -375,7 +375,7 @@ void AssetsManager::initial_after_work(struct uv__work* w, int err) {
         (*count)--;
     }
     req->content = make_align<uint8_t[]>(req->bufLen);
-    uv_buf_t bf{req->bufLen,(char*)req->content.get()};
+    uv_buf_t bf=uv_buf_init((char*)req->content.get(),req->bufLen);
     uv_fs_read(loop, &req->___.fs, req->fd, &bf, 1, req->offset, after_read);
 }
 void AssetsManager::initial_work(uv__work* w){
