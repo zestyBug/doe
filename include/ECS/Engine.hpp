@@ -18,8 +18,8 @@ namespace ECS
         EntityComponentStore ecs;
         ComponentDependencyManager dpm;
         EntityQueryManager eqm{&ecs};
-        std::vector<align_ptr<ISystem>,allocator<align_ptr<ISystem>>> sys;
-        std::vector<Schedule,allocator<Schedule>> scheduleQueue;
+        std::vector<std::unique_ptr<ISystem>> sys;
+        std::vector<Schedule> scheduleQueue;
         DOE() {
             sys.reserve(Constants::InitialSystemCapacity);
             scheduleQueue.reserve(Constants::InitialJobPoolCapacity);

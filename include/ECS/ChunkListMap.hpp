@@ -19,7 +19,7 @@ namespace ECS
         /// @brief When current hash value is invalid but you should not stop searching.
         static constexpr uint32_t _SkipCode = 0xFFFFFFFF;
 
-        align_ptr<uint32_t[]> hashes{};
+        std::unique_ptr<uint32_t[]> hashes{};
         Chunk**chunks = nullptr;
         Archetype* archetype;
         uint32_t _capacity = 0;
@@ -126,7 +126,7 @@ namespace ECS
                 throw std::invalid_argument("init(): too large map");
             const uint32_t size1 = alignPointerSize(sizeof(uint32_t)*count);
             const uint32_t size2 = sizeof(Chunk*)*count;
-            uint8_t* ptr = allocator().allocate(size1+size2);
+            uint8_t* ptr = std::allocator<uint8_t>().allocate(size1+size2);
             hashes.reset((uint32_t*)ptr);
             memset(hashes.get(),0,size1);
             chunks = (Chunk**)(ptr + size1);

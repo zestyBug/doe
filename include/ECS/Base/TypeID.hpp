@@ -3,6 +3,7 @@
 #include <algorithm>    // std::sort
 #include "cutil/static_array.hpp"
 #include "cutil/span.hpp"
+#include "cutil/string_view.hpp"
 #include "cutil/basics.hpp"
 #include "ECS/Base/Entity.hpp"
 #include "Constants.hpp"
@@ -90,15 +91,15 @@ namespace ECS {
         static uint32_t    initialized;
         static uint32_t    typeCount;
         static uint32_t    assetRefOffsetIndex;
-        static align_ptr<TypeInfo[]> sharedTypeInfos;
-        static align_ptr<uint16_t[]> assetRefOffsetList;
+        static std::unique_ptr<TypeInfo[]> sharedTypeInfos;
+        static std::unique_ptr<uint16_t[]> assetRefOffsetList;
     public:
         static void Initialize();
         static inline const_span<uint16_t> GetAssetRefOffsetsPointer(){
-            return {assetRefOffsetList, assetRefOffsetIndex};
+            return {assetRefOffsetList.get(), assetRefOffsetIndex};
         }
         static inline const_span<TypeInfo> GetTypeInfoPointer(){
-            return {sharedTypeInfos, typeCount};
+            return {sharedTypeInfos.get(), typeCount};
         }
         static uint32_t GetTypeCount() {
             return typeCount;
@@ -159,7 +160,7 @@ namespace ECS {
             sharedTypeInfos[index].AssetRefOffsetStartIndex = assetRefOffsetIndex;
             sharedTypeInfos[index].AssetRefOffsetCount = assetRefs.size();
             if(!assetRefs.empty()){
-                uint16_t *begin_dst = assetRefOffsetList + assetRefOffsetIndex;
+                uint16_t *begin_dst = assetRefOffsetList.get() + assetRefOffsetIndex;
                 const uint16_t *begin_src = assetRefs.data();
                 const uint16_t *end_src   = assetRefs.data() + assetRefs.size();
                 assetRefOffsetIndex += assetRefs.size();

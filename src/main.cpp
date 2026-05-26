@@ -5,15 +5,16 @@
 #include "glfw/glfw3native.h"
 using namespace ECS;
 
-extern align_ptr<DOE> sharedEngine;
+extern std::unique_ptr<DOE> sharedEngine;
+extern GLFWwindow* window;
 
 int main(int argc, char*argv[]){
     if (!glfwInit()) return 1;
     uv_setup_args(argc,argv);
     uv_loop_t *loop = uv_default_loop();
-    GLFWwindow* window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
+    window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
     //glwInitialize(0x304);
-    sharedEngine = make_align<DOE>();
+    sharedEngine = std::make_unique<DOE>();
     TypeManager::Initialize();
     JobsUtility::init();
     while (!glfwWindowShouldClose(window))

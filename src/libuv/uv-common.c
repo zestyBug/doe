@@ -714,26 +714,6 @@ uv_dirent_type_t uv__fs_get_dirent_type(uv__dirent_t* dent) {
   return type;
 }
 
-void uv__fs_readdir_cleanup(uv_fs_t* req) {
-  uv_dir_t* dir;
-  uv_dirent_t* dirents;
-  int i;
-
-  if (req->ptr == NULL)
-    return;
-
-  dir = req->ptr;
-  dirents = dir->dirents;
-  req->ptr = NULL;
-
-  if (dirents == NULL)
-    return;
-
-  for (i = 0; i < req->result; ++i) {
-    uv__free((char*) dirents[i].name);
-    dirents[i].name = NULL;
-  }
-}
 
 
 int uv_loop_configure(uv_loop_t* loop, uv_loop_option option, ...) {

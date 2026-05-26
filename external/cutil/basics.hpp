@@ -42,6 +42,7 @@
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 #endif
 
+using Hash32 = uint32_t;
 
 /// @brief alignes the size to "Constants::CacheLineSize" bytes for perfermance, avoiding false sharing, same cache line race condition issues
 /// @attention see ECS::Constants::CacheLineMask for more details.

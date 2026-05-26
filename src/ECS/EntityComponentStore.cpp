@@ -6,7 +6,7 @@
 using namespace ECS;
 EntityComponentStore::~EntityComponentStore(){
     // Move all chunks to become pooled chunks
-    for (align_ptr<Archetype> &archetype: archetypes)
+    for (std::unique_ptr<Archetype> &archetype: archetypes)
     {
         for (uint32_t c = 0; c != archetype->chunks.count(); c++)
         {
@@ -20,7 +20,7 @@ span<Archetype*> EntityComponentStore::getArchetypes(){
     return {(Archetype**)(Archetype*)this->archetypes.data(),(uint32_t)this->archetypes.size()};
 }
 EntityComponentStore::EntityComponentStore(){
-    this->componentTypeOrderVersion = make_align<Version[]>(Constants::MaximumTypesCount);
+    this->componentTypeOrderVersion = std::make_unique<Version[]>(Constants::MaximumTypesCount);
     this->typeLookup.init   (Constants::InitialArchetypeArraySize);
     this->archetypes.reserve(Constants::InitialArchetypeArraySize);
 }
@@ -67,7 +67,7 @@ void EntityComponentStore::incrementComponentTypeOrderVersion(const Archetype* a
 }
 Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
     validateArchetype(types);
-    align_ptr<Archetype> arch;
+    std::unique_ptr<Archetype> arch;
     uint32_t numSharedComponents = 0;
     for (uint32_t i = 0; i < types.size(); ++i) {
         const auto& ct = TypeManager::GetTypeInfo(types[i]);
@@ -85,10 +85,10 @@ Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
         offsets[4] = offsets[3] + alignPointerSize(sizeof(uint16_t)*types.size());
         offsets[5] = offsets[4] + alignPointerSize(sizeof(TypeManager::DefaultFunction)*types.size());
         offsets[6] = offsets[5] + alignPointerSize(sizeof(TypeManager::DefaultFunction)*types.size());
-        arch.reset((Archetype*)allocator().allocate(offsets[6]));
+        arch.reset((Archetype*)std::allocator<uint8_t>().allocate(offsets[6]));
         new (&arch->chunks) ArchetypeChunkData(types.size(),numSharedComponents);
         // arch->chunks.grow(Constants::InitialChunkListSize);
-        new (&arch->chunksWithEmptySlots) std::vector<Chunk*,allocator<Chunk*>>();
+        new (&arch->chunksWithEmptySlots) std::vector<Chunk*>();
         arch->chunksWithEmptySlots.reserve(Constants::InitialChunkListSize);
         new (&arch->freeChunksBySharedComponents) ChunkListMap();
         arch->freeChunksBySharedComponents.init(arch.get(), Constants::InitialChunkListSize);

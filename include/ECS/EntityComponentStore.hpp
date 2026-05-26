@@ -27,12 +27,12 @@ namespace ECS
         // array of entities value,
         // contains index of it archetype and it index in that archetype
         ArchetypeListMap typeLookup;
-        std::vector<align_ptr<Archetype>,allocator<align_ptr<Archetype>>> archetypes;
+        std::vector<std::unique_ptr<Archetype>> archetypes;
         EntityStore entityStore{};
         // global version buffer, used for any entity create/modify command
         Version globalVersion = 1;
         ChunkListChanges chunkListChangesTracker;
-        align_ptr<Version[]> componentTypeOrderVersion;
+        std::unique_ptr<Version[]> componentTypeOrderVersion;
         SharedComponentStore sharedComponents;
         ChunkStore chunks{};
         /// @brief used by EntityQueryManager

@@ -59,10 +59,10 @@ void free_func(void* ptr)
     }
 }
 
-static void onCB(align_ptr<uint8_t[]> ptr,uint32_t size, uint32_t offset){
-    printf("Got: %p(+%u) %u byte\n",ptr.get(), offset, size);
+static void onCB(void*, align_ptr<uint8_t[]> ptr,uint32_t size){
+    printf("Got: %p %u byte\n",ptr.get(), size);
     if(size)
-        write(1,ptr.get()+offset,size);
+        write(1,ptr.get(),size);
 }
 
 int main(int argc, char*argv[]){
@@ -77,7 +77,7 @@ int main(int argc, char*argv[]){
         uv_loop_t *loop = uv_default_loop();
         AssetsManager am;
         am.indexBundle("./dump/test.zip");
-        am.open("./dump/test.zip","test.c",&onCB);
+        am.open("./dump/test.zip","test.c",nullptr,&onCB);
         uv_run(loop,UV_RUN_DEFAULT);
         if(uv_loop_close(loop))
             printf("Libuv error: active requests\n");

@@ -1,8 +1,6 @@
 #if !defined(ENTITY_HPP)
 #define ENTITY_HPP
 
-#include <vector>
-#include <algorithm>    // std::sort
 #include "cutil/basics.hpp"
 
 namespace ECS

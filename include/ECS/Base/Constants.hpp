@@ -30,6 +30,9 @@ namespace ECS {
         /// 4_ 15 bit for type index in an uint16_t + 1 bit for RW/RO
         /// 5_ the larger the number the larger EntityComponentStore byte size
         static constexpr uint16_t MaximumTypesCount = 1 << 12;
+        static constexpr uint16_t MaximumResourcesCount = 1 << 8;
+        static constexpr uint16_t ResourceBlockCount = 1 << 8;
+        static constexpr uint16_t ResourceBlockSize = 1 << 8;
         static constexpr uint32_t MaximumChunkCount = 0x10000;
         static constexpr uint32_t MaxJobCount = 0xFFFFF;
         static constexpr uint32_t InitialSystemCapacity = 0x80;

@@ -17,7 +17,7 @@ namespace ECS
         /// @param types note that type flags are also included, like disable-ness, prefab-being
         /// @return (may-modified) hash value
 
-        align_ptr<Archetype*[]> pointers{};
+        std::unique_ptr<Archetype*[]> pointers{};
         uint32_t* hashes = nullptr;
         uint32_t _capacity = 0;
         uint32_t emptyNodes=0;
@@ -91,7 +91,7 @@ namespace ECS
 
             const uint32_t size1 = alignPointerSize(sizeof(Archetype*)*count);
             const uint32_t size2 = sizeof(uint32_t)*count;
-            uint8_t* ptr = allocator().allocate(size1+size2);
+            uint8_t* ptr = std::allocator<uint8_t>().allocate(size1+size2);
             pointers.reset((Archetype**)ptr);
             hashes = (uint32_t *)(ptr+size1);
             memset(hashes,0,size2);

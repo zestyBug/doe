@@ -8,7 +8,7 @@
 #include "uv.h"
 using namespace ECS;
 
-extern align_ptr<DOE> sharedEngine;
+extern std::unique_ptr<DOE> sharedEngine;
 
 struct Position : IComponentData {
     float x;
@@ -60,7 +60,7 @@ struct Test {
 };
 CLASS_TEST(Test,Test1){
     uv_loop_t *loop = uv_default_loop();
-    align_ptr<SpeedSystem> system = make_align<SpeedSystem>(*sharedEngine);
+    std::unique_ptr<SpeedSystem> system = std::make_unique<SpeedSystem>(*sharedEngine);
     sharedEngine->sys.emplace_back((ISystem*)system.release());
     JobsUtility::init();
     uv_run(loop, UV_RUN_DEFAULT);
@@ -69,7 +69,7 @@ CLASS_TEST(Test,Test1){
 int main(int argc, char*argv[]){
     uv_setup_args(argc,argv);
     uv_loop_t *loop = uv_default_loop();
-    sharedEngine = make_align<DOE>();
+    sharedEngine = std::make_unique<DOE>();
     mtest::run_all();
     uv_loop_close(loop);
     uv_library_shutdown();

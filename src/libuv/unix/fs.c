@@ -533,87 +533,6 @@ static ssize_t uv__fs_scandir(uv_fs_t* req) {
   return n;
 }
 
-static int uv__fs_opendir(uv_fs_t* req) {
-  uv_dir_t* dir;
-
-  dir = uv__malloc(sizeof(*dir));
-  if (dir == NULL)
-    goto error;
-
-  dir->dir = opendir(req->path);
-  if (dir->dir == NULL)
-    goto error;
-
-  req->ptr = dir;
-  return 0;
-
-error:
-  uv__free(dir);
-  req->ptr = NULL;
-  return -1;
-}
-
-static int uv__fs_readdir(uv_fs_t* req) {
-  uv_dir_t* dir;
-  uv_dirent_t* dirent;
-  struct dirent* res;
-  unsigned int dirent_idx;
-  unsigned int i;
-
-  dir = req->ptr;
-  dirent_idx = 0;
-
-  while (dirent_idx < dir->nentries) {
-    /* readdir() returns NULL on end of directory, as well as on error. errno
-       is used to differentiate between the two conditions. */
-    errno = 0;
-    res = readdir(dir->dir);
-
-    if (res == NULL) {
-      if (errno != 0)
-        goto error;
-      break;
-    }
-
-    if (strcmp(res->d_name, ".") == 0 || strcmp(res->d_name, "..") == 0)
-      continue;
-
-    dirent = &dir->dirents[dirent_idx];
-    dirent->name = uv__strdup(res->d_name);
-
-    if (dirent->name == NULL)
-      goto error;
-
-    dirent->type = uv__fs_get_dirent_type(res);
-    ++dirent_idx;
-  }
-
-  return dirent_idx;
-
-error:
-  for (i = 0; i < dirent_idx; ++i) {
-    uv__free((char*) dir->dirents[i].name);
-    dir->dirents[i].name = NULL;
-  }
-
-  return -1;
-}
-
-static int uv__fs_closedir(uv_fs_t* req) {
-  uv_dir_t* dir;
-
-  dir = req->ptr;
-
-  if (dir->dir != NULL) {
-    closedir(dir->dir);
-    dir->dir = NULL;
-  }
-
-  uv__free(req->ptr);
-  req->ptr = NULL;
-  return 0;
-}
-
 static int uv__fs_statfs(uv_fs_t* req) {
   uv_statfs_t* stat_fs;
 #if defined(__sun)      || \
@@ -1394,9 +1313,6 @@ static void uv__fs_work(struct uv__work* w) {
     X(MKDTEMP, uv__fs_mkdtemp(req));
     X(MKSTEMP, uv__fs_mkstemp(req));
     X(SCANDIR, uv__fs_scandir(req));
-    X(OPENDIR, uv__fs_opendir(req));
-    X(READDIR, uv__fs_readdir(req));
-    X(CLOSEDIR, uv__fs_closedir(req));
     X(REALPATH, uv__fs_realpath(req));
     X(RENAME, rename(req->path, req->new_path));
     X(SENDFILE, uv__fs_sendfile(req));
@@ -1582,41 +1498,6 @@ int uv_fs_scandir(uv_loop_t* loop,
   POST;
 }
 
-int uv_fs_opendir(uv_loop_t* loop,
-                  uv_fs_t* req,
-                  const char* path,
-                  uv_fs_cb cb) {
-  INIT(OPENDIR);
-  PATH;
-  POST;
-}
-
-int uv_fs_readdir(uv_loop_t* loop,
-                  uv_fs_t* req,
-                  uv_dir_t* dir,
-                  uv_fs_cb cb) {
-  INIT(READDIR);
-
-  if (dir == NULL || dir->dir == NULL || dir->dirents == NULL)
-    return UV_EINVAL;
-
-  req->ptr = dir;
-  POST;
-}
-
-int uv_fs_closedir(uv_loop_t* loop,
-                   uv_fs_t* req,
-                   uv_dir_t* dir,
-                   uv_fs_cb cb) {
-  INIT(CLOSEDIR);
-
-  if (dir == NULL)
-    return UV_EINVAL;
-
-  req->ptr = dir;
-  POST;
-}
-
 
 int uv_fs_realpath(uv_loop_t* loop,
                   uv_fs_t* req,
@@ -1701,9 +1582,6 @@ void uv_fs_req_cleanup(uv_fs_t* req) {
   req->path = NULL;
   req->new_path = NULL;
 
-  if (req->fs_type == UV_FS_READDIR && req->ptr != NULL)
-    uv__fs_readdir_cleanup(req);
-
   if (req->fs_type == UV_FS_SCANDIR && req->ptr != NULL)
     uv__fs_scandir_cleanup(req);
 
@@ -1711,8 +1589,7 @@ void uv_fs_req_cleanup(uv_fs_t* req) {
     uv__free(req->bufs);
   req->bufs = NULL;
 
-  if (req->fs_type != UV_FS_OPENDIR)
-    uv__free(req->ptr);
+  uv__free(req->ptr);
   req->ptr = NULL;
 }
 

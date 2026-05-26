@@ -140,7 +140,7 @@ EntityQueryImpl EntityQueryManager::createEntityQuery(const EntityQueryBuilder& 
     uint8_t *ptr;
     uint32_t size[2];
 
-    queryData->queries = make_align<EntityQueryData::TypeQuery[]>(qcount);
+    queryData->queries = std::make_unique<EntityQueryData::TypeQuery[]>(qcount);
     queryData->queryCount = qcount;
     queryArray = queryData->queries.get();
     for(uint32_t i=0;i<qcount;++i){
@@ -161,13 +161,13 @@ EntityQueryImpl EntityQueryManager::createEntityQuery(const EntityQueryBuilder& 
 
     size[0] =           (uint32_t)sizeof(EntityQueryData::ArchetypeCache) * Constants::InitialArchetypeCacheSize;
     size[1] = size[0] + (uint32_t)sizeof(uint32_t)                        * Constants::InitialArchetypeCacheSize * queryData->firstNoneIndex;
-    ptr = allocator().allocate(size[1]);
+    ptr = std::allocator<uint8_t>().allocate(size[1]);
     queryData->archetypes.reset((EntityQueryData::ArchetypeCache*)ptr);
     queryData->typesIndex = (int32_t*)(ptr + size[0]);
     queryData->archetypesCapacity = Constants::InitialArchetypeCacheSize;
     queryData->archetypesCount = 0;
 
-    queryData->cache = make_align<EntityQueryData::ChunkCache[]>(Constants::InitialChunkCacheSize);
+    queryData->cache = std::make_unique<EntityQueryData::ChunkCache[]>(Constants::InitialChunkCacheSize);
     queryData->cacheCapacity = Constants::InitialChunkCacheSize;
     queryData->cacheCount = 0;
     queryData->validCache = false;
@@ -234,7 +234,7 @@ void EntityQueryManager::rebuildMatchingChunkCache(EntityQueryData &query){
     if(total_count > query.cacheCapacity){
         total_count = alignPointerSize(total_count);
         query.cacheCapacity = total_count;
-        query.cache = make_align<EntityQueryData::ChunkCache[]>(total_count);
+        query.cache = std::make_unique<EntityQueryData::ChunkCache[]>(total_count);
     }
     caches = query.cache.get();
     total_count=0;

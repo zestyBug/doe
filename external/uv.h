@@ -1069,10 +1069,6 @@ typedef enum {
   UV_FS_RENAME,
   UV_FS_SCANDIR,
   UV_FS_REALPATH,
-  UV_FS_COPYFILE,
-  UV_FS_OPENDIR,
-  UV_FS_READDIR,
-  UV_FS_CLOSEDIR,
   UV_FS_STATFS,
   UV_FS_MKSTEMP
 } uv_fs_type;
@@ -1119,6 +1115,12 @@ UV_EXTERN int uv_fs_read(uv_loop_t* loop,
                          unsigned int nbufs,
                          int64_t offset,
                          uv_fs_cb cb);
+/// @note set req->fs.info.nbufs and req->fs.info.bufsml manually
+int uv_fs_read2(uv_loop_t* loop,
+               uv_fs_t* req,
+               uv_file fd,
+               int64_t offset,
+               uv_fs_cb cb);
 UV_EXTERN int uv_fs_write(uv_loop_t* loop,
                           uv_fs_t* req,
                           uv_file file,
@@ -1147,18 +1149,6 @@ UV_EXTERN int uv_fs_scandir(uv_loop_t* loop,
                             uv_fs_cb cb);
 UV_EXTERN int uv_fs_scandir_next(uv_fs_t* req,
                                  uv_dirent_t* ent);
-UV_EXTERN int uv_fs_opendir(uv_loop_t* loop,
-                            uv_fs_t* req,
-                            const char* path,
-                            uv_fs_cb cb);
-UV_EXTERN int uv_fs_readdir(uv_loop_t* loop,
-                            uv_fs_t* req,
-                            uv_dir_t* dir,
-                            uv_fs_cb cb);
-UV_EXTERN int uv_fs_closedir(uv_loop_t* loop,
-                             uv_fs_t* req,
-                             uv_dir_t* dir,
-                             uv_fs_cb cb);
 UV_EXTERN int uv_fs_fstat(uv_loop_t* loop,
                           uv_fs_t* req,
                           uv_file file,

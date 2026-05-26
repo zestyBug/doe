@@ -27,7 +27,7 @@ namespace ECS {
         friend struct ComponentDependencyManager;
         typedef const Archetype* ArchetypeCache;
         /// @brief matching archetypes
-        align_ptr<ArchetypeCache[]> archetypes;
+        std::unique_ptr<ArchetypeCache[]> archetypes;
         /// @brief typesIndex[archetypeIndex * firstNoneIndex + typeIndex]
         /// @details -1 means not found
         int32_t             *typesIndex = nullptr;
@@ -39,7 +39,7 @@ namespace ECS {
             /// @brief Archetype index in archetypes
             uint32_t archetypeIndex;
         };
-        align_ptr<ChunkCache[]>  cache;
+        std::unique_ptr<ChunkCache[]>  cache;
         uint32_t             cacheCapacity = 0;
         uint32_t             cacheCount = 0;
         struct TypeQuery {
@@ -61,7 +61,7 @@ namespace ECS {
             }
         };
         /// @brief Queries order is as follow: All, Any, None
-        align_ptr<TypeQuery[]> queries;
+        std::unique_ptr<TypeQuery[]> queries;
         uint32_t queryCount = 0;
         uint32_t firstAnyIndex = 0;
         uint32_t firstNoneIndex = 0;

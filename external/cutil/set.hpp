@@ -14,11 +14,12 @@ template <typename Type>
 class set
 {
 protected:
-    static const uint32_t _AValidHashCode = 2;
-    static const uint32_t _SkipCode = 1;
+    static const Hash32 _AValidHashCode = 2;
+    static const Hash32 _SkipCode = 1;
+    static const Hash32 _InvalidHashCode = 0;
 
-    align_ptr<uint32_t[]> hashes;
-    Type *values = nullptr;
+    std::unique_ptr<Hash32[]> hashes;
+    Type    *values = nullptr;
     uint32_t capacity = 0;
     uint32_t unoccupied = 0;
 
@@ -34,10 +35,10 @@ public:
 
         const uint32_t size1 = alignPointerSize(sizeof(uint32_t)*count);
         const uint32_t size2 = sizeof(Type)*count;
-        uint8_t* ptr = allocator().allocate(size1+size2);
+        uint8_t* ptr = std::allocator<uint8_t>().allocate(size1+size2);
         hashes.reset((uint32_t*)ptr);
-        values = (Type*) ptr + size1;
-        memset(ptr,0,size1);
+        values = (Type*)(ptr + size1);
+        memset(ptr,0,size1 + size2);
         capacity = count;
         unoccupied = count;
     }
@@ -47,6 +48,9 @@ public:
         this->unoccupied = v.unoccupied;
         v.capacity=0;
         v.unoccupied=0;
+    }
+    ~set(){
+        hashes.reset();
     }
     set& operator=(const set&) = delete;
     set& operator=(set&& v){
@@ -71,8 +75,8 @@ public:
     void appendFrom(const set& src){
         for (uint32_t offset = 0; offset < capacity; ++offset)
         {
-            uint32_t hash = src.hashes[offset];
-            if (hash != 0 && hash != _SkipCode)
+            Hash32 hash = src.hashes[offset];
+            if (hash != _InvalidHashCode && hash != _SkipCode)
                 insert(hash, src.values[offset]);
         }
     }
@@ -85,19 +89,21 @@ public:
         temp.appendFrom(*this);
         *this = std::move(temp);
     }
-    void insert(uint32_t hashValue, Type value) {
+    void insert(Hash32 hashValue, Type value) {
+        if(hashValue == _InvalidHashCode || hashValue == _SkipCode)
+            hashValue = _AValidHashCode;
         uint32_t offset = (int)(hashValue & hashMask());
         uint32_t attempts = 0;
         while (true)
         {
-            uint32_t hash = hashes[offset];
+            Hash32 hash = hashes[offset];
             if(hash == hashValue)
                 throw std::invalid_argument("insert(): hash already exists");
 
-            if (hash == 0 || hash == _SkipCode)
+            if (hash == _InvalidHashCode || hash == _SkipCode)
             {
                 hashes[offset] = hashValue;
-                new (values+offset) Type(value);
+                values[offset] = value;
                 unoccupied--;
                 possiblyGrow();
                 return;
@@ -110,24 +116,25 @@ public:
                 throw std::runtime_error("add(): something went wrong");
         }
     }
-    void remove(uint32_t hash){
-        int32_t offset = indexOf(hash);
+    void remove(Hash32 hashValue){
+        if(hashValue == _InvalidHashCode || hashValue == _SkipCode)
+            hashValue = _AValidHashCode;
+        int32_t offset = indexOf(hashValue);
         if(offset < 0)
             throw std::runtime_error("remove(): value not found");
         hashes[offset] = _SkipCode;
-        values[offset].~Type();
         unoccupied++;
         possiblyShrink();
     }
-    Type get(uint32_t hashValue) const {
-        if(hashValue == 0 || hashValue == _SkipCode)
+    Type get(Hash32 hashValue) const {
+        if(hashValue == _InvalidHashCode || hashValue == _SkipCode)
             hashValue = _AValidHashCode;
         uint32_t offset = (hashValue & hashMask());
         uint32_t attempts = 0;
         while (true)
         {
-            uint32_t hash = hashes[offset];
-            if (hash == 0)
+            Hash32 hash = hashes[offset];
+            if (hash == _InvalidHashCode)
                 throw std::runtime_error("get(): not found");
             if (hash == hashValue)
                 return values[offset];
@@ -140,20 +147,20 @@ public:
     Type getValue(uint32_t index) const {
         if (index >= capacity)
             throw std::out_of_range("getValue(): not found");
-        if (hashes[index] == 0 || hashes[index] == _SkipCode)
+        if (hashes[index] == _InvalidHashCode || hashes[index] == _SkipCode)
             throw std::invalid_argument("getValue(): not found");
         return values[index];
     }
     /// @brief index of an hash value or -1 if not found 
-    int indexOf(uint32_t hashValue) const {
-        if(hashValue == 0 || hashValue == _SkipCode)
+    int indexOf(Hash32 hashValue) const {
+        if(hashValue == _InvalidHashCode || hashValue == _SkipCode)
             hashValue = _AValidHashCode;
         uint32_t offset = (hashValue & hashMask());
         uint32_t attempts = 0;
         while (true)
         {
-            uint32_t hash = hashes[offset];
-            if (hash == 0)
+            Hash32 hash = hashes[offset];
+            if (hash == _InvalidHashCode)
                 return -1;
             if (hash == hashValue)
             {
@@ -172,13 +179,13 @@ public:
         unoccupied=0;
     }
     struct Iterator {
-        uint32_t *hash;
+        Hash32 *hash;
         Type *value;
         Type operator*() const {
             return *value;
         }
         operator bool() const {
-            return *hash != 0 && *hash != _SkipCode;
+            return *hash != _InvalidHashCode && *hash != _SkipCode;
         }
         void operator++(){
             hash++;
@@ -189,7 +196,7 @@ public:
         }
     };
     Iterator begin(){
-        return Iterator{hashes,values};
+        return Iterator{hashes.get(),values};
     }
     const Iterator end() {
         return Iterator{hashes.get()+capacity,values+capacity};

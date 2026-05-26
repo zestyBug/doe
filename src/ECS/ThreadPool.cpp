@@ -1,9 +1,17 @@
 #include "ECS/ThreadPool.hpp"
 #include "ECS/JobChunk.hpp"
 #include "ECS/Engine.hpp"
+#include "glfw/glfw3.h"
 #include "uv.h"
 
-align_ptr<ECS::DOE> sharedEngine;
+std::unique_ptr<ECS::DOE> sharedEngine;
+std::vector<ECS::ISystem*(*)(ECS::DOE&)>& ECS::_get_initialize_list() {
+    static std::vector<ISystem*(*)(DOE&)> tests;
+    return tests;
+}
+struct GLFWwindow;
+GLFWwindow* window;
+
 using namespace ECS;
 
 struct JobEntry {
@@ -144,8 +152,6 @@ void JobDataChunk::resizeJobPool(uint32_t capacity){
 
 
 
-void initialize_work(uv__work*);
-void initialize_after_work(uv__work* req, int);
 void on_fixed_timer(uv_timer_t *);
 /// @brief calls either iterate_systems or queue_jobs if only if all threads are sleeping
 /// @warning must be called in the main thread only
@@ -154,13 +160,14 @@ void wakeThread(uv_async_t*);
 /// @warning must be called alone and in the main thread only, requires full access to the engine
 void iterate_systems();
 void iterate_systems(uv__work *w,int);
-/// @brief provokes the threadpool
+/// @brief provokes the threadpool (without checking remainding jobs)
 /// @warning must be called alone and in the main thread only, requires full access to the works list
 /// @see queue_jobs
 /// @details activeThreads must be 1 before calling this function
 void queue_jobs(uv__work *,int);
 /// @brief prepares works array to be queued into the threadpool
-/// @warning must be running alone in any thread, requires full access to the works list
+/// @warning must be running alone in any thread, requires full access to the works list, 
+/// @note dont forget to reserve memory in sharedData.jobs array atleast equal to scheduleQueue.size() before calling this if you are calling this from threadpool
 /// @details activeThreads must be 1 before calling this function
 void queue_jobs(uv__work *w);
 /// @brief the actual function jobs are handled in.
@@ -171,36 +178,22 @@ void after_work_jobs(uv__work *,int);
 
 void JobsUtility::init(){
     sharedData.init();
-    sharedData.works[0].data = NULL;
-    sharedData.works[0].work_req.loop = uv_default_loop();
-    sharedData.works[0].work_req.loop = uv_default_loop();
-    sharedData.works[0].work_req.done = &initialize_after_work;
-    sharedData.works[0].work_req.work = &initialize_work;
-    sharedData.activeThreads++;
-    uv_queue_work_slow(sharedData.works);
-}
-void initialize_work(uv__work*){
-    std::vector<void* (*)(DOE *)> &list = JobsUtility::_get_initialize_list();
+    std::vector<ISystem* (*)(DOE &)> &list = _get_initialize_list();
     auto &sys = sharedEngine->sys;
     sys.reserve(list.size());
     for(auto func:list)
-        sys.emplace_back( (ISystem*)func(sharedEngine.get()) );
-}
-void initialize_after_work(uv__work*w, int){
-    unsigned int *count = &w->loop->active_reqs.count;
-    if(*count <= 0)
-        throw std::runtime_error("");
-    (*count)--;
+        sys.emplace_back( func(*sharedEngine.get()) );
     uv_timer_init(uv_default_loop(), sharedData.fixedTimer);
     uv_async_init(uv_default_loop(), sharedData.wakecall, wakeThread);
     uv_timer_start(sharedData.fixedTimer, on_fixed_timer, 0, 20);
-    sharedData.activeThreads--;
 }
 void JobsUtility::stop() {
     // dead locking the JobsUtility for ever
     sharedData.activeThreads++;
     uv_timer_stop(sharedData.fixedTimer);
     uv_unref((uv_handle_t*)sharedData.wakecall);
+    if(window)
+        glfwSetWindowShouldClose(window, 1);
 }
 void on_fixed_timer(uv_timer_t *) {
     sharedData.bitmask |= Request::Timer;
@@ -224,10 +217,18 @@ void wakeThread(uv_async_t*){
         }
     }
 }
+void iterate_systems(uv__work *w,int) {
+    unsigned int *count = &w->loop->active_reqs.count;
+    if(*count <= 0)
+        throw std::runtime_error("");
+    (*count)--;
+    iterate_systems();
+}
 void iterate_systems(){
+    again:;
     {
-        align_ptr<ISystem> *begin =         sharedEngine->sys.data();
-        align_ptr<ISystem> *end   = begin + sharedEngine->sys.size();
+        std::unique_ptr<ISystem> *begin =         sharedEngine->sys.data();
+        std::unique_ptr<ISystem> *end   = begin + sharedEngine->sys.size();
         if(unlikely(sharedData.bitmask & Request::Exit)) {
             while (begin != end){
                 (*begin)->OnDestroy(*sharedEngine);
@@ -254,14 +255,20 @@ void iterate_systems(){
     }
     sharedEngine->eqm.updateNewArchetypes();
     sharedEngine->ecs.cleanChangeList();
-    sharedData.resizeJobPool(sharedEngine->scheduleQueue.size());
-
-    
-    sharedData.works[0].data = NULL;
-    sharedData.works[0].work_req.loop = uv_default_loop();
-    sharedData.works[0].work_req.done = &queue_jobs;
-    sharedData.works[0].work_req.work = &queue_jobs;
-    uv_queue_work_slow(sharedData.works);
+    if(!sharedEngine->scheduleQueue.empty())
+    {
+        sharedData.resizeJobPool(sharedEngine->scheduleQueue.size());
+        sharedData.works[0].data = NULL;
+        sharedData.works[0].work_req.loop = uv_default_loop();
+        sharedData.works[0].work_req.done = &queue_jobs;
+        sharedData.works[0].work_req.work = &queue_jobs;
+        uv_queue_work_slow(sharedData.works);
+    }else{
+        if(sharedData.bitmask.load())
+            goto again;
+        else
+            sharedData.activeThreads--;
+    }
 }
 void queue_jobs(uv__work *w,int){
     if(w){
@@ -286,13 +293,6 @@ void queue_jobs(uv__work *w,int){
         uv_queue_work_slow(begin);
         begin++;
     }
-}
-void iterate_systems(uv__work *w,int) {
-    unsigned int *count = &w->loop->active_reqs.count;
-    if(*count <= 0)
-        throw std::runtime_error("");
-    (*count)--;
-    iterate_systems();
 }
 void queue_jobs(uv__work *w){
     sharedData.writeIndex = 0;
