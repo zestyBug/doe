@@ -122,11 +122,8 @@ namespace ECS
         void addToChunkList(Chunk* chunk, SharedComponentValues sharedComponentIndices, uint32_t changeVersion, ChunkListChanges&);
         void removeFromChunkList(Chunk* chunk, ChunkListChanges&);
 
-        /**
-         * ChunkDataUtility
-         */
+    #pragma region ChunkDataUtility
     public:
-
         /// @brief iterates over types array to find 
         /// @return -1 if not found
         int32_t getIndexInTypeArray(TypeID type) const;
@@ -177,6 +174,7 @@ namespace ECS
         const uint8_t* getComponentDataRO(const Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray) const;
         uint8_t* getComponentDataWithTypeRW(const Chunk *chunk, uint32_t baseEntityIndex, TypeID typeIndex, Version globalSystemVersion);
         uint8_t* getComponentDataRW(const Chunk *chunk, uint32_t baseEntityIndex, uint32_t indexInTypeArray, Version globalSystemVersion);
+    #pragma endregion ChunkDataUtility
     };
 } // namespace ECS
 

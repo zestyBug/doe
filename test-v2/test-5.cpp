@@ -35,22 +35,23 @@ struct SpeedSystem : ISystem {
     JobChunkWrapper<SpeedJob> wrapper;
     EntityQueryImpl qd;
     uint32_t counter=0;
-    SpeedSystem(DOE*e){
-        Archetype *arch = e->ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
+    SpeedSystem(DOE &e){
+        Archetype *arch = e.ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
         Entity entities[200];
-        e->ecs.createEntities(arch,{entities,200});
+        e.ecs.createEntities(arch,{entities,200});
         EntityQueryBuilder qb;
         qb.withAllRW(getTypeID<Position>());
         qb.withAll(getTypeID<Speed>());
-        qd = e->eqm.createEntityQuery(qb);
+        qd = e.eqm.createEntityQuery(qb);
     }
-    void OnFixedUpdate(DOE*e){
+    void OnFixedUpdate(DOE &e){
         counter++;
-        if(counter>5000){
+        if(counter>100){
             JobsUtility::signalQuit();
             return;
         }
-        wrapper.schedule(qd,e->dpm);
+        e.scheduleQueue.push_back(Schedule{(JobChunkWrapperBase*)&wrapper,qd,false});
+        //wrapper.schedule(qd,e.dpm);
     }
 };
 
@@ -59,7 +60,7 @@ struct Test {
 };
 CLASS_TEST(Test,Test1){
     uv_loop_t *loop = uv_default_loop();
-    align_ptr<SpeedSystem> system = make_align<SpeedSystem>(sharedEngine.get());
+    align_ptr<SpeedSystem> system = make_align<SpeedSystem>(*sharedEngine);
     sharedEngine->sys.emplace_back((ISystem*)system.release());
     JobsUtility::init();
     uv_run(loop, UV_RUN_DEFAULT);
@@ -74,10 +75,7 @@ int main(int argc, char*argv[]){
     uv_library_shutdown();
     sharedEngine.reset();
 #ifdef DEBUG
-    // one for the threadpool
-    if(allocator_counter != 3){
-        printf("Memory leak count %li\n",allocator_counter);
-    }
+    printf("Memory leak count %li\n",allocator_counter);
 #endif
     return 0;
 }

@@ -14,9 +14,9 @@ namespace ECS
 {
     struct AssetsManager {
         static constexpr uint32_t RequestPageSize = 2;
-        static constexpr uint32_t MaximumOpenFiles = 32;
+        static constexpr uint32_t MaximumOpenFiles = 2;
         using Hash = uint32_t;
-        typedef void (*CBSignature)(std::unique_ptr<uint8_t[]>, uint32_t size, uint32_t offset);
+        typedef void (*CBSignature)(align_ptr<uint8_t[]>, uint32_t size, uint32_t offset);
         struct EntityInfo {
             uint32_t offset;
             uint32_t size;
@@ -41,6 +41,7 @@ namespace ECS
             uint32_t readIndex = 0;
             uint32_t writeIndex = 0;
             RequestInfo pool[RequestPageSize];
+            static_assert(RequestPageSize > 0);
         };
         set<Bundle*>             bundles;
         align_ptr<RequestWork[]> works;
@@ -49,11 +50,11 @@ namespace ECS
         uv_loop_s               *loop;
         AssetsManager();
         ~AssetsManager();
-        void open(string_view bundle,string_view file, CBSignature onOpen);
+        void open(string_view bundle,string_view file, CBSignature onOpen) noexcept;
         void indexBundle(string_view filename);
     private:
-        RequestWork *allocateWork();
-        void freeWork(RequestWork *ref);
+        void onCleanup(RequestWork *ref);
+        void post(RequestWork &,RequestInfo);
         static void initial_work(uv__work* w);
         static void cb_failed(uv__work* w, int err);
         static void initial_after_work(uv__work* w, int err);

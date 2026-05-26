@@ -96,6 +96,7 @@ Chunk* Archetype::getExistingChunkWithEmptySlots(const SharedComponentValues sha
 }
 
 
+#pragma region ChunkDataUtility
 
 
 int32_t Archetype::getIndexInTypeArray(TypeID type) const
@@ -713,3 +714,5 @@ void Archetype::changeArchetypeInPlace(Archetype* srcArchetype, Chunk *srcChunk,
     if (hasEmptySlots)
         dstArchetype->emptySlotTrackingAddChunk(srcChunk);
 }
+
+#pragma endregion ChunkDataUtility

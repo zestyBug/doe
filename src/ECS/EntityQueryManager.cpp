@@ -83,6 +83,7 @@ void EntityQueryManager::addArchetypeIfMatching(Archetype *archetype, EntityQuer
         return;
     archetype->matchingQueryData[archetype->matchingQueryCount++] = &query;
     archetype->queryMask.set(query.ID,true);
+    query.invalidateCache();
 
     const uint32_t archetypeIndex = query.archetypesCount;
     const uint32_t queryCount = query.firstNoneIndex;
@@ -206,9 +207,9 @@ void EntityQueryManager::updateNewArchetypes()
     span<ECS::Archetype*> archs = ecs->getArchetypes();
     uint32_t pCount = ecs->previousArchetypeCount;
     if(pCount < archs.size()){
+        ecs->previousArchetypeCount = archs.size();
         archs+=pCount;
         this->addAdditionalArchetypes(archs);
-        ecs->previousArchetypeCount = archs.size();
     }
 }
 EntityQueryData* EntityQueryImpl::getData()

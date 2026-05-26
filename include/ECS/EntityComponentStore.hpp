@@ -37,7 +37,7 @@ namespace ECS
         ChunkStore chunks{};
         /// @brief used by EntityQueryManager
         uint32_t previousArchetypeCount = 0;
-
+    public:
         void cleanChangeList();
 
         //int m_UnmanagedSharedComponentCount;
@@ -54,7 +54,7 @@ namespace ECS
 
         //ResourceMap hashLookup;
 
-        // Archetype
+    #pragma region Archetype
     private:
         static void validateArchetype(const_span<TypeID> types);
         static uint32_t getComponentArraySize(uint32_t componentSize, uint32_t entityCount);
@@ -77,8 +77,9 @@ namespace ECS
         inline void setArchetype(Chunk *chunk, Archetype *arch){chunk->archetype = arch;}
         Archetype* getArchetype(ChunkIndex chunk);
         Archetype* getArchetype(Chunk* chunk);
+    #pragma endregion Archetype
 
-        // Chunk and Batch
+    #pragma region Chunk and Batch
     private:
         Chunk *allocateChunk();
         inline void freeChunk(Chunk *chunk) {chunks.freeChunk(chunk->index);}
@@ -96,8 +97,9 @@ namespace ECS
         /// @param result a pointer to where the new value should be writen
         /// @return true if success, false if no change is detected
         bool getArchetypeChunkFilterWithChangedSharedComponent(Chunk *chunk, TypeID type, SharedComponentIndex value, SharedComponentIndex *result);
+    #pragma endregion Chunk and Batch
 
-        // Entity
+    #pragma region Entity
     public:
         uint32_t countEntities();
         void createEntities(Archetype* archetype, span<Entity> entities, const SharedComponentValues values = SharedComponentValues());
@@ -136,8 +138,9 @@ namespace ECS
         inline EntityInChunk getEntityInChunk(Entity entity) {
             return entityStore.getEntityInChunk(entity);
         }
+    #pragma endregion Entity
 
-        // Component
+    #pragma region Componen
     public:
         SharedComponentIndex getSharedComponentDataIndex(Entity entity, TypeID typeIndex);
         const void* getComponentDataWithTypeRO(Entity entity, TypeID typeIndex);
@@ -150,8 +153,9 @@ namespace ECS
         void buildSharedComponentIndicesWithAddedComponent (Chunk* srcChunk, const Archetype* dstArchetype, uint32_t newTypeIndex, SharedComponentIndex value, SharedComponentIndex* outSharedComponentValues);
         void buildSharedComponentIndicesWithRemovedComponents(Chunk* srcChunk, const Archetype* dstArchetype, SharedComponentIndex* outSharedComponentValues);
         void buildSharedComponentIndicesWithRemovedComponent (Chunk* srcChunk, const Archetype* dstArchetype, uint32_t oldTypeIndex, SharedComponentIndex* outSharedComponentValues);
+    #pragma endregion Componen
 
-        // Move
+    #pragma region Archetype Move
     private:
         Archetype* getArchetypeWithAddedComponent(Archetype* archetype, TypeID type, uint32_t* indexInTypeArray = nullptr);
         /// @param types sorted
@@ -201,6 +205,8 @@ namespace ECS
         bool addComponents(EntityBatchInChunk entityBatchInChunk, const_span<TypeID> types);
         /// @param types sorted
         bool removeComponents(EntityBatchInChunk entityBatchInChunk, const_span<TypeID> types);
+    
+    #pragma endregion move
 
     private:
         inline void incrementGlobalSystemVersion() {globalVersion.updateVersion();}

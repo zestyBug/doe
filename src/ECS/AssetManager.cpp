@@ -56,7 +56,7 @@ struct AssetsManager::RequestWork {
     uint32_t beginOffset;
     uv_buf_t buf;
     uv_file fd;
-    std::unique_ptr<uint8_t[]> content;
+    align_ptr<uint8_t[]> content;
 
     RequestWork *_next;
     union{
@@ -75,43 +75,64 @@ AssetsManager::~AssetsManager(){
     }
 }
 AssetsManager::AssetsManager(){
+    static_assert(MaximumOpenFiles > 0);
     this->loop = uv_default_loop();
     uint32_t step = alignCacheLineSize(sizeof(RequestWork));
     uint8_t *ptr = allocator().allocate(step * MaximumOpenFiles);
-    memset(ptr, 0, step*MaximumOpenFiles);
     this->works.reset((RequestWork*)ptr);
     this->freeWorks = (RequestWork*)ptr;
-    RequestWork *end = (RequestWork*)(ptr + (MaximumOpenFiles-1) * step);
+    const RequestWork *end = (RequestWork*)(ptr + MaximumOpenFiles * step);
     RequestWork *begin = (RequestWork*)(ptr);
     while(begin < end){
         RequestWork *buffer = begin;
         begin = (RequestWork*)((uint8_t*)begin + step);
+        buffer->content.release();
+        buffer->fd = -1;
         buffer->_next = begin;
     }
+    begin = (RequestWork*)((uint8_t*)begin - step);
     begin->_next = nullptr;
 }
-AssetsManager::RequestWork *AssetsManager::allocateWork(){
-    RequestWork *tail = this->freeWorks;
-    if(tail != nullptr)
-        this->freeWorks = tail->_next;
-    return tail;
+void AssetsManager::post(RequestWork &req,RequestInfo info){    
+    if(req.bundleHash != info.bundle){
+        if(req.fd >=0)
+            uv_fs_close(this->loop, &req.___.fs, req.fd, &close_cb);
+        req.fd = -1;
+    }
+    uv_work_t &work = req.___.work;
+    work.work_req.loop = this->loop;
+    work.work_req.done = &cb_failed;
+    work.work_req.work = &initial_work;
+    req.cb = info.cb;
+    req.bundleHash = info.bundle;
+    req.entryHash = info.entry;
+    req.thiz = this;
+    uv_queue_work_quick(&work);
 }
-void AssetsManager::open(string_view bundleName,string_view entryName, CBSignature onOpen) {
+void AssetsManager::onCleanup(RequestWork *req) {    
+    req->content.reset();
+    if(this->pageQueue.empty()){
+        req->_next = this->freeWorks;
+        this->freeWorks = req;
+    }else{
+        RequestPage &page = this->pageQueue.front();
+        post(*req,page.pool[page.readIndex++]);
+        if(page.readIndex == this->RequestPageSize)
+            this->pageQueue.pop();
+    }
+}
+#pragma region open
+void AssetsManager::open(string_view bundleName,string_view entryName, CBSignature onOpen) noexcept {
     Hash bundleHash = HashHelper::FNV1A32(bundleName);
     Hash entryHash = HashHelper::FNV1A32(entryName);
-    RequestWork *req = allocateWork();
+    RequestWork *req = this->freeWorks;
     if(req){
-        uv_work_t *work = &req->___.work;
-        work->data = work;
-        work->work_req.loop = uv_default_loop();
-        work->work_req.loop = uv_default_loop();
-        work->work_req.done = &cb_failed;
-        work->work_req.work = &initial_work;
-        req->cb = onOpen;
-        req->bundleHash = bundleHash;
-        req->entryHash = entryHash;
-        req->thiz = this;
-        uv_queue_work_quick(work);
+        this->freeWorks = req->_next;
+        post(*req,RequestInfo{
+            .cb = onOpen,
+            .bundle = bundleHash,
+            .entry = entryHash,
+        });
     }else{
         RequestPage *page = &this->pageQueue.back();
         if(page->writeIndex == this->RequestPageSize){
@@ -124,7 +145,8 @@ void AssetsManager::open(string_view bundleName,string_view entryName, CBSignatu
         };
     }
 }
-
+#pragma endregion open
+#pragma region indexBundle
 void AssetsManager::indexBundle(string_view filename){
     Hash hash = HashHelper::FNV1A32(filename);
     if(bundles.indexOf(hash) >= 0)
@@ -154,6 +176,8 @@ void AssetsManager::indexBundle(string_view filename){
             blkSize = statbuf.st_blksize;
         }
         uv_fs_req_cleanup(&req);
+        if(blkSize & (blkSize-1))
+            throw std::runtime_error("indexBundle(): unable to open the file\n");
 
         if((sizeof(local_file_header) + sizeof(central_dir_header) + sizeof(end_of_central_dir_record)) > fileSize)
             throw std::runtime_error("indexBundle(): unable to open the file\n");
@@ -236,7 +260,7 @@ void AssetsManager::indexBundle(string_view filename){
             header.file_comment_length;
         if(i > (uint32_t)buf.len)
             break;
-        if(header.external_file_attributes & 128)
+        if(header.uncompressed_size)
         {
             Hash hashValue = HashHelper::FNV1A32(&header+1,header.file_name_length);
             if(hashValue == 0)
@@ -263,23 +287,24 @@ void AssetsManager::indexBundle(string_view filename){
     }
     bundles.insert(hash,bundle.release());
 }
-
+#pragma endregion indexBundle
 #pragma region libuv callbacks
 
-void AssetsManager::freeWork(RequestWork *ref) {
-    RequestWork *tail = this->freeWorks;
-    ref->_next = tail;
-    this->freeWorks = ref;
+void AssetsManager::cb_failed(struct uv__work* w, int err){
+    RequestWork* req = (RequestWork*)((char*)w - offsetof(RequestWork, ___.work.work_req));
+    unsigned int *count = &w->loop->active_reqs.count;
+    if(*count <= 0) throw std::runtime_error("");
+    (*count)--;
+    req->cb(nullptr,0,0);
+    req->thiz->onCleanup(req);
 }
 void AssetsManager::close_cb(uv_fs_t* fs) {
-    RequestWork* req = (RequestWork*)((char*)fs - offsetof(RequestWork, ___.fs));
     uv_fs_req_cleanup(fs);
 }
 void AssetsManager::after_read(uv_fs_t* fs) {
     RequestWork* req = (RequestWork*)((char*)fs - offsetof(RequestWork, ___.fs));
     ssize_t result = fs->result;
     uv_fs_req_cleanup(fs);
-    uv_fs_close(fs->loop,fs, req->fd, &close_cb);
     local_file_header *header;
     uint32_t actualSize;
     if(sizeof(local_file_header) > result)
@@ -293,10 +318,12 @@ void AssetsManager::after_read(uv_fs_t* fs) {
     if(actualSize > req->buf.len)
         goto error;
     req->cb(std::move(req->content),header->compressed_size,req->blockOffset);
-    return;
+    goto cleanup;
 error:
     req->content.reset();
     req->cb(nullptr,0,0);
+cleanup:
+    req->thiz->onCleanup(req);
 }
 void AssetsManager::initial_after_work(struct uv__work* w, int err) {
     RequestWork* req = (RequestWork*)((char*)w - offsetof(RequestWork, ___.work.work_req));
@@ -306,62 +333,62 @@ void AssetsManager::initial_after_work(struct uv__work* w, int err) {
         if(*count <= 0) throw std::runtime_error("");
         (*count)--;
     }
-    req->content   = std::make_unique<uint8_t[]>(req->buf.len);
+    req->content   = make_align<uint8_t[]>(req->buf.len);
     req->buf.base  = (char*)req->content.get();
     uv_fs_read(loop, &req->___.fs, req->fd, &req->buf, 1, req->beginOffset, after_read);
 }
-void AssetsManager::cb_failed(struct uv__work* w, int err){
-    RequestWork* req = (RequestWork*)((char*)w - offsetof(RequestWork, ___.work.work_req));
-    unsigned int *count = &w->loop->active_reqs.count;
-    if(*count <= 0) throw std::runtime_error("");
-    (*count)--;
-    req->cb(nullptr,0,0);
-}
 void AssetsManager::initial_work(uv__work* w){
     RequestWork* req = (RequestWork*)((char*)w - offsetof(RequestWork, ___.work.work_req));
-    AssetsManager *thiz = req->thiz;
-    auto &bundles = thiz->bundles;
-    Hash entryHash = req->entryHash;
-    int index = bundles.indexOf(req->bundleHash);
-    if(index >= 0)
+    Bundle *bundle;
+    uint32_t offset;
     {
-        Bundle *bundle = bundles.getValue(index);
+        {
+            AssetsManager *thiz = req->thiz;
+            auto &bundles = thiz->bundles;
+            int index = bundles.indexOf(req->bundleHash);
+            if(index < 0)
+                return;        
+            bundle = bundles.getValue(index);
+        }
+        Hash entryHash = req->entryHash;
         if(entryHash == 0)
             entryHash = 1;
         uint32_t hashMask = bundle->mapSize - 1;
         uint32_t capacity = bundle->mapSize; 
-        uint32_t offset = (entryHash & hashMask);
         uint32_t attempts = 0;
+        uint32_t hash;
+        offset = (entryHash & hashMask);
         while (true)
         {
-            uint32_t hash = bundle->hashes[offset];
+            hash = bundle->hashes[offset];
             if (hash == 0)
+                return;
+            if (unlikely(hash == entryHash))
                 break;
-            if (hash == entryHash)
-            {
-                uint32_t blkSize = bundle->blkSize;
-                EntityInfo info = bundle->entities[offset];
-                req->blockOffset = info.offset % blkSize;
-                req->beginOffset  = info.offset - req->blockOffset;
-                uint32_t len = req->beginOffset + info.size;
-                uint32_t rem = len % blkSize;
-                if(rem)
-                    req->buf.len = len + blkSize - rem;
-                else
-                    req->buf.len = len;
-                uv_fs_t reqTemp;
-                req->fd = uv_fs_open(w->loop,&reqTemp,bundle->path,UV_FS_O_RDONLY | UV_FS_O_DIRECT, 0, NULL);
-                uv_fs_req_cleanup(&reqTemp);
-                if(req->fd < 0)
-                    break;
-                w->done = &initial_after_work;
-            }
             offset = (offset + 1) & hashMask;
             ++attempts;
             if (attempts == capacity)
-                break;
+                return;
         }
     }
+    const uint32_t blkSize = bundle->blkSize;
+    const EntityInfo info = bundle->entities[offset];
+    req->blockOffset = info.offset & (blkSize-1);
+    req->beginOffset  = info.offset - req->blockOffset;
+    const uint32_t len = req->beginOffset + info.size;
+    const uint32_t rem = len & (blkSize-1);
+    if(rem)
+        req->buf.len = len + blkSize - rem;
+    else
+        req->buf.len = len;
+    uv_fs_t reqTemp;
+    if(req->fd < 0){
+        req->fd = uv_fs_open(w->loop,&reqTemp,bundle->path,UV_FS_O_RDONLY | UV_FS_O_DIRECT, 0, NULL);
+        uv_fs_req_cleanup(&reqTemp);
+        if(req->fd < 0)
+            return;
+    }
+    w->done = &initial_after_work;
 }
 
 #pragma endregion

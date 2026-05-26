@@ -32,7 +32,7 @@ namespace ECS
         friend class EntityComponentStore;
         // MAGIC NUMBER. Header size. DO NOT TOUCH.
         /// @details Considerations: must be cache line aligned
-        static constexpr uint32_t MemoryOffset = 64;
+        static constexpr uint32_t MemoryOffset = Constants::CacheLineSize;
         // MAGIC NUMBER. Chunk size. DO NOT TOUCH.
         /// @details Considerations: any number larger than 0xFFFF may cause overflow in offset array!
         static constexpr uint32_t MemorySize = 16 * 1024;

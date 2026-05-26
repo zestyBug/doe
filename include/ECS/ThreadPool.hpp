@@ -29,6 +29,8 @@ namespace ECS
             }
         };
         static void init();
+        /// @warning Internals only
+        static void stop();
         static void signalQuit();
         static void signalRender();
         /// @brief 

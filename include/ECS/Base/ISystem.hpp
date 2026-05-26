@@ -7,9 +7,9 @@ namespace ECS
 {
     struct DOE;
     struct ISystem {
-        virtual void OnUpdate(DOE*){};
-        virtual void OnFixedUpdate(DOE*){};
-        virtual void OnDestroy(DOE*){};
+        virtual void OnUpdate(DOE&){};
+        virtual void OnFixedUpdate(DOE&){};
+        virtual void OnDestroy(DOE&){};
         virtual ~ISystem(){}
     };
 }

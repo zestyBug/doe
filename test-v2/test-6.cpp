@@ -12,7 +12,7 @@ void* malloc_func(size_t size)
     #endif
     *(size_t*)ptr = size;
     ptr+=Constants::CacheLineSize;
-    printf("malloc_func(%lu);// %p\n",size,ptr);
+    //printf("malloc_func(%lu);// %p\n",size,ptr);
     return ptr;
 }
 void* realloc_func(void* ptr, size_t size)
@@ -24,7 +24,7 @@ void* realloc_func(void* ptr, size_t size)
     *(size_t*)nptr = size;
     nptr+=Constants::CacheLineSize;
     uint8_t *pptr = (uint8_t*)ptr - Constants::CacheLineSize;
-    printf("realloc_func(%p(%lu),%lu);// %p\n",ptr,ptr?*(size_t*)pptr:0,size,nptr);
+    //printf("realloc_func(%p(%lu),%lu);// %p\n",ptr,ptr?*(size_t*)pptr:0,size,nptr);
     if(ptr) {
         memcpy(nptr, ptr,  std::min(*(size_t*)pptr,size));
         free(pptr);
@@ -43,7 +43,7 @@ void* calloc_func(size_t count, size_t size)
     #endif
     *(size_t*)ptr = size;
     ptr+=Constants::CacheLineSize;
-    printf("calloc_func(%lu);// %p\n",size,ptr);
+    //printf("calloc_func(%lu);// %p\n",size,ptr);
     memset(ptr,0,size);
     return ptr;
 }
@@ -51,7 +51,7 @@ void free_func(void* ptr)
 {
     if(ptr){
         uint8_t *sptr = (uint8_t*)ptr - Constants::CacheLineSize;
-        printf("free_func(%p);// %lu\n", ptr, *(size_t*)sptr);
+        //printf("free_func(%p);// %lu\n", ptr, *(size_t*)sptr);
         free(sptr);
         #ifdef DEBUG
             allocator_counter2--;
@@ -59,8 +59,10 @@ void free_func(void* ptr)
     }
 }
 
-static void onCB(std::unique_ptr<uint8_t[]> ptr,uint32_t size, uint32_t offset){
-    uint8_t *data = ptr.get() + offset;
+static void onCB(align_ptr<uint8_t[]> ptr,uint32_t size, uint32_t offset){
+    printf("Got: %p(+%u) %u byte\n",ptr.get(), offset, size);
+    if(size)
+        write(1,ptr.get()+offset,size);
 }
 
 int main(int argc, char*argv[]){
@@ -74,10 +76,11 @@ int main(int argc, char*argv[]){
         uv_setup_args(argc,argv);
         uv_loop_t *loop = uv_default_loop();
         AssetsManager am;
-        am.indexBundle("./dump/New folder.zip");
-        am.open("./dump/New folder.zip","docs/code/cgi/main.c",&onCB);
+        am.indexBundle("./dump/test.zip");
+        am.open("./dump/test.zip","test.c",&onCB);
         uv_run(loop,UV_RUN_DEFAULT);
-        uv_loop_close(loop);
+        if(uv_loop_close(loop))
+            printf("Libuv error: active requests\n");
         uv_library_shutdown();
     }
 #ifdef DEBUG
