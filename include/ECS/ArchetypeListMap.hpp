@@ -80,43 +80,9 @@ namespace ECS
                 resize(size() / 2);
         }
 
-
-        void init(uint32_t count){
-            if (count < minimumSize())
-                count = minimumSize();
-
-            // is power of 2?
-            if(0 != (count & (count - 1)))
-                throw std::invalid_argument("Init(): count must be power of 2");
-
-            const uint32_t size1 = alignPointerSize(sizeof(Archetype*)*count);
-            const uint32_t size2 = sizeof(uint32_t)*count;
-            uint8_t* ptr = std::allocator<uint8_t>().allocate(size1+size2);
-            pointers.reset((Archetype**)ptr);
-            hashes = (uint32_t *)(ptr+size1);
-            memset(hashes,0,size2);
-            _capacity = count;
-            emptyNodes = count;
-        }
-        void appendFrom(ArchetypeListMap& src){
-            for (uint32_t offset = 0; offset < src.size(); ++offset)
-            {
-                uint32_t hash = src.hashes[offset];
-                if (hash != 0 && hash != _SkipCode)
-                    add(src.pointers[offset]);
-            }
-            src.reset();
-        }
-        void resize(uint32_t size){
-            if (size < minimumSize())
-                size = minimumSize();
-            if (size == this->size())
-                return;
-            ArchetypeListMap temp;
-            temp.init(size);
-            temp.appendFrom(*this);
-            *this = std::move(temp);
-        }
+        void init(uint32_t count);
+        void appendFrom(ArchetypeListMap& src);
+        void resize(uint32_t size);
         void add(Archetype* ptr);
         void remove(Archetype* ptr);
         /// @brief find a pointer with a key using hash list

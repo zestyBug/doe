@@ -63,7 +63,8 @@ class allocator
     constexpr allocator() { }
     allocator(const allocator&){ }
     allocator& operator=(const allocator&) = default;
-    template<typename _Tp1> allocator(const allocator<_Tp1>&) { }
+    template<typename _Tp1>
+    allocator(const allocator<_Tp1>&) { }
     ~allocator() { }
 
     [[nodiscard]]

@@ -342,7 +342,7 @@ int AssetsManager::Bundle::findEntity(Hash32 entryHash)
 #pragma endregion indexBundle
 #pragma region libuv callbacks
 
-void AssetsManager::cb_failed(struct uv__work* w, int err){
+void AssetsManager::cb_failed(struct uv__work* w, int){
     RequestWork* req = (RequestWork*)((char*)w - offsetof(RequestWork, ___.work.work_req));
     unsigned int *count = &w->loop->active_reqs.count;
     if(*count <= 0) throw std::runtime_error("");
@@ -366,7 +366,7 @@ error:
 cleanup:
     req->thiz->onCleanup(req);
 }
-void AssetsManager::initial_after_work(struct uv__work* w, int err) {
+void AssetsManager::initial_after_work(struct uv__work* w, int) {
     RequestWork* req = (RequestWork*)((char*)w - offsetof(RequestWork, ___.work.work_req));
     uv_loop_t *loop = w->loop;
     {

@@ -193,6 +193,9 @@ OBJS= \
 	$(OBJ)/$(srcDir)/ECS/ChunkListChanges.o \
 	$(OBJ)/$(srcDir)/ECS/EntityQueryManager.o \
 	$(OBJ)/$(srcDir)/ECS/JobChunk.o \
+	$(OBJ)/$(srcDir)/ECS/ChunkStore.o \
+	$(OBJ)/$(srcDir)/ECS/SharedComponentStore.o \
+	$(OBJ)/$(srcDir)/ECS/EntityStore.o \
 	$(OBJ)/$(cutilDir)/HashHelper.o
 
 DEPS = $(OBJS:.o=.d)
@@ -224,7 +227,7 @@ test-4: $(BIN)/test-4
 test-5: $(BIN)/test-5
 test-6: $(BIN)/test-6
 test-7: $(BIN)/test-7
-main: $(BIN)/main
+main:   $(BIN)/main
 
 clean:
 	@echo "Cleaning up..."

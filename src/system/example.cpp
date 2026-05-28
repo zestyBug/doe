@@ -5,7 +5,7 @@
 ECS::SystemRegister<ExampleSystem> _{};
 void ExampleSystem::OnFixedUpdate(ECS::DOE&){
     counter++;
-    if(counter == 100)
+    if(counter == 1000)
         ECS::JobsUtility::signalQuit();
 }
 ExampleSystem::ExampleSystem(ECS::DOE &e):ISystem{e}{
