@@ -24,7 +24,7 @@ namespace ECS
         std::vector<Schedule> scheduleQueue;
         AssetsManager am;
         ResourceManager rm;
-        DOE() {
+        DOE(){
             sys.reserve(Constants::InitialSystemCapacity);
             scheduleQueue.reserve(Constants::InitialJobPoolCapacity);
         };

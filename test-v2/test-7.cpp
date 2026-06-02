@@ -49,7 +49,7 @@ int main(int argc, char*argv[])
         am.indexBundle("./dump/test.zip");
         ResourceManager rm;
         _rm=&rm;
-        ResourceID id = rm.registerResource( &Load, &Free, &rm, 20);
+        ResourceType id = rm.registerResourceType( &Load, &Free, &rm, 20);
         rm.loadResource(id, "test", nullptr, &Waiter);
         uv_run(loop,UV_RUN_DEFAULT);
         void *value = rm.getResource(_rc);

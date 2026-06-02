@@ -40,20 +40,6 @@ namespace ECS
     public:
         void cleanChangeList();
 
-        //int m_UnmanagedSharedComponentCount;
-        //std::vector<ComponentTypeList> m_UnmanagedSharedComponentsByType;
-        // struct SharedComponentInfo
-        // {
-        //     int RefCount;
-        //     int ComponentType;
-        //     int Version;
-        //     int HashCode;
-        // };
-        //std::vector<TypeID> m_UnmanagedSharedComponentTypes;
-        //std::vector<std::vector<SharedComponentInfo>> m_UnmanagedSharedComponentInfo;
-
-        //ResourceMap hashLookup;
-
     #pragma region Archetype
     private:
         static void validateArchetype(const_span<TypeID> types);

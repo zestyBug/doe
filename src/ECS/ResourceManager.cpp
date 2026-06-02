@@ -1,16 +1,52 @@
 #include "ECS/ResourceManager.hpp"
+#include "cutil/set.hpp"
 using namespace ECS;
 #pragma region ResourceManager
+struct ResourceManager::ResourceStore {
+    void          *Ctx = nullptr;
+    LoadSignature *Load = nullptr;
+    FreeSignature *Free = nullptr;
+    uint32_t       typeSize = 0;
+    uint32_t       blockCount = 0; 
+    uint32_t       freeIndex = 0;
+    ResourceType     type = 0;
+    set<uint32_t>  hashmap;
+    struct ResourceBlock {
+        ResourceTask resources[Constants::ResourceBlockSize];
+        uint32_t     refCounts[Constants::ResourceBlockSize];
+        uint8_t      data[];
+    };
+    std::unique_ptr<ResourceBlock> blocks[Constants::ResourceBlockCount];
+
+    ResourceTask& getResource(uint32_t index);
+    uint32_t& getRefCount(uint32_t index);
+    void* getValue(uint32_t index);
+    void addBlock();
+    ResourceTask& allocateResource(Hash32 hash);
+    void freeResource(ResourceTask &task);
+    ~ResourceStore()=default;
+};
+ResourceManager::~ResourceManager(){
+    for(uint32_t i=0;i<Constants::MaximumResourcesCount;i++){
+        if(this->sharedValues[i]){
+            this->sharedValues[i]->~ResourceStore();
+            std::allocator<ResourceStore>().deallocate(this->sharedValues[i],1);
+        }else{
+            break;
+        }
+    }
+}
 //ResourceManager::ResourceManager(){}
-ResourceID ResourceManager::registerResource(LoadSignature *load, FreeSignature *free, void* ctx, uint32_t typeSize) {
+ResourceType ResourceManager::registerResourceType(LoadSignature *load, FreeSignature *free, void* ctx, uint32_t typeSize) {
     if(unlikely(typeCount >= Constants::MaximumResourcesCount))
-        throw std::runtime_error("registerResource(): Constants::MaximumResourcesCount");
+        throw std::runtime_error("registerResourceType(): Constants::MaximumResourcesCount");
     if(!free || !load)
-        throw std::invalid_argument("registerResource(): nullptr function");
+        throw std::invalid_argument("registerResourceType(): nullptr function");
     const uint32_t index = typeCount++;
-    //sharedInfos[index].TypeIndex = ResourceID::fromIndex(index);
+    //sharedInfos[index].TypeIndex = ResourceType::fromIndex(index);
     //sharedInfos[index].TypeSize = sizeof(T);
-    sharedValues[index] = std::make_unique<ResourceStore>();
+    sharedValues[index] = std::allocator<ResourceStore>().allocate(1);
+    new (sharedValues[index]) ResourceStore();
     ResourceStore &store = *sharedValues[index];
     store.Load = load;
     store.Free = free;
@@ -20,7 +56,7 @@ ResourceID ResourceManager::registerResource(LoadSignature *load, FreeSignature 
     //sharedInfos[index].Name = name;
     return index;
 }
-void ResourceManager::loadResource(ResourceID id, string_view name, void *ctx, WaiterSignature *cb)
+void ResourceManager::loadResource(ResourceType id, string_view name, void *ctx, WaiterSignature *cb)
 {
     if(id >= ResourceManager::typeCount)
         throw std::invalid_argument("getStore(): invalid resource id");
