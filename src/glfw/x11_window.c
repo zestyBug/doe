@@ -57,8 +57,7 @@
 #define _GLFW_XDND_VERSION 5
 
 // Wait for event data to arrive on the X11 display socket
-// This avoids blocking other threads via the per-display Xlib lock that also
-// covers GLX functions
+// This avoids blocking other threads via the per-display Xlib lock
 //
 static GLFWbool waitForX11Event(double* timeout)
 {
@@ -74,8 +73,7 @@ static GLFWbool waitForX11Event(double* timeout)
 }
 
 // Wait for event data to arrive on any event file descriptor
-// This avoids blocking other threads via the per-display Xlib lock that also
-// covers GLX functions
+// This avoids blocking other threads via the per-display Xlib lock
 //
 static GLFWbool waitForAnyEvent(double* timeout)
 {
@@ -1959,10 +1957,10 @@ void _glfwCreateInputContext(_GLFWwindow* window)
 GLFWbool _glfwCreateWindowOS(_GLFWwindow* window,
                               const _GLFWwndconfig* wndconfig)
 {
-    Visual* visual = _glfw.x11.glxVisual->visual;
-    int depth = _glfw.x11.glxVisual->depth;
+    Visual* visual = NULL;
+    int depth;
 
-    if (!visual || !depth)
+    if (!visual)
     {
         visual = DefaultVisual(_glfw.x11.display, _glfw.x11.screen);
         depth = DefaultDepth(_glfw.x11.display, _glfw.x11.screen);
@@ -3039,19 +3037,6 @@ const char* _glfwGetClipboardStringOS(void)
 //////////////////////////////////////////////////////////////////////////
 //////                        GLFW native API                       //////
 //////////////////////////////////////////////////////////////////////////
-
-GLFWAPI void glfwSwapBuffer(GLFWwindow* window)
-{
-    _GLFW_REQUIRE_INIT();
-    glXSwapBuffers(_glfw.x11.display, ((_GLFWwindow*)window)->x11.handle);
-}
-GLFWAPI int glfwMakeContextCurrent(GLFWwindow* window)
-{
-    _GLFW_REQUIRE_INIT_OR_RETURN(0);
-    if (!glXMakeContextCurrent(_glfw.x11.display, ((_GLFWwindow*)window)->x11.handle, ((_GLFWwindow*)window)->x11.handle, _glfw.x11.glxContext))
-        return GLFW_FALSE;
-    return GLFW_TRUE;
-}
 
 GLFWAPI Display* glfwGetX11Display(void)
 {

@@ -182,6 +182,7 @@ GLFWAPI const char* glfwGetWin32Monitor(GLFWmonitor* monitor);
  *  @ingroup native
  */
 GLFWAPI HWND glfwGetWin32Window(GLFWwindow* window);
+GLFWAPI HINSTANCE glfwGetWin32Instance();
 #endif
 
 

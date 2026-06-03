@@ -87,6 +87,7 @@
     "C_Cpp.inlayHints.parameterNames.suppressWhenArgumentContainsName": false,
     "C_Cpp.inlayHints.referenceOperator.enabled": true,
     "C_Cpp.default.defines": [
-        "_GLFW_WIN32"
+        "_GLFW_WIN32",
+        "VK_USE_PLATFORM_WIN32_KHR"
     ],
 }

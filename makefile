@@ -39,7 +39,9 @@ systemDir=src/system
 #export
 
 
-
+$(OBJ)/$(srcDir)/vulkan/%.o: $(srcDir)/vulkan/%.cpp
+	mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 $(OBJ)/$(srcDir)/system/%.o: $(srcDir)/system/%.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
@@ -59,9 +61,6 @@ $(OBJ)/main.o: $(srcDir)/main.cpp
 	mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $< -o $@
 $(OBJ)/$(srcDir)/glfw/%.o: $(srcDir)/glfw/%.c
-	mkdir -p $(@D)
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
-$(OBJ)/$(srcDir)/glcorearb.o: $(srcDir)/glcorearb.c
 	mkdir -p $(@D)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
@@ -84,7 +83,7 @@ ifeq ($(OS),Windows_NT)
 		$(OBJ)/$(srcDir)/glfw/win32_monitor.o \
 		$(OBJ)/$(srcDir)/glfw/win32_time.o \
 		$(OBJ)/$(srcDir)/glfw/win32_window.o
-	CPPFLAGS+=-D_GLFW_WIN32
+	CPPFLAGS+=-D_GLFW_WIN32 -DVK_USE_PLATFORM_WIN32_KHR
 # LDFLAGS+=-lgdi32
 else
 	OBJS_GLFW+= \
@@ -95,7 +94,7 @@ else
 		$(OBJ)/$(srcDir)/glfw/x11_monitor.o \
 		$(OBJ)/$(srcDir)/glfw/x11_window.o \
 		$(OBJ)/$(srcDir)/glfw/xkb_unicode.o
-	CPPFLAGS+=-D_GLFW_X11
+	CPPFLAGS+=-D_GLFW_X11 -DVK_USE_PLATFORM_XLIB_KHR
 	LDFLAGS+=-lGL
 #install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev 
 endif
@@ -196,6 +195,8 @@ OBJS= \
 	$(OBJ)/$(srcDir)/ECS/ChunkStore.o \
 	$(OBJ)/$(srcDir)/ECS/SharedComponentStore.o \
 	$(OBJ)/$(srcDir)/ECS/EntityStore.o \
+	$(OBJ)/$(srcDir)/vulkan/wrapper.o \
+	$(OBJ)/$(srcDir)/vulkan/VKContext.o \
 	$(OBJ)/$(cutilDir)/HashHelper.o
 
 DEPS = $(OBJS:.o=.d)

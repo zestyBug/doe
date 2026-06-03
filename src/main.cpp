@@ -2,17 +2,22 @@
 #include "ECS/ThreadPool.hpp"
 #include "uv.h"
 #include "glfw/glfw3.h"
-#include "glfw/glfw3native.h"
+#include "vulkan/VKContext.hpp"
 using namespace ECS;
 
 extern std::unique_ptr<DOE> sharedEngine;
 extern GLFWwindow* window;
 
 int main(int argc, char*argv[]){
+    VKContext vk;
+    vk.initialize();
     if (!glfwInit()) return 1;
     uv_setup_args(argc,argv);
     uv_loop_t *loop = uv_default_loop();
     window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
+    vk.createSurface(window);
+    vk.selectDevice();
+    vk.initDevice();
     //glwInitialize(0x304);
     sharedEngine = std::make_unique<DOE>();
     TypeManager::Initialize();
