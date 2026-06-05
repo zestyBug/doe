@@ -17,7 +17,7 @@ int main(int argc, char*argv[]){
     window = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
     vk.createSurface(window);
     vk.selectDevice();
-    vk.initDevice();
+    vk.initSwapchain();
     //glwInitialize(0x304);
     sharedEngine = std::make_unique<DOE>();
     TypeManager::Initialize();
