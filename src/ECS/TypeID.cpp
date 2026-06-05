@@ -62,4 +62,3 @@ template<> TypeID __typeid__<ECS::Entity>(){
 }
 
 }
-ssize_t allocator_counter = 0;

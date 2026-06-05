@@ -51,7 +51,7 @@ $(OBJ)/$(srcDir)/ECS/%.o: $(srcDir)/ECS/%.cpp
 $(OBJ)/$(srcDir)/libuv/%.o: $(srcDir)/libuv/%.c
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(libuv_la_CFLAGS) -c $< -o $@
-$(OBJ)/$(cutilDir)/%.o: $(cutilDir)/%.cpp
+$(OBJ)/$(srcDir)/cutil/%.o: $(srcDir)/cutil/%.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) -c $< -o $@
 $(OBJ)/$(testDir)/test-%.o: $(testDir)/test-%.cpp
@@ -197,7 +197,8 @@ OBJS= \
 	$(OBJ)/$(srcDir)/ECS/EntityStore.o \
 	$(OBJ)/$(srcDir)/vulkan/wrapper.o \
 	$(OBJ)/$(srcDir)/vulkan/VKContext.o \
-	$(OBJ)/$(cutilDir)/HashHelper.o
+	$(OBJ)/$(srcDir)/cutil/HashHelper.o \
+	$(OBJ)/$(srcDir)/cutil/basics.o
 
 DEPS = $(OBJS:.o=.d)
 DEPS += $(SYSS:.o=.d)

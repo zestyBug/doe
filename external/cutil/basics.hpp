@@ -5,9 +5,6 @@
 #if !defined(BASICS_HPP)
 #define BASICS_HPP
 
-#ifdef DEBUG
-#include <stdio.h>
-#endif
 //memory allocation
 #include <stdlib.h>
 // heavy dependancy
@@ -52,9 +49,9 @@ inline uint32_t alignCacheLineSize(uint32_t size){
 inline uint32_t alignPointerSize(uint32_t size){
     return (size+((uint32_t)sizeof(void*)-1))&(~((uint32_t)sizeof(void*)-1));
 }
-#ifdef DEBUG
+void* _allocate(size_t);
+void _deallocate(void*);
 extern ssize_t allocator_counter;
-#endif
 template<typename _Tp=uint8_t>
 class allocator
 {
@@ -68,43 +65,13 @@ class allocator
     ~allocator() { }
 
     [[nodiscard]]
-    _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) {
-        _Tp* ret;
-        __n = sizeof(_Tp) * __n;
-        if(__n < 1)      return nullptr;
-        if(__n>0x100000)  throw std::bad_alloc();
-        #if DOE_WIN32
-            ret = (_Tp*) _aligned_malloc(__n,ECS::Constants::CacheLineSize);
-        #else
-            ret = (_Tp*) aligned_alloc(ECS::Constants::CacheLineSize,__n);
-        #endif
-            if(ret == nullptr) throw std::bad_alloc();
-        #ifdef DEBUG
-            allocator_counter++;
-        #endif
-    #ifdef DEBUG
-        printf("allocator::allocate(): %u byte in %p\n",(uint32_t)__n,ret);
-    #endif
-        return ret;
+    inline _Tp* allocate(size_t __n,const void* = static_cast<const void*>(0)) {
+        return (_Tp*)_allocate(sizeof(_Tp) * __n);
     }
 
     // null safe
-    void deallocate(void* __p, uint32_t __n=0) {
-        (void)__n;
-        if(likely(__p != nullptr)){
-        #ifdef DEBUG
-            printf("allocator::deallocate(): %p\n",__p);
-        #endif
-        #if DOE_WIN32
-            _aligned_free(__p);
-        #else
-            free(__p);
-        #endif
-        #ifdef DEBUG
-            allocator_counter--;
-        #endif
-        }
-
+    inline void deallocate(void* __p, uint32_t=0) {
+        _deallocate(__p);
     }
 
     bool operator==(const allocator&) { return true; }
