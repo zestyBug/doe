@@ -187,14 +187,6 @@ void JobsUtility::init(){
     uv_async_init(uv_default_loop(), sharedData.wakecall, wakeThread);
     uv_timer_start(sharedData.fixedTimer, on_fixed_timer, 0, 20);
 }
-void JobsUtility::stop() {
-    // dead locking the JobsUtility for ever
-    sharedData.activeThreads++;
-    uv_timer_stop(sharedData.fixedTimer);
-    uv_unref((uv_handle_t*)sharedData.wakecall);
-    if(window)
-        glfwSetWindowShouldClose(window, 1);
-}
 void on_fixed_timer(uv_timer_t *) {
     sharedData.bitmask |= Request::Timer;
     uv_async_send(sharedData.wakecall);
@@ -202,6 +194,7 @@ void on_fixed_timer(uv_timer_t *) {
 void JobsUtility::signalQuit(){
     sharedData.bitmask |= Request::Exit;
     uv_async_send(sharedData.wakecall);
+    glfwSetWindowShouldClose(window, 1);
 }
 void JobsUtility::signalRender(){
     sharedData.bitmask |= Request::Render;
@@ -234,7 +227,9 @@ void iterate_systems(){
                 (*begin)->OnDestroy(*sharedEngine);
                 begin++;
             }
-            JobsUtility::stop();
+            uv_timer_stop(sharedData.fixedTimer);
+            uv_unref((uv_handle_t*)sharedData.wakecall);
+            uv_stop(uv_default_loop());
             return;
         } else if(sharedData.bitmask & Request::Timer) {
             while (begin != end){

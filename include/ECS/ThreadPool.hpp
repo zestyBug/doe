@@ -22,8 +22,6 @@ namespace ECS
     struct DOE;
     struct JobsUtility final {
         static void init();
-        /// @warning Internals only
-        static void stop();
         static void signalQuit();
         static void signalRender();
         /// @brief 
