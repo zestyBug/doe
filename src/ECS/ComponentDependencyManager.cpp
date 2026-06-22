@@ -35,7 +35,7 @@ JobHandle ComponentDependencyManager::getDependency(const EntityQueryData &query
     if(queries == queries_end)
         return JobHandle();
     // wish we dont stack overflow
-    JobHandle allHandles[counter * MaximumReadJobHandle];
+    JobHandle allHandles[Constants::MaximumQueryTypesCount * MaximumReadJobHandle];
     uint32_t allHandleCount = 0;
 
     while(queries != queries_end){

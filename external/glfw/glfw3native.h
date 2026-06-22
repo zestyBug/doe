@@ -240,6 +240,9 @@ GLFWAPI id glfwGetCocoaView(GLFWwindow* window);
 #endif
 
 #if defined(_GLFW_X11)
+
+GLFWAPI VisualID glfwGetVisualID(void);
+
 /*! @brief Returns the `Display` used by GLFW.
  *
  *  @return The `Display` used by GLFW, or `NULL` if an

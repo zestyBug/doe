@@ -1,20 +1,9 @@
 #include "vulkan/VKContext.hpp"
-#include "cutil/basics.hpp"
+#include "glfw/glfw3native.h"
 #include <vector>
 #define arrayCount(X) (sizeof(X)/sizeof(*X))
 using namespace ECS;
 
-class VulkanException : public std::exception {
-public:
-    VulkanException(VkResult result, const char* expression);
-    ~VulkanException(){};
-    /** Returns a C-style character string describing the general cause of
-     *  the current error (the same string passed to the ctor).  */
-    const char* what() const noexcept {return message.get();};
-private:
-    static const char* VkResultToString(VkResult result);
-    std::unique_ptr<char[]> message;
-};
 VulkanException::VulkanException(VkResult result, const char* expression):std::exception{}
 {
     this->message = std::make_unique<char[]>(512);
@@ -128,6 +117,10 @@ VkBool32 VKContext::TestSurfaceSupport(VkPhysicalDevice pd, VkSurfaceKHR surface
         res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pd,surface,&capability);
         if(res)
             throw VulkanException(res, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+        if(capability.maxImageExtent.height < 480 || capability.maxImageExtent.width < 640)
+            return 1;
+        if(capability.minImageCount > Constants::MaximumSwapchainImageCount)
+            return 1;
     }
     {
         uint32_t surface_format_count = 0;
@@ -165,15 +158,34 @@ success:
     }
     return 0;
 }
+VKContext::VKContext(){
+    memset(this,0,sizeof(*this));
+}
 VKContext::~VKContext(){
     vkDeviceWaitIdle(this->device);
-    if(instance){
-        if(device){
-            if(surface){
-                vkDestroySurfaceKHR(instance,surface,NULL);
-            }
+    if(instance != VK_NULL_HANDLE){
+        if(device != VK_NULL_HANDLE)
+        {
+            for (uint32_t i=0;i<this->imageCount;i++)
+                if(this->frambuffer[i] != VK_NULL_HANDLE)
+                    vkDestroyFramebuffer(this->device, this->frambuffer[i], 0);
+            for (uint32_t i=0;i<this->imageCount;i++) 
+                if(this->bufferView[i] != VK_NULL_HANDLE)
+                    vkDestroyImageView(this->device, this->bufferView[i], 0);
+            if (swapchain != VK_NULL_HANDLE)
+		        vkDestroySwapchainKHR(this->device, swapchain, NULL);
+            if (this->renderpass != VK_NULL_HANDLE)
+                vkDestroyRenderPass(this->device, this->renderpass, NULL);
+            if (this->queueFence != VK_NULL_HANDLE)
+                vkDestroyFence(this->device, this->queueFence, NULL);
+            if (this->imageSemaphore != VK_NULL_HANDLE)
+                vkDestroySemaphore(this->device, this->imageSemaphore, NULL);
+            if (this->queueSemaphore != VK_NULL_HANDLE)
+                vkDestroySemaphore(this->device, this->queueSemaphore, NULL);
             vkDestroyDevice(device,NULL);
         }
+        if(surface != VK_NULL_HANDLE)
+            vkDestroySurfaceKHR(instance,surface,NULL);
         vkDestroyInstance(instance,NULL);
     }
 }
@@ -290,6 +302,14 @@ void VKContext::selectDevice(){
         .ppEnabledExtensionNames = exts,
         .pEnabledFeatures = NULL,
     };
+    VkFenceCreateInfo fence_info = {
+		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT
+	};
+    VkSemaphoreCreateInfo sinfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .flags = VK_SEMAPHORE_TYPE_BINARY
+    };
 
     for (auto& pd : physical_devices)
     {
@@ -318,6 +338,10 @@ void VKContext::selectDevice(){
             if(!vkGetPhysicalDeviceWin32PresentationSupportKHR(pd,i))
                 continue;
         #endif
+        #ifdef VK_USE_PLATFORM_X11_KHR
+            if(!vkGetPhysicalDeviceXlibPresentationSupportKHR(pd,i,glfwGetX11Display(),glfwGetVisualID()))
+                continue;
+        #endif
             // A Device may not be plugged into a monitor or not have any graphcal output
             // which could make direct interactions with displayable images difficult or impossible.
             // ie: it can render but result image must be copied to another Device that can render to display.
@@ -341,6 +365,154 @@ exit_loop:
     if(VKInitializeWDevice(this->device))
         throw std::runtime_error("VKInitializeWDevice");
     vkGetDeviceQueue(this->device, this->queueFamilyIndex, 0, &this->queue);
+    res = vkCreateFence(this->device, &fence_info, 0, &this->queueFence);
+    if (res)
+        throw std::runtime_error("vkCreateFence");
+    res = vkCreateSemaphore(this->device, &sinfo, 0, &this->imageSemaphore);
+    if (res)
+        throw std::runtime_error("vkCreateSemaphore");
+    res = vkCreateSemaphore(this->device, &sinfo, 0, &this->queueSemaphore);
+    if (res)
+        throw std::runtime_error("vkCreateSemaphore");
 }
-void VKContext::initSwapchain(){
+
+void VKContext::initRender(){
+	VkResult res;
+    VkAttachmentReference ared {
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+    VkSubpassDescription sdesc {
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+	    .colorAttachmentCount = 1,
+	    .pColorAttachments = &ared,
+    };
+    VkAttachmentDescription adesc {
+        .format = VK_FORMAT_B8G8R8A8_SRGB,
+		.samples = VK_SAMPLE_COUNT_1_BIT,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    };
+	VkSubpassDependency subpass_dependency {
+		.srcSubpass = VK_SUBPASS_EXTERNAL,
+		.dstSubpass = 0,
+		.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		.srcAccessMask = 0,
+		.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		.dependencyFlags = 0,
+	};
+	VkRenderPassCreateInfo rpinfo {
+		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		.attachmentCount = 1,
+		.pAttachments = &adesc,
+		.subpassCount = 1,
+		.pSubpasses = &sdesc,
+		.dependencyCount = 1,
+		.pDependencies = &subpass_dependency,
+	};
+	res = vkCreateRenderPass(this->device, &rpinfo, nullptr, &this->renderpass);
+	if (res)
+		throw VulkanException(res, "vkCreateRenderPass");
+}
+void VKContext::resetSwapchain(){
+    for (uint32_t i=0;i<this->imageCount;i++)
+        if(this->frambuffer[i])
+            vkDestroyFramebuffer(this->device, this->frambuffer[i], 0);
+    for (uint32_t i=0;i<this->imageCount;i++)
+        if(this->bufferView[i])
+            vkDestroyImageView(this->device, this->bufferView[i], 0);
+    {
+        VkSurfaceCapabilitiesKHR capability;
+        VkResult res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this->pdevice,this->surface,&capability);
+        if(res)
+            throw VulkanException(res, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+        if(capability.minImageCount > Constants::MaximumSwapchainImageCount)
+            throw VulkanException(VK_SUCCESS, "Invalid image count");
+        this->surfaceExtend = capability.currentExtent;
+        if(capability.minImageCount > 2){
+            this->imageCount = capability.minImageCount;
+        }else{
+            if(capability.maxImageCount == 0 || capability.maxImageCount > 2)
+                this->imageCount = 3;
+            else
+                this->imageCount = capability.minImageCount + capability.maxImageCount;
+        }
+    }
+
+    VkSwapchainKHR old_swapchain = this->swapchain;
+	// this line plays an important role
+	this->swapchain = VK_NULL_HANDLE;
+    {
+        VkSwapchainCreateInfoKHR swapchain_ci;
+        swapchain_ci = {
+            .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+            .pNext = NULL,
+            .surface = this->surface,
+            .minImageCount = this->imageCount,
+            .imageFormat = VK_FORMAT_B8G8R8A8_SRGB,
+            .imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR,
+            .imageExtent = this->surfaceExtend,
+            .imageArrayLayers = 1,
+            .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 0,
+            .pQueueFamilyIndices = NULL,
+            .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+            .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+            .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+            .clipped = true,
+            .oldSwapchain = old_swapchain,
+        };
+        // If the graphics and present queues are from different queue families,
+        // we either have to explicitly transfer ownership of images between
+        // the queues, or we have to create the swapchain with imageSharingMode
+        // as VK_SHARING_MODE_CONCURRENT (queueFamilyIndexCount=2, pQueueFamilyIndices=[...])
+        {
+            VkResult res = vkCreateSwapchainKHR(this->device, &swapchain_ci, NULL, &this->swapchain);
+            if (res)
+                throw VulkanException(res, "vkCreateSwapchainKHR");
+        }
+    }
+    {
+        uint32_t img_count;
+		VkResult res = vkGetSwapchainImagesKHR(this->device, this->swapchain, &img_count, 0);
+		if (res || img_count != this->imageCount)
+			throw VulkanException(res, "vkGetSwapchainImagesKHR");
+		res = vkGetSwapchainImagesKHR(this->device, this->swapchain, &img_count, this->bufferImage);
+		if (res)
+			throw VulkanException(res, "vkGetSwapchainImagesKHR");
+
+		for (uint32_t i = 0; i < img_count; i++) {
+			const VkImageViewCreateInfo vinfo = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+				.image = this->bufferImage[i],
+				.viewType = VK_IMAGE_VIEW_TYPE_2D,
+				.format = VK_FORMAT_B8G8R8A8_SRGB,
+				.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1},
+			};
+			// VkFramebufferCreateInfo fbinfo = {
+			// 	.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			// 	.renderPass = VK_NULL_HANDLE,
+			// 	.attachmentCount = 1,
+			// 	.pAttachments = this->bufferView+i,
+			// 	.width = this->surfaceExtend.width,
+			// 	.height = this->surfaceExtend.height,
+			// 	.layers = 1,
+			// };
+			res = vkCreateImageView(this->device, &vinfo, nullptr, this->bufferView+i);
+			if (res)
+				throw VulkanException(res, "vkCreateImageView");
+			// res = vkCreateFramebuffer(this->device, &fbinfo, nullptr, this->frambuffer+i);
+			// if (res)
+			// 	throw VulkanException(res, "vkCreateFramebuffer");
+		}
+	}
+	if (old_swapchain != VK_NULL_HANDLE)
+		vkDestroySwapchainKHR(this->device, old_swapchain, NULL);
+}
+int VKContext::render(){
+	return 0;
 }

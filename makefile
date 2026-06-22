@@ -203,7 +203,7 @@ OBJS= \
 DEPS = $(OBJS:.o=.d)
 DEPS += $(SYSS:.o=.d)
 DEPS += $(libuv_la_SOURCES:.o=.d)
-DEPS += $(OBJ)/$(testDir)/test-6.d
+DEPS += $(OBJ)/main.d
 -include $(DEPS)
 
 $(BIN)/test-7: $(OBJ)/$(testDir)/test-7.o $(libuv_la_SOURCES) $(OBJ)/$(srcDir)/ECS/TypeID.o $(OBJ)/$(cutilDir)/HashHelper.o $(OBJ)/$(srcDir)/ECS/AssetsManager.o $(OBJ)/$(srcDir)/ECS/ResourceManager.o

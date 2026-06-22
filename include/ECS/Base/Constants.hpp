@@ -16,7 +16,7 @@ namespace ECS {
         /// @details Considerations: ArchetypeChunkData uses bitset as enabling bit per type for entities in a chunk so it must be multiply of 64.
         static constexpr uint32_t MaximumEntitiesPerChunk = 192;
         /// @details Considerations: must be power of 2
-        static constexpr uint32_t MaximumQueryCount = 1024;
+        static constexpr uint32_t MaximumQueryCount = 512;
         static constexpr uint32_t MaximumQueryTypesCount = 32;
         /// @details Considerations: 1 bit flag for invalid entities.
         static constexpr uint32_t MaximumEntityCount = INT32_MAX;
@@ -43,6 +43,7 @@ namespace ECS {
         static constexpr uint32_t InitialSharedComponentChunkCapacity = 0x20;
         static constexpr uint32_t InitialJobPoolCapacity = 0x40;
         static constexpr uint32_t MaximumRefOffsetCount = 0x400;
+        static constexpr uint32_t MaximumSwapchainImageCount = 8;
     };
 }
 

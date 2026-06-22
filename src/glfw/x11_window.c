@@ -3038,6 +3038,10 @@ const char* _glfwGetClipboardStringOS(void)
 //////                        GLFW native API                       //////
 //////////////////////////////////////////////////////////////////////////
 
+GLFWAPI VisualID glfwGetVisualID(void)
+{
+    return XVisualIDFromVisual(DefaultVisual(_glfw.x11.display, _glfw.x11.screen));
+}
 GLFWAPI Display* glfwGetX11Display(void)
 {
     _GLFW_REQUIRE_INIT_OR_RETURN(NULL);

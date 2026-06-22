@@ -179,10 +179,21 @@ void after_work_jobs(uv__work *,int);
 void JobsUtility::init(){
     sharedData.init();
     std::vector<ISystem* (*)(DOE &)> &list = _get_initialize_list();
-    auto &sys = sharedEngine->sys;
-    sys.reserve(list.size());
-    for(auto func:list)
-        sys.emplace_back( func(*sharedEngine.get()) );
+    auto &sysList = sharedEngine->sys;
+    sysList.reserve(list.size());
+    for(auto func:list){
+        ISystem *sys;
+        try
+        {
+            sys = func(*sharedEngine.get());
+        } catch(const std::exception& e) {
+        #ifdef DEBUG
+            printf("caught std::exception initializing a system: %s\n",e.what());
+        #endif
+            continue;
+        }
+        sysList.emplace_back(sys);
+    }
     uv_timer_init(uv_default_loop(), sharedData.fixedTimer);
     uv_async_init(uv_default_loop(), sharedData.wakecall, wakeThread);
     uv_timer_start(sharedData.fixedTimer, on_fixed_timer, 0, 20);
@@ -194,7 +205,6 @@ void on_fixed_timer(uv_timer_t *) {
 void JobsUtility::signalQuit(){
     sharedData.bitmask |= Request::Exit;
     uv_async_send(sharedData.wakecall);
-    glfwSetWindowShouldClose(window, 1);
 }
 void JobsUtility::signalRender(){
     sharedData.bitmask |= Request::Render;
@@ -223,23 +233,47 @@ void iterate_systems(){
         std::unique_ptr<ISystem> *begin =         sharedEngine->sys.data();
         std::unique_ptr<ISystem> *end   = begin + sharedEngine->sys.size();
         if(unlikely(sharedData.bitmask & Request::Exit)) {
-            while (begin != end){
-                (*begin)->OnDestroy(*sharedEngine);
-                begin++;
-            }
             uv_timer_stop(sharedData.fixedTimer);
             uv_unref((uv_handle_t*)sharedData.wakecall);
             uv_stop(uv_default_loop());
+            glfwSetWindowShouldClose(window, 1);
+            glfwPostEmptyEvent();
+            while (begin != end){
+                try {
+                    (*begin)->OnDestroy(*sharedEngine);
+                } catch(const std::exception& e) {
+                #ifdef DEBUG
+                    printf("caught std::exception OnDestroy: %s\n",e.what());
+                #endif
+                }
+                begin++;
+            }
             return;
         } else if(sharedData.bitmask & Request::Timer) {
             while (begin != end){
-                (*begin)->OnFixedUpdate(*sharedEngine);
+                try {
+                    (*begin)->OnFixedUpdate(*sharedEngine);
+                } catch(const std::exception& e) {
+                #ifdef DEBUG
+                    printf("caught std::exception OnFixedUpdate: %s\n",e.what());
+                #endif
+                    sharedData.bitmask |= Request::Exit;
+                    break;
+                }
                 begin++;
             }
             sharedData.bitmask &= ~Request::Timer;
         } else if(sharedData.bitmask & Request::Render) {
             while (begin != end){
-                (*begin)->OnUpdate(*sharedEngine);
+                try {
+                    (*begin)->OnUpdate(*sharedEngine);
+                } catch(const std::exception& e) {
+                #ifdef DEBUG
+                    printf("caught std::exception OnUpdate: %s\n",e.what());
+                #endif
+                    sharedData.bitmask |= Request::Exit;
+                    break;
+                }
                 begin++;
             }
             sharedData.bitmask &= ~Request::Render;
