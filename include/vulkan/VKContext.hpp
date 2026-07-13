@@ -28,7 +28,6 @@ namespace ECS
         uint32_t imageCount = 0;
         VkQueue queue = VK_NULL_HANDLE;
         VkFence queueFence = VK_NULL_HANDLE;
-        VkSemaphore imageSemaphore = VK_NULL_HANDLE;
         VkSemaphore queueSemaphore = VK_NULL_HANDLE;
         // actual physical device,
         // this refrence can be used to obtain info about device
@@ -42,6 +41,7 @@ namespace ECS
         VkImageView bufferView[Constants::MaximumSwapchainImageCount];
         VkFramebuffer frambuffer[Constants::MaximumSwapchainImageCount];
         VkImage bufferImage[Constants::MaximumSwapchainImageCount];
+        VkSemaphore imageSemaphores[Constants::MaximumSwapchainImageCount];
         static VkBool32 TestSurfaceSupport(VkPhysicalDevice pd, VkSurfaceKHR surface);
         VKContext();
         ~VKContext();
