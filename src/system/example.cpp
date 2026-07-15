@@ -2,9 +2,9 @@
 #include "ECS/Engine.hpp"
 #include "ECS/ThreadPool.hpp"
 
-extern std::unique_ptr<ECS::DOE> sharedEngine;
-extern GLFWwindow* window;
+
 ECS::SystemRegister<ExampleSystem> _{};
+static std::atomic<bool> running;
 void ExampleSystem::OnFixedUpdate(ECS::DOE&){
     counter++;
     if(counter == 100)
@@ -38,7 +38,7 @@ void ExampleSystem::gFunc(void *arg)
 		.swapchainCount = 1,
 	};
     goto begining;
-    while(!glfwWindowShouldClose(window))
+    while(running)
     {
     again:
         if(recreate){
@@ -84,9 +84,10 @@ void ExampleSystem::gFunc(void *arg)
 }
 ExampleSystem::ExampleSystem(ECS::DOE &e):ISystem{e}{
     vk.initialize();
-    vk.createSurface(window);
+    vk.createSurface();
     vk.selectDevice();
     vk.initRender();
+    running = true;
     uv_sem_init(&this->glock,1);
     uv_thread_create(&this->gthread, &gFunc, this);
 }
@@ -94,6 +95,7 @@ void ExampleSystem::OnDestroy(ECS::DOE&){
     uv_sem_post(&this->glock);
 }
 ExampleSystem::~ExampleSystem(){
+    running = false;
     uv_sem_post(&this->glock);
     uv_thread_join(&this->gthread);
     uv_sem_destroy(&this->glock);

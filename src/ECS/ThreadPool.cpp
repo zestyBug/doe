@@ -1,16 +1,13 @@
 #include "ECS/ThreadPool.hpp"
 #include "ECS/JobChunk.hpp"
 #include "ECS/Engine.hpp"
-#include "glfw/glfw3.h"
+#include "ECS/Base/Window.hpp"
 #include "uv.h"
 
-std::unique_ptr<ECS::DOE> sharedEngine;
 std::vector<ECS::ISystem*(*)(ECS::DOE&)>& ECS::_get_initialize_list() {
     static std::vector<ISystem*(*)(DOE&)> tests;
     return tests;
 }
-struct GLFWwindow;
-GLFWwindow* window;
 
 using namespace ECS;
 
@@ -236,8 +233,6 @@ void iterate_systems(){
             uv_timer_stop(sharedData.fixedTimer);
             uv_unref((uv_handle_t*)sharedData.wakecall);
             uv_stop(uv_default_loop());
-            glfwSetWindowShouldClose(window, 1);
-            glfwPostEmptyEvent();
             while (begin != end){
                 try {
                     (*begin)->OnDestroy(*sharedEngine);

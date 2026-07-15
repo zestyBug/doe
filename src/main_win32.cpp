@@ -4,7 +4,8 @@
 #include "glfw/glfw3.h"
 using namespace ECS;
 
-extern std::unique_ptr<DOE> sharedEngine;
+std::unique_ptr<DOE> ECS::sharedEngine;
+
 extern GLFWwindow* window;
 void runThread(void *arg){
     sharedEngine = std::make_unique<DOE>();

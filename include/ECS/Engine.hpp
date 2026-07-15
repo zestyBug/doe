@@ -29,6 +29,7 @@ namespace ECS
             scheduleQueue.reserve(Constants::InitialJobPoolCapacity);
         };
     };
+    extern std::unique_ptr<DOE> sharedEngine;
 } // namespace ECS
 
 

@@ -57,7 +57,7 @@ $(OBJ)/$(srcDir)/cutil/%.o: $(srcDir)/cutil/%.cpp
 $(OBJ)/$(testDir)/test-%.o: $(testDir)/test-%.cpp
 	mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $< -o $@
-$(OBJ)/main.o: $(srcDir)/main.cpp
+$(OBJ)/%.o: $(srcDir)/%.cpp
 	mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $< -o $@
 $(OBJ)/$(srcDir)/glfw/%.o: $(srcDir)/glfw/%.c
@@ -69,33 +69,17 @@ $(OBJ)/$(srcDir)/glfw/%.o: $(srcDir)/glfw/%.c
 
 
 
-OBJS_GLFW= \
-    $(OBJ)/$(srcDir)/glfw/context.o \
-	$(OBJ)/$(srcDir)/glfw/init.o \
-	$(OBJ)/$(srcDir)/glfw/input.o \
-	$(OBJ)/$(srcDir)/glfw/monitor.o \
-	$(OBJ)/$(srcDir)/glfw/platform.o \
-	$(OBJ)/$(srcDir)/glfw/window.o
+OBJS_GLFW=
 ifeq ($(OS),Windows_NT)
 	OBJS_GLFW+= \
-		$(OBJ)/$(srcDir)/glfw/win32_init.o \
-		$(OBJ)/$(srcDir)/glfw/win32_module.o \
-		$(OBJ)/$(srcDir)/glfw/win32_monitor.o \
-		$(OBJ)/$(srcDir)/glfw/win32_time.o \
-		$(OBJ)/$(srcDir)/glfw/win32_window.o
-	CPPFLAGS+=-D_GLFW_WIN32 -DVK_USE_PLATFORM_WIN32_KHR
-# LDFLAGS+=-lgdi32
+		$(OBJ)/main_win32.o
+	CPPFLAGS+=-DVK_USE_PLATFORM_WIN32_KHR
+	LDFLAGS+=-lgdi32
 else
 	OBJS_GLFW+= \
-		$(OBJ)/$(srcDir)/glfw/posix_module.o \
-		$(OBJ)/$(srcDir)/glfw/posix_poll.o \
-		$(OBJ)/$(srcDir)/glfw/posix_time.o \
-		$(OBJ)/$(srcDir)/glfw/x11_init.o \
-		$(OBJ)/$(srcDir)/glfw/x11_monitor.o \
-		$(OBJ)/$(srcDir)/glfw/x11_window.o \
-		$(OBJ)/$(srcDir)/glfw/xkb_unicode.o
-	CPPFLAGS+=-D_GLFW_X11 -DVK_USE_PLATFORM_XLIB_KHR
-	LDFLAGS+=-lGL
+		$(OBJ)/main_linux.o
+	CPPFLAGS+=-DVK_USE_PLATFORM_XLIB_KHR
+	LDFLAGS+=-lX11 -lXi -lXcursor
 #install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev 
 endif
 
@@ -202,8 +186,8 @@ OBJS= \
 
 DEPS = $(OBJS:.o=.d)
 DEPS += $(SYSS:.o=.d)
+DEPS += $(OBJS_GLFW:.o=.d)
 DEPS += $(libuv_la_SOURCES:.o=.d)
-DEPS += $(OBJ)/main.d
 -include $(DEPS)
 
 $(BIN)/test-7: $(OBJ)/$(testDir)/test-7.o $(libuv_la_SOURCES) $(OBJ)/$(srcDir)/ECS/TypeID.o $(OBJ)/$(cutilDir)/HashHelper.o $(OBJ)/$(srcDir)/ECS/AssetsManager.o $(OBJ)/$(srcDir)/ECS/ResourceManager.o
@@ -218,7 +202,7 @@ $(BIN)/test-5: $(OBJ)/$(testDir)/test-5.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLF
 $(BIN)/test-%: $(OBJ)/$(testDir)/test-%.o $(OBJS) $(OBJ)/$(srcDir)/ECS/TypeID.o
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
-$(BIN)/main: $(OBJ)/main.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW) $(SYSS)
+$(BIN)/main: $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW) $(SYSS)
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
 

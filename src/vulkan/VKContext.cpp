@@ -1,5 +1,5 @@
 #include "vulkan/VKContext.hpp"
-#include "glfw/glfw3native.h"
+#include "ECS/Base/Window.hpp"
 #include <vector>
 #define arrayCount(X) (sizeof(X)/sizeof(*X))
 using namespace ECS;
@@ -233,7 +233,7 @@ void VKContext::initialize(){
         throw VulkanException(res, "vkCreateInstance");
 }
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
-void VKContext::createSurface(GLFWwindow *handle){
+void VKContext::createSurface(){
     if(VKInitializeWInstance(this->instance))
         throw std::runtime_error("VKInitializeWInstance");
     VkWin32SurfaceCreateInfoKHR cInfo {
@@ -248,20 +248,22 @@ void VKContext::createSurface(GLFWwindow *handle){
         throw VulkanException(res, "vkCreateWin32SurfaceKHR");
 }
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
-void VKContext::createSurface(GLFWwindow *handle){
+void VKContext::createSurface(){
     if(VKInitializeWInstance(this->instance))
         throw std::runtime_error("VKInitializeWInstance");
     VkXlibSurfaceCreateInfoKHR cInfo {
         .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
         .pNext = NULL,
         .flags = 0,
-        .dpy = glfwGetX11Display(),
-        .window = glfwGetX11Window(handle),
+        .dpy = (::Display*)sharedWindow.display,
+        .window = (::Window)sharedWindow.window,
     };
     VkResult res = vkCreateXlibSurfaceKHR(this->instance, &cInfo, NULL, &this->surface);
     if(res)
         throw VulkanException(res, "vkCreateXlibSurfaceKHR");
 }
+#else
+#error
 #endif
 // selects a physical device, create a logical device and command pool of that device
 // requires surface to check compatibility
@@ -340,7 +342,7 @@ void VKContext::selectDevice(){
                 continue;
         #endif
         #ifdef VK_USE_PLATFORM_X11_KHR
-            if(!vkGetPhysicalDeviceXlibPresentationSupportKHR(pd,i,glfwGetX11Display(),glfwGetVisualID()))
+            if(!vkGetPhysicalDeviceXlibPresentationSupportKHR(pd,i,(::Display*)sharedWindow.display,(::VisualID)sharedWindow.visualId))
                 continue;
         #endif
             // A Device may not be plugged into a monitor or not have any graphcal output

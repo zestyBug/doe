@@ -4,7 +4,6 @@
 #include "vulkan/wrapper.h"
 #include "ECS/Base/Constants.hpp"
 #include "cutil/basics.hpp"
-#include "glfw/glfw3.h"
 
 namespace ECS
 {
@@ -47,13 +46,8 @@ namespace ECS
         ~VKContext();
         // create a instance with required extentions and layers
         void initialize();
-        #if defined(VK_USE_PLATFORM_WIN32_KHR)
-        void createSurface(GLFWwindow *handle);
-        #elif defined(VK_USE_PLATFORM_XLIB_KHR)
-        void createSurface(GLFWwindow *handle);
-        #else
-        #error undefined platform
-        #endif
+        // create surface base off of the window. unlike swapchain, it can only be created once.
+        void createSurface();
         // selects a physical device, create a logical device and command pool of that device
         // requires surface to check compatibility
         void selectDevice();
