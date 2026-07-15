@@ -26,5 +26,5 @@ Its not an exact copy, there are some differents. ChunkIndex is not used, for pe
 - better encapsulation
 - write some tests
 - assets manager
-- glfw + vulkan + imgui
+- vulkan imgui
 - remove unnecesary aligned alloctions
