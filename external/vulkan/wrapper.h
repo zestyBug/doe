@@ -16,6 +16,7 @@
 #ifndef VULKAN_WRAPPER_H
 #define VULKAN_WRAPPER_H
 
+#define VOLK_H_ 1
 #define VK_NO_PROTOTYPES 1
 
 #include "vulkan.h"

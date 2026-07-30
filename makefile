@@ -60,7 +60,7 @@ $(OBJ)/$(testDir)/test-%.o: $(testDir)/test-%.cpp
 $(OBJ)/%.o: $(srcDir)/%.cpp
 	mkdir -p $(@D)
 	$(CXX) -c $(CPPFLAGS) $< -o $@
-$(OBJ)/$(srcDir)/glfw/%.o: $(srcDir)/glfw/%.c
+$(OBJ)/$(srcDir)/imgui/%.o: $(srcDir)/imgui/%.cpp
 	mkdir -p $(@D)
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
@@ -158,6 +158,14 @@ libuv_la_SOURCES += \
 
 endif  # WINNT
 
+IMGUI_OBJS += \
+	$(OBJ)/$(srcDir)/imgui/imgui.o \
+	$(OBJ)/$(srcDir)/imgui/imgui_widgets.o \
+	$(OBJ)/$(srcDir)/imgui/imgui_tables.o \
+	$(OBJ)/$(srcDir)/imgui/imgui_impl_vulkan.o \
+	$(OBJ)/$(srcDir)/imgui/imgui_draw.o \
+	$(OBJ)/$(srcDir)/imgui/imgui_demo.o
+# $(OBJ)/$(srcDir)/imgui/imgui_impl_glfw.o
 
 SYSS= \
 	$(OBJ)/$(srcDir)/system/example.o \
@@ -188,6 +196,7 @@ DEPS = $(OBJS:.o=.d)
 DEPS += $(SYSS:.o=.d)
 DEPS += $(OBJS_GLFW:.o=.d)
 DEPS += $(libuv_la_SOURCES:.o=.d)
+DEPS += $(IMGUI_OBJS:.o=.d)
 -include $(DEPS)
 
 $(BIN)/test-7: $(OBJ)/$(testDir)/test-7.o $(libuv_la_SOURCES) $(OBJ)/$(srcDir)/ECS/TypeID.o $(OBJ)/$(cutilDir)/HashHelper.o $(OBJ)/$(srcDir)/ECS/AssetsManager.o $(OBJ)/$(srcDir)/ECS/ResourceManager.o
@@ -202,7 +211,7 @@ $(BIN)/test-5: $(OBJ)/$(testDir)/test-5.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLF
 $(BIN)/test-%: $(OBJ)/$(testDir)/test-%.o $(OBJS) $(OBJ)/$(srcDir)/ECS/TypeID.o
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
-$(BIN)/main: $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW) $(SYSS)
+$(BIN)/main: $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW) $(SYSS) $(IMGUI_OBJS)
 	mkdir -p $(@D)
 	$(CXX) $^ $(LDFLAGS) -o $@
 

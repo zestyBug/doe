@@ -36,6 +36,8 @@ namespace ECS
 		VkDevice device = VK_NULL_HANDLE;
         VkSwapchainKHR swapchain = VK_NULL_HANDLE;
         VkRenderPass renderpass = VK_NULL_HANDLE;
+        VkDescriptorPool dpool = VK_NULL_HANDLE;
+        VkCommandPool cpool = VK_NULL_HANDLE;
         VkExtent2D surfaceExtend;
         VkImageView bufferView[Constants::MaximumSwapchainImageCount];
         VkFramebuffer frambuffer[Constants::MaximumSwapchainImageCount];

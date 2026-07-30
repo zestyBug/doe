@@ -183,6 +183,10 @@ VKContext::~VKContext(){
                 vkDestroyFence(this->device, this->queueFence, NULL);
             if (this->queueSemaphore != VK_NULL_HANDLE)
                 vkDestroySemaphore(this->device, this->queueSemaphore, NULL);
+            if (this->dpool != VK_NULL_HANDLE)
+                vkDestroyDescriptorPool(this->device, this->dpool, NULL);
+            if (this->cpool != VK_NULL_HANDLE)
+                vkDestroyCommandPool(this->device, this->cpool, NULL);
             vkDestroyDevice(device,NULL);
         }
         if(surface != VK_NULL_HANDLE)
@@ -416,6 +420,31 @@ void VKContext::initRender(){
 	res = vkCreateRenderPass(this->device, &rpinfo, nullptr, &this->renderpass);
 	if (res)
 		throw VulkanException(res, "vkCreateRenderPass");
+    VkDescriptorPoolSize sizes[] =
+    {
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 100 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 }
+    };
+    VkDescriptorPoolCreateInfo dpInfo {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+        .maxSets = 1000,
+        .poolSizeCount = 3,
+        .pPoolSizes = sizes,
+        
+    };
+    res = vkCreateDescriptorPool(this->device, &dpInfo, nullptr, &this->dpool);
+	if (res)
+		throw VulkanException(res, "vkCreateDescriptorPool");
+    VkCommandPoolCreateInfo cpInfo {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = this->queueFamilyIndex,
+    };
+    res = vkCreateCommandPool(this->device, &cpInfo, nullptr, &this->cpool);
+	if (res)
+		throw VulkanException(res, "vkCreateCommandPool");
 }
 void VKContext::resetSwapchain(){
     for (uint32_t i=0;i<this->imageCount;i++)
@@ -506,24 +535,24 @@ void VKContext::resetSwapchain(){
                 .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
                 .flags = VK_SEMAPHORE_TYPE_BINARY
             };
-			// VkFramebufferCreateInfo fbinfo = {
-			// 	.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-			// 	.renderPass = VK_NULL_HANDLE,
-			// 	.attachmentCount = 1,
-			// 	.pAttachments = this->bufferView+i,
-			// 	.width = this->surfaceExtend.width,
-			// 	.height = this->surfaceExtend.height,
-			// 	.layers = 1,
-			// };
+			VkFramebufferCreateInfo fbinfo = {
+				.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+				.renderPass = this->renderpass,
+				.attachmentCount = 1,
+				.pAttachments = this->bufferView+i,
+				.width = this->surfaceExtend.width,
+				.height = this->surfaceExtend.height,
+				.layers = 1,
+			};
 			res = vkCreateImageView(this->device, &vinfo, nullptr, this->bufferView+i);
 			if (res)
-				throw VulkanException(res, "vkCreateImageView");
+			    throw VulkanException(res, "vkCreateImageView");
             res = vkCreateSemaphore(this->device, &sinfo, 0, this->imageSemaphores+i);
             if (res)
                 throw std::runtime_error("vkCreateSemaphore");
-			// res = vkCreateFramebuffer(this->device, &fbinfo, nullptr, this->frambuffer+i);
-			// if (res)
-			// 	throw VulkanException(res, "vkCreateFramebuffer");
+			res = vkCreateFramebuffer(this->device, &fbinfo, nullptr, this->frambuffer+i);
+			if (res)
+			    throw VulkanException(res, "vkCreateFramebuffer");
 		}
 	}
 	if (old_swapchain != VK_NULL_HANDLE)
