@@ -5,7 +5,7 @@ CXX = g++
 CC = gcc
 
 WARNS=-Wall -Wconversion -Wextra -Wfatal-errors -Wshadow
-INCLUDE=-Iexternal -Iinclude
+INCLUDE=-Iexternal -Iinclude -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 
 

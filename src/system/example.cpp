@@ -151,13 +151,6 @@ ExampleSystem::ExampleSystem(ECS::DOE &e):ISystem{e}{
     vk.selectDevice();
     vk.initRender();
     running = true;
-    ImGui::CreateContext();
-    {
-        ImGuiIO& io=ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable some options
-        io.BackendPlatformUserData = nullptr;
-        io.BackendPlatformName = "imgui_impl_my";
-    }
     ImGui::StyleColorsLight();
     {
         ImGui_ImplVulkan_InitInfo info {
@@ -204,7 +197,6 @@ void ExampleSystem::OnDestroy(ECS::DOE&){
     ImGui_ImplVulkan_Shutdown();
 }
 ExampleSystem::~ExampleSystem(){
-	ImGui::DestroyContext();
 }
 struct example_system {
     ECS::Version systemVersion = 0;

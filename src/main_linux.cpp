@@ -29,6 +29,7 @@
 #include "ECS/ThreadPool.hpp"
 #include "ECS/Base/Window.hpp"
 #include "uv.h"
+#include "imgui.h"
 
 #include <X11/Xatom.h>
 #include <X11/extensions/Xrender.h>
@@ -85,26 +86,24 @@ int main(int argc, char *argv[])
         attr.background_pixmap = None;
         attr.border_pixmap = None;
         attr.border_pixel = 0;
-        attr.event_mask = EnterWindowMask | LeaveWindowMask | OwnerGrabButtonMask |ExposureMask | VisibilityChangeMask | StructureNotifyMask | PropertyChangeMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | ButtonMotionMask | PointerMotionMask;
-        attr_mask =
+        attr.event_mask = EnterWindowMask | LeaveWindowMask | OwnerGrabButtonMask | ExposureMask | VisibilityChangeMask | StructureNotifyMask | PropertyChangeMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | ButtonMotionMask | PointerMotionMask;
         //	CWBackPixmap|
-            CWColormap|
-            CWBorderPixel|
-            CWEventMask;
+        attr_mask = CWColormap | CWBorderPixel | CWEventMask;
         ECS::sharedWindow.window = XCreateWindow((Display *)ECS::sharedWindow.display, root, 0, 0, ECS::sharedWindow.width, ECS::sharedWindow.height, 0, CopyFromParent, InputOutput, CopyFromParent, attr_mask, &attr);
         if(!ECS::sharedWindow.window)
             throw std::runtime_error("Couldn't create the window\n");
     }
 
     {
+        const char *title = "Title";
         XEvent event;
         XTextProperty textprop;
         XSizeHints hints;
         XWMHints *startup_state;
-        textprop.value = (unsigned char*)"Title";
+        textprop.value = (unsigned char*)title;
         textprop.encoding = XA_STRING;
         textprop.format = 8;
-        textprop.nitems = strlen("Title");
+        textprop.nitems = strlen(title);
         hints.x = 0;
         hints.y = 0;
         hints.width = ECS::sharedWindow.width;
@@ -131,6 +130,13 @@ int main(int argc, char *argv[])
     uv_poll_init(loop, &x11_poll, XConnectionNumber((Display*)ECS::sharedWindow.display));
     uv_poll_start(&x11_poll, UV_READABLE, &WndProc);
 
+    ImGui::CreateContext();
+    {
+        ImGuiIO& io=ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable some options
+        io.BackendPlatformUserData = nullptr;
+        io.BackendPlatformName = "imgui_impl_my";
+    }
     ECS::sharedEngine = std::make_unique<ECS::DOE>();
     ECS::TypeManager::Initialize();
     ECS::JobsUtility::init();
@@ -139,6 +145,7 @@ int main(int argc, char *argv[])
 
     uv_poll_stop(&x11_poll);
     ECS::sharedEngine.reset();
+    ImGui::DestroyContext();
     uv_loop_close(loop);
     uv_library_shutdown();
 
@@ -154,10 +161,12 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-
+ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(unsigned int keycode);
+ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey(unsigned int keycode);
 void WndProc(uv_poll_t *handle, int status, int events)
 {
     XEvent event;
+    ImGuiIO& io=ImGui::GetIO();
     while (XPending((Display*)ECS::sharedWindow.display))
     {
         XNextEvent((Display*)ECS::sharedWindow.display, &event);
@@ -165,28 +174,25 @@ void WndProc(uv_poll_t *handle, int status, int events)
         switch (event.type)
         {
         case ConfigureNotify:
-            //io.DisplaySize = ImVec2((float)event->xconfigure.width, (float)event->xconfigure.height);
-            //Console(Tiz::Logger::developer,"Resize: %d %d\n",event->xconfigure.width,event->xconfigure.height);
+            io.DisplaySize = ImVec2((float)event.xconfigure.width, (float)event.xconfigure.height);
             break;
         case KeyPress:
-            // Tiz::Console(Tiz::Logger::debug,"press: %d\n",event->xkey.keycode);
-            //io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(event->xkey.keycode), 1);
-            //io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey(event->xkey.keycode), true);
+            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(event.xkey.keycode), 1);
+            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey(event.xkey.keycode), true);
             unic=XLookupKeysym(&event.xkey, 0);
 
-            //putchar(unic);Console.flush();
             if ((0x20<=unic && unic<=0x7e)
             || (0xa0<=unic && unic<=0xff)
             || (0x1a1<=unic && unic<=0x1ff)
             || (0x2a1<=unic && unic<=0x2fe)
             ){
-                //io.AddInputCharacter(unic);
+                io.AddInputCharacter(unic);
             }
             break;
         case KeyRelease:
             //XMaskEvent()
-            //io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(event->xkey.keycode), 0);
-            //io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey(event->xkey.keycode), false);
+            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(event.xkey.keycode), 0);
+            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey(event.xkey.keycode), false);
             break;
         /*
             1 = left button
@@ -200,37 +206,37 @@ void WndProc(uv_poll_t *handle, int status, int events)
             9 = 5th button (aka browser forward button)
         */
         case ButtonPress:
-            // if (Button1==event->xbutton.button)
-            // 	io.AddMouseButtonEvent(0, true);
-            // if (Button2==event->xbutton.button)
-            // 	io.AddMouseButtonEvent(2, true);
-            // if (Button3==event->xbutton.button)
-            // 	io.AddMouseButtonEvent(1, true);
-            // else if (event->xbutton.button==Button4)
-            // 	io.AddMouseWheelEvent(0.0f, 0.5);
-            // else if (event->xbutton.button==Button5)
-            // 	io.AddMouseWheelEvent(0.0f,-0.5);
+            if (Button1==event.xbutton.button)
+            	io.AddMouseButtonEvent(0, true);
+            if (Button2==event.xbutton.button)
+            	io.AddMouseButtonEvent(2, true);
+            if (Button3==event.xbutton.button)
+            	io.AddMouseButtonEvent(1, true);
+            else if (event.xbutton.button==Button4)
+            	io.AddMouseWheelEvent(0.0f, 0.5);
+            else if (event.xbutton.button==Button5)
+            	io.AddMouseWheelEvent(0.0f,-0.5);
             break;
         case ButtonRelease:
-            // if (Button1==event->xbutton.button)
-            // 	io.AddMouseButtonEvent(0, false);
-            // if (Button2==event->xbutton.button)
-            // 	io.AddMouseButtonEvent(2, false);
-            // if (Button3==event->xbutton.button)
-            // 	io.AddMouseButtonEvent(1, false);
-            // else if (event->xbutton.button==Button4)
-            // 	io.AddMouseWheelEvent(0.0f, 0.5);
-            // else if (event->xbutton.button==Button5)
-            // 	io.AddMouseWheelEvent(0.0f,-0.5);
+            if (Button1==event.xbutton.button)
+            	io.AddMouseButtonEvent(0, false);
+            if (Button2==event.xbutton.button)
+            	io.AddMouseButtonEvent(2, false);
+            if (Button3==event.xbutton.button)
+            	io.AddMouseButtonEvent(1, false);
+            else if (event.xbutton.button==Button4)
+            	io.AddMouseWheelEvent(0.0f, 0.5);
+            else if (event.xbutton.button==Button5)
+            	io.AddMouseWheelEvent(0.0f,-0.5);
             break;
         case MotionNotify:
-            //io.AddMousePosEvent((float)event->xmotion.x,(float)event->xmotion.y);
+            io.AddMousePosEvent((float)event.xmotion.x,(float)event.xmotion.y);
             break;
         case Expose:
             break;
         case ClientMessage:
-            // if ((unsigned)(event->xclient.data.l[0]) == del_atom)
-            // 	isRunning = false;
+            if ((unsigned)(event.xclient.data.l[0]) == del_atom)
+                ECS::JobsUtility::signalQuit();
             break;
         }
     }
@@ -238,7 +244,6 @@ void WndProc(uv_poll_t *handle, int status, int events)
 
 
 
-/*
 ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(unsigned int keycode)
 {
     switch (keycode)
@@ -351,8 +356,6 @@ ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey(unsigned int keycode)
 	case 118: return ImGuiKey_Insert;
 	case 119: return ImGuiKey_Delete;
 	default:
-	//printf("key: %i\n",keycode);
 	return ImGuiKey_None;
 	}
 }
-*/
