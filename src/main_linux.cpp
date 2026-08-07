@@ -35,6 +35,8 @@
 #include <X11/extensions/Xrender.h>
 #include <X11/Xutil.h>
 
+#define Button6 6
+#define Button7 7
 #undef None
 #undef Bool
 #undef Always
@@ -44,6 +46,8 @@ std::unique_ptr<ECS::DOE> ECS::sharedEngine;
 ECS::Window ECS::sharedWindow;
 
 static Atom del_atom;
+XIM xim;
+XIC xic;
 
 
 static Bool WaitForMapNotify(Display *d, XEvent *e, char *arg)
@@ -93,6 +97,9 @@ int main(int argc, char *argv[])
         if(!ECS::sharedWindow.window)
             throw std::runtime_error("Couldn't create the window\n");
     }
+
+    xim = XOpenIM((Display*)ECS::sharedWindow.display, NULL, NULL, NULL);
+    xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing, XNClientWindow, ECS::sharedWindow.window, XNFocusWindow, ECS::sharedWindow.window, NULL);
 
     {
         const char *title = "Title";
@@ -161,38 +168,62 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(unsigned int keycode);
-ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey(unsigned int keycode);
-void WndProc(uv_poll_t *handle, int status, int events)
+
+// Decode a Unicode code point from a UTF-8 stream
+// Based on cutef8 by Jeff Bezanson (Public Domain)
+//
+static uint32_t decodeUTF8(const char* s){
+    uint32_t codepoint = 0, count = 0;
+    static const uint32_t offsets[] = {
+        0x00000000u, 0x00003080u, 0x000e2080u,
+        0x03c82080u, 0xfa082080u, 0x82082080u
+    };
+    do {
+        codepoint = (codepoint << 6) + (unsigned char) *s;
+        (s)++;
+        count++;
+    } while ((*s & 0xc0) == 0x80);
+
+    if(likely(count <= 6))
+        return codepoint - offsets[count - 1];
+    return 0;
+}
+
+ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(unsigned int keysym);
+ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey   (unsigned int keysym);
+void WndProc(uv_poll_t *handle, int, int)
 {
     XEvent event;
     ImGuiIO& io=ImGui::GetIO();
+    char utf8[64];
+    KeySym keysym;
+    Status status;
+    int len;
     while (XPending((Display*)ECS::sharedWindow.display))
     {
         XNextEvent((Display*)ECS::sharedWindow.display, &event);
-        KeySym unic;
         switch (event.type)
         {
         case ConfigureNotify:
             io.DisplaySize = ImVec2((float)event.xconfigure.width, (float)event.xconfigure.height);
             break;
         case KeyPress:
-            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(event.xkey.keycode), 1);
-            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey(event.xkey.keycode), true);
-            unic=XLookupKeysym(&event.xkey, 0);
+            keysym=XLookupKeysym(&event.xkey, 0);
+            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(keysym), true);
+            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey   (keysym), true);
 
-            if ((0x20<=unic && unic<=0x7e)
-            || (0xa0<=unic && unic<=0xff)
-            || (0x1a1<=unic && unic<=0x1ff)
-            || (0x2a1<=unic && unic<=0x2fe)
-            ){
-                io.AddInputCharacter(unic);
+            len = Xutf8LookupString(xic, &event.xkey, utf8, sizeof(utf8), NULL, &status);
+            if (status == XLookupChars || status == XLookupBoth)
+            {
+                utf8[len] = '\0';
+                io.AddInputCharacter(decodeUTF8(utf8));
             }
             break;
         case KeyRelease:
             //XMaskEvent()
-            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(event.xkey.keycode), 0);
-            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey(event.xkey.keycode), false);
+            keysym=XLookupKeysym(&event.xkey, 0);
+            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(keysym), 0);
+            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey(keysym), false);
             break;
         /*
             1 = left button
@@ -206,28 +237,36 @@ void WndProc(uv_poll_t *handle, int status, int events)
             9 = 5th button (aka browser forward button)
         */
         case ButtonPress:
-            if (Button1==event.xbutton.button)
+            if      (event.xbutton.button == Button1)
             	io.AddMouseButtonEvent(0, true);
-            if (Button2==event.xbutton.button)
+            else if (event.xbutton.button == Button2)
             	io.AddMouseButtonEvent(2, true);
-            if (Button3==event.xbutton.button)
+            else if (event.xbutton.button == Button3)
             	io.AddMouseButtonEvent(1, true);
-            else if (event.xbutton.button==Button4)
-            	io.AddMouseWheelEvent(0.0f, 0.5);
-            else if (event.xbutton.button==Button5)
-            	io.AddMouseWheelEvent(0.0f,-0.5);
+            else if (event.xbutton.button == Button4)
+            	io.AddMouseWheelEvent(0.0f, 0.5f);
+            else if (event.xbutton.button == Button5)
+            	io.AddMouseWheelEvent(0.0f, -0.5f);
+            else if (event.xbutton.button == Button6)
+                io.AddMouseWheelEvent(0.5f, 0.0f);
+            else if (event.xbutton.button == Button7)
+                io.AddMouseWheelEvent(-0.5f, 0.0f);
             break;
         case ButtonRelease:
-            if (Button1==event.xbutton.button)
+            if      (event.xbutton.button == Button1)
             	io.AddMouseButtonEvent(0, false);
-            if (Button2==event.xbutton.button)
+            else if (event.xbutton.button == Button2)
             	io.AddMouseButtonEvent(2, false);
-            if (Button3==event.xbutton.button)
+            else if (event.xbutton.button == Button3)
             	io.AddMouseButtonEvent(1, false);
-            else if (event.xbutton.button==Button4)
-            	io.AddMouseWheelEvent(0.0f, 0.5);
-            else if (event.xbutton.button==Button5)
-            	io.AddMouseWheelEvent(0.0f,-0.5);
+            else if (event.xbutton.button == Button4)
+            	io.AddMouseWheelEvent(0.0f, 0.5f);
+            else if (event.xbutton.button == Button5)
+            	io.AddMouseWheelEvent(0.0f, -0.5f);
+            else if (event.xbutton.button == Button6)
+                io.AddMouseWheelEvent(0.5f, 0.0f);
+            else if (event.xbutton.button == Button7)
+                io.AddMouseWheelEvent(-0.5f, 0.0f);
             break;
         case MotionNotify:
             io.AddMousePosEvent((float)event.xmotion.x,(float)event.xmotion.y);
@@ -244,118 +283,88 @@ void WndProc(uv_poll_t *handle, int status, int events)
 
 
 
-ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(unsigned int keycode)
+ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(unsigned int keysym)
 {
-    switch (keycode)
+    switch (keysym)
 	{
-	case 37:
-	case 105:
+    // XK_Caps_Lock
+	case XK_Control_L:
+	case XK_Control_R:
         return ImGuiMod_Ctrl;
-	case 64:
-	case 108:
+	case XK_Alt_L:
+	case XK_Alt_R:
         return ImGuiMod_Alt;
-	case 50:
-	case 62:
+	case XK_Shift_L:
+	case XK_Shift_R:
         return ImGuiMod_Shift;
     default:
-        return ImGuiKey_None;
+        return ImGuiMod_None;
     }
 }
-ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey(unsigned int keycode)
+ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey(unsigned int keysym)
 {
-	switch (keycode)
+	switch (keysym)
 	{
-	//ImGuiKey_0
-	//case XK_0 ... XK_9: return (ImGuiKey)key+488;
+    case XK_bracketleft: return ImGuiKey_LeftBracket;
+    case XK_backslash: return ImGuiKey_Backslash;
+    case XK_bracketright: return ImGuiKey_RightBracket;
+    case XK_grave: return ImGuiKey_GraveAccent;
+    case XK_a ... XK_z: return (ImGuiKey)(ImGuiKey_A+(keysym-XK_a));
+    case XK_space: return ImGuiKey_Space;
+    case XK_apostrophe: return ImGuiKey_Apostrophe;
+    case XK_plus: return ImGuiKey_Equal;
+    case XK_comma: return ImGuiKey_Comma;
+    case XK_minus: return ImGuiKey_Minus;
+    case XK_period: return ImGuiKey_Period;
+    case XK_slash: return ImGuiKey_Slash;
+    case XK_0 ... XK_9: return (ImGuiKey)(ImGuiKey_0+(keysym-XK_0));
+    case XK_semicolon: return ImGuiKey_Semicolon;
+	case XK_F1 ... XK_F24: return (ImGuiKey)(ImGuiKey_F1+(keysym-XK_F1));
 
+	case XK_BackSpace: return ImGuiKey_Backspace;
+	case XK_Tab: return ImGuiKey_Tab;
+    case XK_Return: return ImGuiKey_Enter;
+	case XK_Escape: return ImGuiKey_Escape;
+    case XK_Delete: return ImGuiKey_Delete;
 
-	case 9: return ImGuiKey_Escape;
-	case 10 ... 18: return (ImGuiKey)(ImGuiKey_1+(keycode-10));
-	case 19: return ImGuiKey_0;
-	case 20: return ImGuiKey_Minus;
-	case 21: return ImGuiKey_Equal;
-	case 22: return ImGuiKey_Backspace;
+    case XK_Home: return ImGuiKey_Home;
+    case XK_Left: return ImGuiKey_LeftArrow;
+    case XK_Up: return ImGuiKey_UpArrow;
+    case XK_Right: return ImGuiKey_RightArrow;
+    case XK_Down: return ImGuiKey_DownArrow;
+    case XK_Page_Up: return ImGuiKey_PageUp;
+    case XK_Page_Down: return ImGuiKey_PageDown;
+    case XK_End: return ImGuiKey_End;
 
+	case XK_Shift_L: return ImGuiKey_LeftShift;
+	case XK_Shift_R: return ImGuiKey_RightShift;
+	case XK_Control_L: return ImGuiKey_LeftCtrl;
+	case XK_Control_R: return ImGuiKey_RightCtrl;
+	case XK_Caps_Lock: return ImGuiKey_CapsLock;
+    case XK_Alt_L: return ImGuiKey_LeftAlt;
+    case XK_Alt_R: return ImGuiKey_RightAlt;
+    case XK_Super_L: return ImGuiKey_LeftSuper;
+    case XK_Super_R: return ImGuiKey_RightSuper;
 
-	case 23: return ImGuiKey_Tab;
-	case 24: return ImGuiKey_Q;
-	case 25: return ImGuiKey_W;
-	case 26: return ImGuiKey_E;
-	case 27: return ImGuiKey_R;
-	case 28: return ImGuiKey_T;
-	case 29: return ImGuiKey_Y;
-	case 30: return ImGuiKey_U;
-	case 31: return ImGuiKey_I;
-	case 32: return ImGuiKey_O;
-	case 33: return ImGuiKey_P;
-	case 34: return ImGuiKey_LeftBracket;
-	case 35: return ImGuiKey_RightBracket;
+    case XK_Insert: return ImGuiKey_Insert;
+    case XK_Num_Lock: return ImGuiKey_NumLock;
 
-	case 36: return ImGuiKey_Enter;
-	case 37: return ImGuiKey_LeftCtrl;
-	case 38: return ImGuiKey_A;
-	case 39: return ImGuiKey_S;
-	case 40: return ImGuiKey_D;
-	case 41: return ImGuiKey_F;
-	case 42: return ImGuiKey_G;
-	case 43: return ImGuiKey_H;
-	case 44: return ImGuiKey_J;
-	case 45: return ImGuiKey_K;
-	case 46: return ImGuiKey_L;
-	case 47: return ImGuiKey_Semicolon;
-	case 48: return ImGuiKey_Comma;
-	case 49: return ImGuiKey_GraveAccent;
-
-	case 50: return ImGuiKey_LeftShift;
-	case 51: return ImGuiKey_Backslash;
-	case 52: return ImGuiKey_Z;
-	case 53: return ImGuiKey_X;
-	case 54: return ImGuiKey_C;
-	case 55: return ImGuiKey_V;
-	case 56: return ImGuiKey_B;
-	case 57: return ImGuiKey_N;
-	case 58: return ImGuiKey_M;
-	case 59: return ImGuiKey_Apostrophe;
-	case 60: return ImGuiKey_Period;
-	case 61: return ImGuiKey_Slash;
-	case 62: return ImGuiKey_RightShift;
-	case 63: return ImGuiKey_KeypadMultiply;
-	case 64: return ImGuiKey_LeftAlt;
-	case 65: return ImGuiKey_Space;
-	case 66: return ImGuiKey_CapsLock;
-
-	case 67 ... 76: return (ImGuiKey)(ImGuiKey_F1+(keycode-67));
-
-
-	case 77:        return ImGuiKey_NumLock;
-	case 79 ... 81: return (ImGuiKey)(ImGuiKey_Keypad7+(keycode-79));
-	case 82:        return ImGuiKey_KeypadSubtract;
-	case 83 ... 85: return (ImGuiKey)(ImGuiKey_Keypad4+(keycode-83));
-	case 86:        return ImGuiKey_KeypadAdd;
-	case 87 ... 89: return (ImGuiKey)(ImGuiKey_Keypad1+(keycode-87));
-	case 90:        return ImGuiKey_Keypad0;
-	case 91:        return ImGuiKey_KeypadDecimal;
-
-
-	case 95: return ImGuiKey_F11;
-	case 96: return ImGuiKey_F12;
-
-	case 104: return ImGuiKey_KeypadEnter;
-	case 105: return ImGuiKey_RightCtrl;
-	case 106: return ImGuiKey_KeypadDivide;
-	case 108: return ImGuiKey_RightAlt;
-
-	case 110: return ImGuiKey_Home;
-	case 111: return ImGuiKey_UpArrow;
-	case 113: return ImGuiKey_LeftArrow;
-	case 112: return ImGuiKey_PageUp;
-	case 114: return ImGuiKey_RightArrow;
-	case 115: return ImGuiKey_End;
-	case 116: return ImGuiKey_DownArrow;
-	case 117: return ImGuiKey_PageDown;
-	case 118: return ImGuiKey_Insert;
-	case 119: return ImGuiKey_Delete;
-	default:
-	return ImGuiKey_None;
+    case XK_KP_Enter: return ImGuiKey_KeypadEnter;
+    case XK_KP_Home: return ImGuiKey_Keypad7;
+    case XK_KP_Left: return ImGuiKey_Keypad4;
+    case XK_KP_Up: return ImGuiKey_Keypad8;
+    case XK_KP_Right: return ImGuiKey_Keypad6;
+    case XK_KP_Down: return ImGuiKey_Keypad2;
+    case XK_KP_Page_Up: return ImGuiKey_Keypad9;
+    case XK_KP_Page_Down: return ImGuiKey_Keypad3;
+    case XK_KP_End: return ImGuiKey_Keypad1;
+    case XK_KP_Begin: return ImGuiKey_Keypad5;
+    case XK_KP_Insert: return ImGuiKey_Keypad0;
+    case XK_KP_Delete: return ImGuiKey_KeypadDecimal;
+    case XK_KP_Multiply: return ImGuiKey_KeypadMultiply;
+    case XK_KP_Add: return ImGuiKey_KeypadAdd;
+    case XK_KP_Subtract: return ImGuiKey_KeypadSubtract;
+    case XK_KP_Divide: return ImGuiKey_KeypadDivide;
+	default: return ImGuiKey_None;
 	}
 }
