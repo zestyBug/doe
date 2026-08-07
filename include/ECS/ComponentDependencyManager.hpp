@@ -37,7 +37,9 @@ private:
 };
 }
 #else
-/// @brief job schedule buffer
+/**
+ * Temporary storage for job scheduling by their dependancies to avoid data race condition.
+ */
 struct ComponentDependencyManager {
     struct DependencyHandle
     {

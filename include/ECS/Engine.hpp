@@ -11,6 +11,7 @@
 namespace ECS
 {
     struct JobChunkWrapperBase;
+    // A scheduled job reference.
     struct Schedule {
         JobChunkWrapperBase *jw;
         EntityQueryImpl qb;

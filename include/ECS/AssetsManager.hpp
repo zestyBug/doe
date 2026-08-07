@@ -12,6 +12,9 @@ struct uv_fs_s;
 struct uv__work;
 namespace ECS
 {
+    /**
+     * A class to encapsulate process of loading
+     */
     struct AssetsManager {
     private:
         static constexpr uint32_t RequestPageSize = 2;

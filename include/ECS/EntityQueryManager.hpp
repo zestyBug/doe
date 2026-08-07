@@ -13,6 +13,10 @@ namespace ECS {
     struct EntityComponentStore;
     struct EntityQueryBuilder;
 
+    /**
+     * Actual query data is stored here.
+     * Including matching archetypes and a matching chunk list cache.
+     */
     struct EntityQueryData {
         inline void invalidateCache(){
             validCache = false;
@@ -69,6 +73,10 @@ namespace ECS {
         // simply an index.
         uint32_t ID;
     };
+    /**
+     * This is a helper class to create and keep queries caches up to date.
+     * To manage new new queries and new archetype
+     */
     struct EntityQueryManager { 
     private:
         static_array<EntityQueryData,Constants::MaximumQueryCount> entityQueryDatas;

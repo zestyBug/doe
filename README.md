@@ -20,6 +20,7 @@ Its not an exact copy, there are some differents. ChunkIndex is not used, for pe
 
 
 ### TODO
+- batched chunk allocator
 - 32 bit systems compatibility
 - a better README and documentation
 - changing pointers to references as possible (resource owener)
