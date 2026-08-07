@@ -191,6 +191,7 @@ void JobsUtility::init(){
         }
         sysList.emplace_back(sys);
     }
+    sharedEngine->fixedTimeBuffer = sharedEngine->updateTimeBuffer = uv_hrtime();
     uv_timer_init(uv_default_loop(), sharedData.fixedTimer);
     uv_async_init(uv_default_loop(), sharedData.wakecall, wakeThread);
     uv_timer_start(sharedData.fixedTimer, on_fixed_timer, 0, 20);
@@ -245,6 +246,11 @@ void iterate_systems(){
             }
             return;
         } else if(sharedData.bitmask & Request::Timer) {
+            {
+                uint64_t realtime = uv_hrtime();
+                sharedEngine->fixedDelta      = realtime - sharedEngine->fixedTimeBuffer;
+                sharedEngine->fixedTimeBuffer = realtime;
+            }
             while (begin != end){
                 try {
                     (*begin)->OnFixedUpdate(*sharedEngine);
@@ -259,6 +265,11 @@ void iterate_systems(){
             }
             sharedData.bitmask &= ~Request::Timer;
         } else if(sharedData.bitmask & Request::Render) {
+            {
+                uint64_t realtime = uv_hrtime();
+                sharedEngine->updateDelta      = (double)(realtime - sharedEngine->updateTimeBuffer) / 1.0e9;
+                sharedEngine->updateTimeBuffer = realtime;
+            }
             while (begin != end){
                 try {
                     (*begin)->OnUpdate(*sharedEngine);

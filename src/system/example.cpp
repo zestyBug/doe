@@ -17,7 +17,7 @@ void ExampleSystem::OnUpdate(ECS::DOE&){
     {
         ImGuiIO& io=ImGui::GetIO();
         io.DisplaySize = ImVec2(this->vk.surfaceExtend.width, this->vk.surfaceExtend.height);
-        io.DeltaTime = 60.0/1000.0;
+        io.DeltaTime = ECS::sharedEngine->updateDelta;
     }
     ImGui_ImplVulkan_NewFrame();
     ImGui::NewFrame();

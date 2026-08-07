@@ -21,6 +21,10 @@ namespace ECS
         EntityComponentStore ecs;
         ComponentDependencyManager dpm;
         EntityQueryManager eqm{&ecs};
+        uint64_t fixedTimeBuffer = 0;
+        uint64_t updateTimeBuffer = 0;
+        double fixedDelta = 0;
+        double updateDelta = 0;
         std::vector<std::unique_ptr<ISystem>> sys;
         std::vector<Schedule> scheduleQueue;
         AssetsManager am;
