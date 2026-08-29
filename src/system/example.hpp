@@ -9,6 +9,7 @@
 struct ExampleSystem : ECS::ISystem{
     int counter = 0;
     ECS::VKContext vk;
+    ECS::EntityQueryImpl query;
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
     uv_thread_t gthread;
     uv_sem_t glock;
