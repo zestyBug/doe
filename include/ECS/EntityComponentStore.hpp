@@ -60,18 +60,18 @@ namespace ECS
         Archetype* getArchetype(Entity entity);
         span<Archetype*> getArchetypes();
     private:
-        inline void setArchetype(Chunk *chunk, Archetype *arch){chunk->archetype = arch;}
+        inline void setArchetype(Chunk &chunk, Archetype *arch){chunk.archetype = arch;}
         Archetype* getArchetype(ChunkIndex chunk);
-        Archetype* getArchetype(Chunk* chunk);
+        Archetype* getArchetype(Chunk &chunk);
     #pragma endregion Archetype
 
     #pragma region Chunk and Batch
     private:
         Chunk *allocateChunk();
-        inline void freeChunk(Chunk *chunk) {chunks.freeChunk(chunk->index);}
-        Chunk* getCleanChunk(Archetype* archetype, const SharedComponentValues sharedComponentValues);
-        Chunk* getChunkWithEmptySlots(Archetype* archetype, const SharedComponentValues sharedComponents);
-        void setSharedComponentDataIndexForChunk(Chunk* chunk, Archetype* chunkArchetype, TypeID type, SharedComponentIndex value);
+        inline void freeChunk(Chunk &chunk) {chunks.freeChunk(chunk.index);}
+        Chunk* getCleanChunk(Archetype &archetype, const SharedComponentValues sharedComponentValues);
+        Chunk* getChunkWithEmptySlots(Archetype &archetype, const SharedComponentValues sharedComponents);
+        void setSharedComponentDataIndexForChunk(Chunk* chunk, Archetype &chunkArchetype, TypeID type, SharedComponentIndex value);
         inline Chunk* getChunk(Entity entity){
             return entityStore.getEntityInChunk(entity).chunk;
         }
@@ -88,7 +88,7 @@ namespace ECS
     #pragma region Entity
     public:
         uint32_t countEntities();
-        void createEntities(Archetype* archetype, span<Entity> entities, const SharedComponentValues values = SharedComponentValues());
+        void createEntities(Archetype &archetype, span<Entity> entities, const SharedComponentValues values = SharedComponentValues());
         bool exists(Entity entity);
         bool hasComponent(Entity entity, TypeID type);
         const EntityName* getName(Entity entity);
@@ -100,7 +100,7 @@ namespace ECS
         /// @param baseIndex 
         /// @param count 
         /// @param outputEntities 
-        void allocateEntities(Archetype* arch, Chunk *chunk, uint32_t baseIndex, uint32_t count, Entity* outputEntities = nullptr);
+        void allocateEntities(Archetype &arch, Chunk *chunk, uint32_t baseIndex, uint32_t count, Entity* outputEntities = nullptr);
         /// @brief A wrapper to deallocate components, entites and fill the space
         /// @details EntityComponentStore::deallocateManagedComponents, EntityStore::deallocateEntities, Archetype::copy
         void deallocateDataEntitiesInChunk(EntityBatchInChunk batch);
@@ -133,50 +133,50 @@ namespace ECS
         void* getComponentDataWithTypeRW(Entity entity, TypeID typeIndex);
     private:
         void moveAllSharedComponents(EntityComponentStore* srcEntityComponentStore);
-        void incrementComponentOrderVersion(Archetype* archetype, const SharedComponentValues sharedComponentValues);
-        void incrementComponentTypeOrderVersion(const Archetype* archetype);
-        void buildSharedComponentIndicesWithAddedComponents(Chunk* srcChunk, const Archetype* dstArchetype, SharedComponentIndex* outSharedComponentValues);
-        void buildSharedComponentIndicesWithAddedComponent (Chunk* srcChunk, const Archetype* dstArchetype, uint32_t newTypeIndex, SharedComponentIndex value, SharedComponentIndex* outSharedComponentValues);
-        void buildSharedComponentIndicesWithRemovedComponents(Chunk* srcChunk, const Archetype* dstArchetype, SharedComponentIndex* outSharedComponentValues);
-        void buildSharedComponentIndicesWithRemovedComponent (Chunk* srcChunk, const Archetype* dstArchetype, uint32_t oldTypeIndex, SharedComponentIndex* outSharedComponentValues);
+        void incrementComponentOrderVersion(Archetype &archetype, const SharedComponentValues sharedComponentValues);
+        void incrementComponentTypeOrderVersion(const Archetype &archetype);
+        void buildSharedComponentIndicesWithAddedComponents(Chunk &srcChunk, const Archetype &dstArchetype, SharedComponentIndex* outSharedComponentValues);
+        void buildSharedComponentIndicesWithAddedComponent (Chunk &srcChunk, const Archetype &dstArchetype, uint32_t newTypeIndex, SharedComponentIndex value, SharedComponentIndex* outSharedComponentValues);
+        void buildSharedComponentIndicesWithRemovedComponents(Chunk &srcChunk, const Archetype &dstArchetype, SharedComponentIndex* outSharedComponentValues);
+        void buildSharedComponentIndicesWithRemovedComponent (Chunk &srcChunk, const Archetype &dstArchetype, uint32_t oldTypeIndex, SharedComponentIndex* outSharedComponentValues);
     #pragma endregion Componen
 
     #pragma region Archetype Move
     private:
-        Archetype* getArchetypeWithAddedComponent(Archetype* archetype, TypeID type, uint32_t* indexInTypeArray = nullptr);
+        Archetype* getArchetypeWithAddedComponent(Archetype &archetype, TypeID type, uint32_t* indexInTypeArray = nullptr);
         /// @param types sorted
-        Archetype* getArchetypeWithAddedComponents(Archetype* srcArchetype, const_span<TypeID> types);
-        Archetype* getArchetypeWithRemovedComponent(Archetype* archetype, TypeID type, uint32_t* indexInOldTypeArray = nullptr);
+        Archetype* getArchetypeWithAddedComponents(Archetype &srcArchetype, const_span<TypeID> types);
+        Archetype* getArchetypeWithRemovedComponent(Archetype &archetype, TypeID type, uint32_t* indexInOldTypeArray = nullptr);
         /// @param types sorted
-        Archetype* getArchetypeWithRemovedComponents(Archetype* archetype, const_span<TypeID> types);
+        Archetype* getArchetypeWithRemovedComponents(Archetype &archetype, const_span<TypeID> types);
     private:
-        void moveAndSetChangeVersion(EntityBatchInChunk batch, Archetype *archetype, const SharedComponentValues sharedComponentValues, TypeID type);
+        void moveAndSetChangeVersion(EntityBatchInChunk batch, Archetype &archetype, const SharedComponentValues sharedComponentValues, TypeID type);
         /// @brief move subset of chunk data into another chunk.
         /// @remarks chunks can be of same archetype (but differ by shared component values).
         /// @details if the chunk be smaller than available space, it only copies partially from the end of entity batch.
         /// @return returns the number moved. Caller handles if less than indicated in srcBatch.
-        uint32_t move(EntityBatchInChunk srcBatch, Chunk* dstChunk);
+        uint32_t move(EntityBatchInChunk srcBatch, Chunk *dstChunk);
         /// @brief moves a entity into another archetype/shared value
         /// @details calls move(EntityBatchInChunk , Archetype*, SharedComponentValues);
         /// @param entity the entity to move
         /// @param archetype 
         /// @param sharedComponentValues 
         /// @return 
-        void move(Entity entity, Archetype* archetype, const SharedComponentValues sharedComponentValues);
+        void move(Entity entity, Archetype &archetype, const SharedComponentValues sharedComponentValues);
         /// @brief moves a entire chunk into another archetype/shared value
         /// @details calls move(EntityBatchInChunk , Archetype*, SharedComponentValues);
         /// @param chunk source chunk
         /// @param archetype destination archetype
         /// @param sharedComponentValues a pointer to the shared component values
         /// @return 
-        void move(Chunk *chunk, Archetype* archetype, const SharedComponentValues sharedComponentValues);
+        void move(Chunk*chunk, Archetype *archetype, const SharedComponentValues sharedComponentValues);
         /// @brief moves a batch of entities into another archetype/shared value
         /// @details calls move(EntityBatchInChunk, Chunk*)
         /// @param batch 
         /// @param archetype 
         /// @param sharedComponentValues 
         /// @return 
-        void move(EntityBatchInChunk batch, Archetype* archetype, const SharedComponentValues sharedComponentValues);
+        void move(EntityBatchInChunk batch, Archetype &archetype, const SharedComponentValues sharedComponentValues);
     public:
         bool addComponent(Entity entity, TypeID type);
         /// @param types sorted

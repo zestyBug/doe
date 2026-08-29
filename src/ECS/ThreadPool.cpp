@@ -288,7 +288,7 @@ void iterate_systems(){
             return;
         }
     }
-    sharedEngine->eqm.updateNewArchetypes();
+    sharedEngine->eqm.updateNewArchetypes(sharedEngine->ecs);
     sharedEngine->ecs.cleanChangeList();
     if(!sharedEngine->scheduleQueue.empty())
     {

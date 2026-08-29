@@ -106,10 +106,10 @@ void ChunkListMap::add(Chunk* chunk) {
             throw std::runtime_error("add(): something went wrong");
     }
 }
-void ChunkListMap::remove(Chunk* chunk){
-    int32_t offset = chunk->listWithEmptySlotsIndex;
-    chunk->listWithEmptySlotsIndex = -1;
-    if(0 > offset || (uint32_t)offset >= this->_capacity || chunks[offset] != chunk)
+void ChunkListMap::remove(Chunk &chunk){
+    int32_t offset = chunk.listWithEmptySlotsIndex;
+    chunk.listWithEmptySlotsIndex = -1;
+    if(0 > offset || (uint32_t)offset >= this->_capacity || chunks[offset] != &chunk)
         throw std::invalid_argument("remove(): invalid chunk");
     hashes[offset] = _SkipCode;
     ++emptyNodes;

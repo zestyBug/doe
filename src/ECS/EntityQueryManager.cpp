@@ -129,7 +129,7 @@ void EntityQueryManager::addArchetypeIfMatching(Archetype *archetype, EntityQuer
         ptr1[queries[i].parameterIndex] = currentTypeComponentIndex;
     }
 }
-EntityQueryImpl EntityQueryManager::createEntityQuery(const EntityQueryBuilder& query)
+EntityQueryImpl EntityQueryManager::createEntityQuery(const EntityQueryBuilder& query, EntityComponentStore &ecs)
 {
     uint32_t qcount = query.count;
     if(qcount < 1 || qcount > EntityQueryBuilder::capacity)
@@ -173,7 +173,7 @@ EntityQueryImpl EntityQueryManager::createEntityQuery(const EntityQueryBuilder& 
     queryData->validCache = false;
     queryData->ID = id;
 
-    span<Archetype*> archs = this->ecs->getArchetypes();
+    span<Archetype*> archs = ecs.getArchetypes();
     for(Archetype *arch:archs)
         addArchetypeIfMatching(arch,*queryData);
     return EntityQueryImpl{queryData};
@@ -202,14 +202,35 @@ void EntityQueryManager::addAdditionalArchetypes(span<Archetype*> archetypeList)
         }
     }
 }
-void EntityQueryManager::updateNewArchetypes()
+void EntityQueryManager::updateNewArchetypes(EntityComponentStore &ecs)
 {
-    span<ECS::Archetype*> archs = ecs->getArchetypes();
-    uint32_t pCount = ecs->previousArchetypeCount;
+    span<ECS::Archetype*> archs = ecs.getArchetypes();
+    uint32_t pCount = ecs.previousArchetypeCount;
     if(pCount < archs.size()){
-        ecs->previousArchetypeCount = archs.size();
+        ecs.previousArchetypeCount = archs.size();
         archs+=pCount;
         this->addAdditionalArchetypes(archs);
+    }
+}
+void EntityQueryManager::iterate(EntityComponentStore &ecs, EntityQueryImpl query, void (*cb)(span<const void*>)){
+    EntityQueryData *qdata = query.getData();
+    const int32_t                *typesIndex = qdata->typesIndex;
+    const uint32_t                cacheCount = qdata->cacheCount;
+    const uint32_t                typesCount = qdata->firstNoneIndex;
+    const EntityQueryData::ChunkCache *cacheFrom = qdata->cache.get();
+    const EntityQueryData::ChunkCache *cacheTo = cacheFrom + cacheCount;
+    const void *args[typesCount];
+    while(cacheFrom < cacheTo){
+        const Chunk *ch = cacheFrom->value;
+        Archetype *arch = ch->archetype;
+        uint32_t count  = ch->count;
+        const_span<int32_t> index{typesIndex + (typesCount * cacheFrom->archetypeIndex),typesCount};
+        while(count--){
+            for(uint32_t i = typesCount;i--;)
+                args[i] = arch->getComponentDataRO(ch,count,index[i]);
+            cb({args, typesCount});
+        }
+        cacheFrom++;
     }
 }
 EntityQueryData* EntityQueryImpl::getData()

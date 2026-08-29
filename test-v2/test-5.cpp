@@ -35,14 +35,14 @@ struct SpeedSystem : ISystem {
     JobChunkWrapper<SpeedJob> wrapper;
     EntityQueryImpl qd;
     uint32_t counter=0;
-    SpeedSystem(DOE &e){
+    SpeedSystem(DOE &e):ISystem{e} {
         Archetype *arch = e.ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
         Entity entities[200];
         e.ecs.createEntities(arch,{entities,200});
         EntityQueryBuilder qb;
         qb.withAllRW(getTypeID<Position>());
         qb.withAll(getTypeID<Speed>());
-        qd = e.eqm.createEntityQuery(qb);
+        qd = e.eqm.createEntityQuery(qb,e.ecs);
     }
     void OnFixedUpdate(DOE &e){
         counter++;
@@ -60,8 +60,8 @@ struct Test {
 };
 CLASS_TEST(Test,Test1){
     uv_loop_t *loop = uv_default_loop();
-    std::unique_ptr<SpeedSystem> system = std::make_unique<SpeedSystem>(*sharedEngine);
-    sharedEngine->sys.emplace_back((ISystem*)system.release());
+    std::unique_ptr<SpeedSystem> system = std::make_unique<SpeedSystem>(*ECS::sharedEngine);
+    ECS::sharedEngine->sys.emplace_back((ISystem*)system.release());
     JobsUtility::init();
     uv_run(loop, UV_RUN_DEFAULT);
 }
@@ -69,11 +69,11 @@ CLASS_TEST(Test,Test1){
 int main(int argc, char*argv[]){
     uv_setup_args(argc,argv);
     uv_loop_t *loop = uv_default_loop();
-    sharedEngine = std::make_unique<DOE>();
+    ECS::sharedEngine = std::make_unique<DOE>();
     mtest::run_all();
     uv_loop_close(loop);
     uv_library_shutdown();
-    sharedEngine.reset();
+    ECS::sharedEngine.reset();
 #ifdef DEBUG
     printf("Memory leak count %li\n",allocator_counter);
 #endif

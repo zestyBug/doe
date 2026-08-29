@@ -94,9 +94,9 @@ namespace ECS
         std::bitset<Constants::MaximumQueryCount> queryMask;
 
         void addToChunkListWithEmptySlots(Chunk* chunk);
-        void removeFromChunkListWithEmptySlots(Chunk* chunk);
+        void removeFromChunkListWithEmptySlots(Chunk &chunk);
     private:
-        void emptySlotTrackingRemoveChunk(Chunk* chunk);
+        void emptySlotTrackingRemoveChunk(Chunk &chunk);
         void emptySlotTrackingAddChunk(Chunk* chunk);
         Chunk* getExistingChunkWithEmptySlots(const SharedComponentValues sharedComponentValues);
     public:
@@ -120,7 +120,7 @@ namespace ECS
         Archetype(Archetype&&) = delete;
         ~Archetype() = default;
         void addToChunkList(Chunk* chunk, SharedComponentValues sharedComponentIndices, uint32_t changeVersion, ChunkListChanges&);
-        void removeFromChunkList(Chunk* chunk, ChunkListChanges&);
+        void removeFromChunkList(Chunk &chunk, ChunkListChanges&);
 
     #pragma region ChunkDataUtility
     public:
@@ -130,9 +130,9 @@ namespace ECS
         /// @brief when type arrays are pre-sorted, this can be used to search linearly for a match
         int32_t getNextIndexInTypeArray(TypeID type, int32_t lastTypeIndexInTypeArray) const;
         /// @brief Check if non-zero-sized components are same. Means chunks can be moved between archetypes.
-        static bool areLayoutCompatible(Archetype *a, Archetype *b);
+        static bool areLayoutCompatible(Archetype &a, Archetype &b);
     private:
-        void releaseChunk(Chunk* chunk);
+        void releaseChunk(Chunk &chunk);
         void setChunkCount(Chunk* chunk, uint32_t newCount);
 
         void initializeComponents(Chunk* chunk, uint32_t dstIndex, uint32_t count);
@@ -158,13 +158,13 @@ namespace ECS
         /// @brief copy + ChangeVersion
         static void copyComponents(const Chunk *srcChunk, uint32_t srcIndex, const Chunk *dstChunk, uint32_t dstIndex, uint32_t count, uint32_t dstGlobalSystemVersion);
         /// @brief convert + cloneChangeVersions
-        static void clone(Archetype *srcArchetype, EntityBatchInChunk srcBatch, Archetype *dstArchetype, Chunk *dstChunk);
+        static void clone(Archetype &srcArchetype, EntityBatchInChunk srcBatch, Archetype *dstArchetype, Chunk *dstChunk);
         /// @brief move sized components data from a Chunk to another Chunk
         /// @details operations are: copy: memcpy(dst,src), new added: memset(dst,0), removed: destruct(src)
         /// @warning assuming srcArchetype.Types[0] == dstArchetype.Types[0] == Entity
-        static void convert(Archetype *srcArchetype, Chunk *srcChunk, uint32_t srcIndex, Archetype *dstArchetype, Chunk *dstChunk, uint32_t dstIndex, uint32_t count);
-        static void cloneChangeVersions(Archetype* srcArchetype, int32_t chunkIndexInSrcArchetype, Archetype* dstArchetype, int32_t chunkIndexInDstArchetype, bool dstValidExistingVersions = false);
-        static void changeArchetypeInPlace(Archetype* srcArchetype, Chunk *srcChunk, Archetype* dstArchetype, const SharedComponentValues sharedComponentValues);
+        static void convert(Archetype &srcArchetype, Chunk &srcChunk, uint32_t srcIndex, Archetype &dstArchetype, Chunk &dstChunk, uint32_t dstIndex, uint32_t count);
+        static void cloneChangeVersions(Archetype &srcArchetype, int32_t chunkIndexInSrcArchetype, Archetype* dstArchetype, int32_t chunkIndexInDstArchetype, bool dstValidExistingVersions = false);
+        static void changeArchetypeInPlace(Archetype &srcArchetype, Chunk *srcChunk, Archetype* dstArchetype, const SharedComponentValues sharedComponentValues);
         void addEmptyChunk(Chunk *chunk, const SharedComponentValues sharedComponentValues);
     public:
         void setSharedComponentDataIndex(Entity entity, const SharedComponentValues sharedComponentValues, TypeID typeIndex);

@@ -91,7 +91,7 @@ namespace ECS
         // the whole popuse is to free space when object is unused but still in memory
         void reset();
         void add(Chunk*);
-        void remove(Chunk*);
+        void remove(Chunk&);
         /// @brief find a pointer with a key using hash list
         /// @return value or nullptr
         Chunk* tryGet(const SharedComponentValues sharedComponentValues, uint32_t numSharedComponents) const;

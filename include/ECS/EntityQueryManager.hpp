@@ -30,9 +30,9 @@ namespace ECS {
         friend struct EntityQueryManager;
         friend struct ComponentDependencyManager;
         typedef const Archetype* ArchetypeCache;
-        /// @brief matching archetypes
+        /// @brief matching archetypes.
         std::unique_ptr<ArchetypeCache[]> archetypes;
-        /// @brief typesIndex[archetypeIndex * firstNoneIndex + typeIndex]
+        /// @brief how to access: typesIndex[archetypeIndex(in this->archetypes) * this->firstNoneIndex + typeIndex(in the archetype)]
         /// @details -1 means not found
         int32_t             *typesIndex = nullptr;
         uint32_t             archetypesCapacity = 0;
@@ -40,7 +40,7 @@ namespace ECS {
         /// @brief matching chunks cache
         struct ChunkCache {
             const Chunk *value;
-            /// @brief Archetype index in archetypes
+            /// @brief Archetype index in this->archetypes.
             uint32_t archetypeIndex;
         };
         std::unique_ptr<ChunkCache[]>  cache;
@@ -68,6 +68,8 @@ namespace ECS {
         std::unique_ptr<TypeQuery[]> queries;
         uint32_t queryCount = 0;
         uint32_t firstAnyIndex = 0;
+        /// @brief can be used as total number of non-zero sized components in the query.
+        /// @note archetypes may lack some of the optional components.
         uint32_t firstNoneIndex = 0;
         uint32_t validCache = false;
         // simply an index.
@@ -80,17 +82,17 @@ namespace ECS {
     struct EntityQueryManager { 
     private:
         static_array<EntityQueryData,Constants::MaximumQueryCount> entityQueryDatas;
-        EntityComponentStore *ecs;
         static bool testMatchingArchetypeRequiredComponent(const_span<TypeID> archetypeTypes, const_span<EntityQueryData::TypeQuery> queryTypes);
         static bool testMatchingArchetypeOptionalComponent(const_span<TypeID> archetypeTypes, const_span<EntityQueryData::TypeQuery> queryTypes);
         static bool testMatchingArchetypeExcludedComponent(const_span<TypeID> archetypeTypes, const_span<EntityQueryData::TypeQuery> queryTypes);
     public:
-        EntityQueryManager(EntityComponentStore *_ecs):ecs{_ecs}{}
-        EntityQueryImpl createEntityQuery(const EntityQueryBuilder&);
+        EntityQueryManager(){}
+        EntityQueryImpl createEntityQuery(const EntityQueryBuilder&, EntityComponentStore &ecs);
         static void addArchetypeIfMatching(Archetype *archetype, EntityQueryData &query);
         void addAdditionalArchetypes(span<Archetype*> archetypeList);
         static void rebuildMatchingChunkCache(EntityQueryData &query);
-        void updateNewArchetypes();
+        void updateNewArchetypes(EntityComponentStore &ecs);
+        void iterate(EntityComponentStore &, EntityQueryImpl, void (*)(span<const void*>));
     };
 }
 
