@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
         hints.y = 0;
         hints.width = ECS::sharedWindow.width;
         hints.height = ECS::sharedWindow.height;
-        hints.flags = USPosition|USSize;
+        hints.flags = USSize;// USPosition
         startup_state = XAllocWMHints();
         startup_state->initial_state = NormalState;
         startup_state->flags = StateHint;
@@ -195,7 +195,7 @@ void WndProc(uv_poll_t *handle, int, int)
 {
     XEvent event;
     ImGuiIO& io=ImGui::GetIO();
-    char utf8[64];
+    char utf8[16];
     KeySym keysym;
     Status status;
     int len;
@@ -212,7 +212,7 @@ void WndProc(uv_poll_t *handle, int, int)
             io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(keysym), true);
             io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey   (keysym), true);
 
-            len = Xutf8LookupString(xic, &event.xkey, utf8, sizeof(utf8), NULL, &status);
+            len = Xutf8LookupString(xic, &event.xkey, utf8, sizeof(utf8)-1, NULL, &status);
             if (status == XLookupChars || status == XLookupBoth)
             {
                 utf8[len] = '\0';
@@ -222,7 +222,7 @@ void WndProc(uv_poll_t *handle, int, int)
         case KeyRelease:
             //XMaskEvent()
             keysym=XLookupKeysym(&event.xkey, 0);
-            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(keysym), 0);
+            io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(keysym), false);
             io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey(keysym), false);
             break;
         /*
@@ -287,7 +287,6 @@ ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(unsigned int keysym)
 {
     switch (keysym)
 	{
-    // XK_Caps_Lock
 	case XK_Control_L:
 	case XK_Control_R:
         return ImGuiMod_Ctrl;
