@@ -2,16 +2,21 @@
 #define WINDOW_HPP
 
 #include "cutil/basics.hpp"
+#include "vulkan/vk_platform.h"
 
 namespace ECS
 {
     struct Window {
-    #if defined(_WIN32) || (defined(__WIN32__) || defined(WIN32) || defined(__MINGW32__))
+    #if defined(VK_USE_PLATFORM_WIN32_KHR)
+        HWND hWnd;
+        HINSTANCE hInstance;
+    #elif defined(VK_USE_PLATFORM_XLIB_KHR)
+        ::Display *display;
+        ::Visual *visual;
+        ::VisualID visualId;
+        ::Window window;
     #else
-        void *display;
-        void *visual;
-        unsigned long visualId;
-        unsigned long window;
+    #error
     #endif
         int width, height;
     };

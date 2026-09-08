@@ -34,7 +34,7 @@ namespace ECS {
     private:
         struct ResourceStore;
         uint32_t                       typeCount = 0;
-        ResourceStore *sharedValues[Constants::MaximumResourcesCount];
+        ResourceStore *sharedValues[Constants::MaximumResourcesCount]{};
         // ResourceManager();
     public:
         ResourceManager(ResourceManager&&) = delete;

@@ -163,8 +163,8 @@ IMGUI_OBJS += \
 	$(OBJ)/$(srcDir)/imgui/imgui_widgets.o \
 	$(OBJ)/$(srcDir)/imgui/imgui_tables.o \
 	$(OBJ)/$(srcDir)/imgui/imgui_impl_vulkan.o \
-	$(OBJ)/$(srcDir)/imgui/imgui_draw.o \
-	$(OBJ)/$(srcDir)/imgui/imgui_demo.o
+	$(OBJ)/$(srcDir)/imgui/imgui_draw.o
+# $(OBJ)/$(srcDir)/imgui/imgui_demo.o
 # $(OBJ)/$(srcDir)/imgui/imgui_impl_glfw.o
 
 SYSS= \

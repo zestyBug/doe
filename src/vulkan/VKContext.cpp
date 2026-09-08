@@ -117,8 +117,8 @@ VkBool32 VKContext::TestSurfaceSupport(VkPhysicalDevice pd, VkSurfaceKHR surface
         res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pd,surface,&capability);
         if(res)
             throw VulkanException(res, "vkGetPhysicalDeviceSurfaceFormatsKHR");
-        if(capability.maxImageExtent.height < 480 || capability.maxImageExtent.width < 640)
-            return 1;
+        //if(capability.maxImageExtent.height < 480 || capability.maxImageExtent.width < 640)
+        //    return 1;
         if(capability.minImageCount > Constants::MaximumSwapchainImageCount)
             return 1;
     }
@@ -162,10 +162,10 @@ VKContext::VKContext(){
     memset(this,0,sizeof(*this));
 }
 VKContext::~VKContext(){
-    vkDeviceWaitIdle(this->device);
     if(instance != VK_NULL_HANDLE){
         if(device != VK_NULL_HANDLE)
         {
+            vkDeviceWaitIdle(this->device);
             for (uint32_t i=0;i<this->imageCount;i++)
                 if(this->frambuffer[i] != VK_NULL_HANDLE)
                     vkDestroyFramebuffer(this->device, this->frambuffer[i], 0);
@@ -211,15 +211,17 @@ void VKContext::initialize(){
     char const* const exts[] = { 
         "VK_KHR_get_physical_device_properties2", 
         VK_KHR_SURFACE_EXTENSION_NAME,
-        VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+        //VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
     #if defined(VK_USE_PLATFORM_WIN32_KHR)
         VK_KHR_WIN32_SURFACE_EXTENSION_NAME
     #elif defined(VK_USE_PLATFORM_XLIB_KHR)
         VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+    #else
+    #error
     #endif
     };
     char const* const lays[] = {
-        "VK_LAYER_KHRONOS_validation",
+        //"VK_LAYER_KHRONOS_validation",
     };
     // initialize the VkInstanceCreateInfo structure
     const VkInstanceCreateInfo inst_info = {
@@ -244,8 +246,8 @@ void VKContext::createSurface(){
         .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
         .pNext = NULL,
         .flags = 0,
-        .hinstance = glfwGetWin32Instance(),
-        .hwnd = glfwGetWin32Window(handle),
+        .hinstance = ECS::sharedWindow.hInstance,
+        .hwnd = ECS::sharedWindow.hWnd,
     };
     VkResult res = vkCreateWin32SurfaceKHR(this->instance, &cInfo, NULL, &this->surface);
     if(res)
@@ -259,8 +261,8 @@ void VKContext::createSurface(){
         .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
         .pNext = NULL,
         .flags = 0,
-        .dpy = (::Display*)sharedWindow.display,
-        .window = (::Window)sharedWindow.window,
+        .dpy = sharedWindow.display,
+        .window = sharedWindow.window,
     };
     VkResult res = vkCreateXlibSurfaceKHR(this->instance, &cInfo, NULL, &this->surface);
     if(res)
@@ -341,13 +343,14 @@ void VKContext::selectDevice(){
                 continue;
             if (!(queue_family_prop[i].queueFlags & VK_QUEUE_TRANSFER_BIT))
                 continue;
-        #ifdef VK_USE_PLATFORM_WIN32_KHR
+        #if defined(VK_USE_PLATFORM_WIN32_KHR)
             if(!vkGetPhysicalDeviceWin32PresentationSupportKHR(pd,i))
                 continue;
-        #endif
-        #ifdef VK_USE_PLATFORM_X11_KHR
-            if(!vkGetPhysicalDeviceXlibPresentationSupportKHR(pd,i,(::Display*)sharedWindow.display,(::VisualID)sharedWindow.visualId))
+        #elif defined(VK_USE_PLATFORM_XLIB_KHR)
+            if(!vkGetPhysicalDeviceXlibPresentationSupportKHR(pd,i,sharedWindow.display,sharedWindow.visualId))
                 continue;
+        #else
+        #error
         #endif
             // A Device may not be plugged into a monitor or not have any graphcal output
             // which could make direct interactions with displayable images difficult or impossible.

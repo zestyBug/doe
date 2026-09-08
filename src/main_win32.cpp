@@ -1,111 +1,107 @@
-#define NOMINMAX 1
-#include <windows.h>
 #include "ECS/Engine.hpp"
 #include "ECS/ThreadPool.hpp"
 #include "ECS/Base/Window.hpp"
 #include "uv.h"
 #include "imgui.h"
+#define NOMINMAX 1
+#include <windows.h>
 
 std::unique_ptr<ECS::DOE> ECS::sharedEngine;
 ECS::Window ECS::sharedWindow;
 
 LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-const char* WINDOW_CLASS_NAME = "Graph_Project_Window";
+const char* WINDOW_CLASS_NAME = "DOE_Window";
 uint32_t MouseButtonsDown = 0;
 bool MouseTracked = false;
-
+void messageIdle(uv_idle_t *arg){
+    MSG msg;
+    /* check for messages in the queue */
+    while (PeekMessageA(&msg, ECS::sharedWindow.hWnd, 0, 0, PM_REMOVE))
+    {
+        // WM_KEYDOWN and WM_KEYUP ==> WM_CHAR, wont replace but add new message to the queue
+        TranslateMessage(&msg);
+        // pass the message to the WndProc
+        DispatchMessageA(&msg);
+    }
+}
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, const int iCmdShow)
 {
-    rc.OnInit();
+    uv_loop_t *loop;
+    uv_idle_t idle;
+    ECS::sharedWindow.hInstance = hInstance;
+    {
+        WNDCLASS	wc;
+        //wc.cbSize = sizeof(wc);
+        wc.style = CS_OWNDC;
+        wc.lpfnWndProc = WndProc;
+        wc.cbClsExtra = 0;
+        wc.cbWndExtra = 0;
+        wc.hInstance = hInstance;
+        wc.hIcon = LoadIconA(NULL, IDI_APPLICATION);
+        wc.hCursor = LoadCursorA(NULL, IDC_ARROW);
+        wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+        wc.lpszClassName = WINDOW_CLASS_NAME;
+        wc.lpszMenuName = NULL;
+        //wc.hIconSm = NULL;
+        RegisterClassA(&wc);
+    }
+    {
+        HWND console;
+        console = GetConsoleWindow();
+        ShowWindow(console, false);
+    }
 
-    HGLRC		hGLRC;
-    HWND		console;
-
-    WNDCLASS	wc;
-    //wc.cbSize = sizeof(wc);
-    wc.style = CS_OWNDC;
-    wc.lpfnWndProc = WndProc;
-    wc.cbClsExtra = 0;
-    wc.cbWndExtra = 0;
-    wc.hInstance = hInstance;
-    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-    wc.lpszClassName = WINDOW_CLASS_NAME;
-    wc.lpszMenuName = NULL;
-    //wc.hIconSm = NULL;
-    RegisterClass(&wc);
-
-    console = GetConsoleWindow();
     /* create main window */
-    hWnd = CreateWindowEx(
+    ECS::sharedWindow.hWnd = CreateWindowExA(
         WS_EX_CLIENTEDGE, WINDOW_CLASS_NAME, "OpenGL Sample",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX |
         WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_SIZEBOX | WS_SYSMENU,
-        100, 100, window_initial_width, window_initial_height,
-        NULL, NULL, hInstance, NULL);
-    if (!hWnd) {
+        100, 100, 640, 240,
+        NULL, NULL, ECS::sharedWindow.hInstance, NULL);
+    if (!ECS::sharedWindow.hWnd) {
         printf("unable to create window"); exit(1);
     }
-    ShowWindow(hWnd, true);
-    //ShowWindow(console, true);
-    hDC = GetDC(hWnd);
-    if (!hDC) {
-        printf("unable to get window device context"); exit(1);
-    }
-
-
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable some options
-    IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
-    io.BackendPlatformUserData = (void*)IM_NEW(ImGui_ImplMy_Data)();
-    io.BackendPlatformName = "imgui_impl_my";
-    io.DisplaySize = ImVec2(width, height);
-
-    ImGui::GetMainViewport()->PlatformHandleRaw = (void*)hWnd;
-
-    ImGui_ImplOpenGL3_Init();
-
-    ImGui::StyleColorsLight();
-
-    DeltaTime.init();
+    ShowWindow(ECS::sharedWindow.hWnd, true);
+    
 
     {
         RECT rect = { 0, 0, 0, 0 };
-        ::GetClientRect(hWnd, &rect);
-        width = rect.right - rect.left;
-        height = rect.bottom - rect.top;
-        io.DisplaySize = ImVec2((float)width, (float)height);
+        ::GetClientRect(ECS::sharedWindow.hWnd, &rect);
+        ECS::sharedWindow.width = rect.right - rect.left;
+        ECS::sharedWindow.height = rect.bottom - rect.top;
     }
 
-    MSG msg;
-    while (isRunning)
+
+    uv_setup_args(1,&lpCmdLine);
+    loop = uv_default_loop();
+    uv_idle_init(loop, &idle);
+    uv_idle_start(&idle, messageIdle);
+
+    ImGui::CreateContext();
+    ImGui::GetMainViewport()->PlatformHandleRaw = (void*)ECS::sharedWindow.hWnd;
     {
-        /* check for messages in the queue */
-        if (GetMessage(&msg, hWnd, 0, 0))
-        {
-            // WM_KEYDOWN and WM_KEYUP ==> WM_CHAR, wont replace but add new message to the queue
-            TranslateMessage(&msg);
-            // pass the message to the WndProc
-            DispatchMessage(&msg);
-            if (msg.message == WM_QUIT)
-                isRunning = 0;
-        }
+        ImGuiIO& io=ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable some options
+        io.BackendPlatformUserData = nullptr;
+        io.BackendPlatformName = "imgui_impl_my";
     }
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui::DestroyContext();
-    glwDestroy();
+    ECS::sharedEngine = std::make_unique<ECS::DOE>();
+    ECS::TypeManager::Initialize();
+    ECS::JobsUtility::init();
 
-    ReleaseDC(hWnd, hDC);
-    ::DestroyWindow(hWnd);
+    uv_run(loop, UV_RUN_DEFAULT);
+
+    uv_idle_stop(&idle);
+    ECS::sharedEngine.reset();
+    ImGui::DestroyContext();
+    uv_loop_close(loop);
+    uv_library_shutdown();
+
+    ::DestroyWindow(ECS::sharedWindow.hWnd);
     return 0;
 }
-
-
-
 
 
 
@@ -120,20 +116,11 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         ImGuiIO& io = ImGui::GetIO();
         switch (message)
         {
-        case WM_SIZE://WM_SIZING
-        {
-            RECT rect = { 0, 0, 0, 0 };
-            ::GetClientRect(hWnd, &rect);
-            width = rect.right - rect.left;
-            height = rect.bottom - rect.top;
-            io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
-            break;
-        }
         case WM_MOUSEMOVE:
             // We need to call TrackMouseEvent in order to receive WM_MOUSELEAVE events
             if (!MouseTracked)
             {
-                TRACKMOUSEEVENT tme = { sizeof(tme), TME_LEAVE, hWnd, 0 };
+                TRACKMOUSEEVENT tme = { sizeof(tme), TME_LEAVE, ECS::sharedWindow.hWnd, 0 };
                 ::TrackMouseEvent(&tme);
                 MouseTracked = true;
             }
@@ -154,7 +141,7 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             else if (message == WM_MBUTTONDOWN || message == WM_MBUTTONDBLCLK) { button = 2; }
             else if (message == WM_XBUTTONDOWN || message == WM_XBUTTONDBLCLK) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
             if (MouseButtonsDown == 0 && ::GetCapture() == nullptr)
-                ::SetCapture(hWnd);
+                ::SetCapture(ECS::sharedWindow.hWnd);
             MouseButtonsDown |= 1 << button;
             io.AddMouseButtonEvent(button, true);
             break;
@@ -170,7 +157,7 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             else if (message == WM_MBUTTONUP) { button = 2; }
             else if (message == WM_XBUTTONUP) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
             MouseButtonsDown &= ~(1 << button);
-            if (MouseButtonsDown == 0 && ::GetCapture() == hWnd)
+            if (MouseButtonsDown == 0 && ::GetCapture() == ECS::sharedWindow.hWnd)
                 ::ReleaseCapture();
             io.AddMouseButtonEvent(button, false);
             break;
@@ -223,12 +210,6 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             io.AddMouseWheelEvent((float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA, 0.0f);
             break;
             // return if it was an user input event, countinue to process if is system event.
-        default: goto sys;
-        }
-        return 0;
-    sys: 
-        switch (message)
-        {
         case WM_SETFOCUS:
         case WM_KILLFOCUS:
             io.AddFocusEvent(message == WM_SETFOCUS);
@@ -238,22 +219,30 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     switch (message)
     {
-        // case WM_CREATE:
+    case WM_SIZE://WM_SIZING
+    {
+        RECT rect = { 0, 0, 0, 0 };
+        ::GetClientRect(ECS::sharedWindow.hWnd, &rect);
+        ECS::sharedWindow.width = rect.right - rect.left;
+        ECS::sharedWindow.height = rect.bottom - rect.top;
+        break;
+    }
+    // case WM_CREATE:
     case WM_PAINT:
-        //
+    {
+        PAINTSTRUCT ps;
+        BeginPaint(ECS::sharedWindow.hWnd, &ps);
+        EndPaint  (ECS::sharedWindow.hWnd, &ps);
         break;
+    }
     case WM_QUIT:
-        isRunning = 0;
-        break;
-    case WM_DESTROY:
-        break;
     case WM_CLOSE:
-        // like PostMessage,
+        ECS::JobsUtility::signalQuit();
         PostQuitMessage(0);
         break;
 
     default:
-        return DefWindowProc(_hWnd, message, wParam, lParam);
+        return DefWindowProcA(_hWnd, message, wParam, lParam);
     }
     return 0;
 }
@@ -262,57 +251,50 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam)
 {
-    if (wParam >= 0x41 && wParam <= 0x5A) {
+    if (wParam >= 0x41 && wParam <= 0x5A)
         return (ImGuiKey)(ImGuiKey_A + (wParam - 0x41));
-
-    }
-    if (wParam >= 0x30 && wParam <= 0x39) {
+    if (wParam >= 0x30 && wParam <= 0x39)
         return (ImGuiKey)(ImGuiKey_0 + (wParam - 48));
-    }
-    if (wParam >= ImGuiKey_Keypad0 && wParam <= ImGuiKey_Keypad9) {
+    if (wParam >= ImGuiKey_Keypad0 && wParam <= ImGuiKey_Keypad9)
         return (ImGuiKey)(ImGuiKey_Keypad0 + (wParam - ImGuiKey_Keypad0));
-    }
-    if (wParam >= VK_F1 && wParam <= VK_F12) {
+    if (wParam >= VK_F1 && wParam <= VK_F12)
         return (ImGuiKey)(ImGuiKey_F1 + (wParam - VK_F1));
-    }
     switch (wParam)
     {
-    case VK_ESCAPE: return ImGuiKey_Escape;
-    case VK_OEM_MINUS: return ImGuiKey_Minus;
-    case VK_OEM_NEC_EQUAL: return ImGuiKey_Equal;
-    case VK_BACK: return ImGuiKey_Backspace;
-    case VK_TAB: return ImGuiKey_Tab;
-    case VK_OEM_4: return ImGuiKey_LeftBracket;
-    case VK_OEM_6: return ImGuiKey_RightBracket;
-    case VK_RETURN: return ImGuiKey_Enter;
-    case VK_OEM_1: return ImGuiKey_Semicolon;
-    case VK_OEM_COMMA: return ImGuiKey_Comma;
-    case VK_OEM_3: return ImGuiKey_GraveAccent;
-    case VK_OEM_5: return ImGuiKey_Backslash;
-    case VK_OEM_7: return ImGuiKey_Apostrophe;
-    case VK_OEM_PERIOD: return ImGuiKey_Period;
-    case VK_OEM_2: return ImGuiKey_Slash;
-    case VK_MULTIPLY: return ImGuiKey_KeypadMultiply;
-    case VK_SPACE: return ImGuiKey_Space;
-    case VK_CAPITAL: return ImGuiKey_CapsLock;
-    case VK_NUMLOCK:        return ImGuiKey_NumLock;
+    case VK_ESCAPE:          return ImGuiKey_Escape;
+    case VK_OEM_MINUS:       return ImGuiKey_Minus;
+    case VK_OEM_NEC_EQUAL:   return ImGuiKey_Equal;
+    case VK_BACK:            return ImGuiKey_Backspace;
+    case VK_TAB:             return ImGuiKey_Tab;
+    case VK_OEM_4:           return ImGuiKey_LeftBracket;
+    case VK_OEM_6:           return ImGuiKey_RightBracket;
+    case VK_RETURN:          return ImGuiKey_Enter;
+    case VK_OEM_1:           return ImGuiKey_Semicolon;
+    case VK_OEM_COMMA:       return ImGuiKey_Comma;
+    case VK_OEM_3:           return ImGuiKey_GraveAccent;
+    case VK_OEM_5:           return ImGuiKey_Backslash;
+    case VK_OEM_7:           return ImGuiKey_Apostrophe;
+    case VK_OEM_PERIOD:      return ImGuiKey_Period;
+    case VK_OEM_2:           return ImGuiKey_Slash;
+    case VK_MULTIPLY:        return ImGuiKey_KeypadMultiply;
+    case VK_SPACE:           return ImGuiKey_Space;
+    case VK_CAPITAL:         return ImGuiKey_CapsLock;
+    case VK_NUMLOCK:         return ImGuiKey_NumLock;
     case VK_SUBTRACT:        return ImGuiKey_KeypadSubtract;
-    case VK_ADD:        return ImGuiKey_KeypadAdd;
-    case VK_DECIMAL:        return ImGuiKey_KeypadDecimal;
+    case VK_ADD:             return ImGuiKey_KeypadAdd;
+    case VK_DECIMAL:         return ImGuiKey_KeypadDecimal;
     case IM_VK_KEYPAD_ENTER: return ImGuiKey_KeypadEnter;
-    case VK_DIVIDE: return ImGuiKey_KeypadDivide;
-    case VK_HOME: return ImGuiKey_Home;
-    case VK_UP: return ImGuiKey_UpArrow;
-    case VK_LEFT: return ImGuiKey_LeftArrow;
-    case VK_NAVIGATION_UP: return ImGuiKey_PageUp;
-    case VK_RIGHT: return ImGuiKey_RightArrow;
-    case VK_END: return ImGuiKey_End;
-    case VK_DOWN: return ImGuiKey_DownArrow;
+    case VK_DIVIDE:          return ImGuiKey_KeypadDivide;
+    case VK_HOME:            return ImGuiKey_Home;
+    case VK_UP:              return ImGuiKey_UpArrow;
+    case VK_LEFT:            return ImGuiKey_LeftArrow;
+    case VK_NAVIGATION_UP:   return ImGuiKey_PageUp;
+    case VK_RIGHT:           return ImGuiKey_RightArrow;
+    case VK_END:             return ImGuiKey_End;
+    case VK_DOWN:            return ImGuiKey_DownArrow;
     case VK_NAVIGATION_DOWN: return ImGuiKey_PageDown;
-    case VK_INSERT: return ImGuiKey_Insert;
-    case VK_DELETE: return ImGuiKey_Delete;
-    default:
-        //printf("key: %i\n",keycode);
-        return ImGuiKey_None;
+    case VK_INSERT:          return ImGuiKey_Insert;
+    case VK_DELETE:          return ImGuiKey_Delete;
+    default:                 return ImGuiKey_None;
     }
 }

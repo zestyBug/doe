@@ -30,10 +30,10 @@
 #include "ECS/Base/Window.hpp"
 #include "uv.h"
 #include "imgui.h"
-
+#define Status int
 #include <X11/Xatom.h>
-#include <X11/extensions/Xrender.h>
 #include <X11/Xutil.h>
+#include <X11/extensions/Xrender.h>
 
 #define Button6 6
 #define Button7 7
@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
 	//Window;
     int screen;
     Window root;
+    uv_loop_t *loop;
 
     /* Avoid locale-related number parsing issues */
     setlocale(LC_NUMERIC, "C");
@@ -81,7 +82,7 @@ int main(int argc, char *argv[])
 	ECS::sharedWindow.visual   = DefaultVisual(ECS::sharedWindow.display, screen);
     ECS::sharedWindow.width    = DisplayWidth (ECS::sharedWindow.display, screen)/2;
 	ECS::sharedWindow.height   = DisplayHeight(ECS::sharedWindow.display, screen)/2;
-    ECS::sharedWindow.visualId = XVisualIDFromVisual((Visual *)ECS::sharedWindow.visual);
+    ECS::sharedWindow.visualId = XVisualIDFromVisual(ECS::sharedWindow.visual);
 
     {
         int attr_mask;
@@ -93,12 +94,12 @@ int main(int argc, char *argv[])
         attr.event_mask = EnterWindowMask | LeaveWindowMask | OwnerGrabButtonMask | ExposureMask | VisibilityChangeMask | StructureNotifyMask | PropertyChangeMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | ButtonMotionMask | PointerMotionMask;
         //	CWBackPixmap|
         attr_mask = CWColormap | CWBorderPixel | CWEventMask;
-        ECS::sharedWindow.window = XCreateWindow((Display *)ECS::sharedWindow.display, root, 0, 0, ECS::sharedWindow.width, ECS::sharedWindow.height, 0, CopyFromParent, InputOutput, CopyFromParent, attr_mask, &attr);
+        ECS::sharedWindow.window = XCreateWindow(ECS::sharedWindow.display, root, 0, 0, ECS::sharedWindow.width, ECS::sharedWindow.height, 0, CopyFromParent, InputOutput, CopyFromParent, attr_mask, &attr);
         if(!ECS::sharedWindow.window)
             throw std::runtime_error("Couldn't create the window\n");
     }
 
-    xim = XOpenIM((Display*)ECS::sharedWindow.display, NULL, NULL, NULL);
+    xim = XOpenIM(ECS::sharedWindow.display, NULL, NULL, NULL);
     xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing, XNClientWindow, ECS::sharedWindow.window, XNFocusWindow, ECS::sharedWindow.window, NULL);
 
     {
@@ -119,22 +120,22 @@ int main(int argc, char *argv[])
         startup_state = XAllocWMHints();
         startup_state->initial_state = NormalState;
         startup_state->flags = StateHint;
-        XSetStandardProperties((Display*)ECS::sharedWindow.display, (Window)ECS::sharedWindow.window, "xogl", "xogl", None, argv, argc, NULL);
-        XSetWMProperties((Display*)ECS::sharedWindow.display, (Window)ECS::sharedWindow.window, &textprop, &textprop, NULL, 0, &hints, startup_state, NULL);
+        XSetStandardProperties(ECS::sharedWindow.display, ECS::sharedWindow.window, "xogl", "xogl", None, argv, argc, NULL);
+        XSetWMProperties(ECS::sharedWindow.display, ECS::sharedWindow.window, &textprop, &textprop, NULL, 0, &hints, startup_state, NULL);
         XFree(startup_state);
 
-        XMapWindow((Display*)ECS::sharedWindow.display, (Window)ECS::sharedWindow.window);
-        XIfEvent((Display*)ECS::sharedWindow.display, &event, WaitForMapNotify, (XPointer)&ECS::sharedWindow.window);
+        XMapWindow(ECS::sharedWindow.display, ECS::sharedWindow.window);
+        XIfEvent(ECS::sharedWindow.display, &event, WaitForMapNotify, (XPointer)&ECS::sharedWindow.window);
 
-        if ((del_atom = XInternAtom((Display*)ECS::sharedWindow.display, "WM_DELETE_WINDOW", 0)) != None) {
-            XSetWMProtocols((Display*)ECS::sharedWindow.display, (Window)ECS::sharedWindow.window, &del_atom, 1);
+        if ((del_atom = XInternAtom(ECS::sharedWindow.display, "WM_DELETE_WINDOW", 0)) != None) {
+            XSetWMProtocols(ECS::sharedWindow.display, ECS::sharedWindow.window, &del_atom, 1);
         }
     }
 
     uv_setup_args(argc,argv);
-    uv_loop_t *loop = uv_default_loop();
+    loop = uv_default_loop();
     uv_poll_t x11_poll;
-    uv_poll_init(loop, &x11_poll, XConnectionNumber((Display*)ECS::sharedWindow.display));
+    uv_poll_init(loop, &x11_poll, XConnectionNumber(ECS::sharedWindow.display));
     uv_poll_start(&x11_poll, UV_READABLE, &WndProc);
 
     ImGui::CreateContext();
@@ -163,8 +164,8 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    XDestroyWindow((Display*)ECS::sharedWindow.display, (Window)ECS::sharedWindow.window);
-    XCloseDisplay((Display*)ECS::sharedWindow.display);
+    XDestroyWindow(ECS::sharedWindow.display, ECS::sharedWindow.window);
+    XCloseDisplay(ECS::sharedWindow.display);
 	return 0;
 }
 
@@ -199,9 +200,9 @@ void WndProc(uv_poll_t *handle, int, int)
     KeySym keysym;
     Status status;
     int len;
-    while (XPending((Display*)ECS::sharedWindow.display))
+    while (XPending(ECS::sharedWindow.display))
     {
-        XNextEvent((Display*)ECS::sharedWindow.display, &event);
+        XNextEvent(ECS::sharedWindow.display, &event);
         switch (event.type)
         {
         case ConfigureNotify:
