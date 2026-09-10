@@ -3,17 +3,11 @@
 
 #include "ECS/Base/ISystem.hpp"
 #include "ECS/Engine.hpp"
-#include "vulkan/VKContext.hpp"
 #include "uv.h"
 
 struct ExampleSystem : ECS::ISystem{
     int counter = 0;
-    ECS::VKContext vk;
     ECS::EntityQueryImpl query;
-    VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
-    uv_thread_t gthread;
-    uv_sem_t glock;
-    static void gFunc(void *arg);
     ExampleSystem(ECS::DOE&);
     void OnFixedUpdate(ECS::DOE&);
     void OnUpdate(ECS::DOE&);

@@ -18,7 +18,8 @@ namespace ECS
         static const char* VkResultToString(VkResult result);
         std::unique_ptr<char[]> message;
     };
-    // A kind of bootstrap class for vulkan
+    /// @brief A bootstrap class for vulkan.
+    /// @warning This class must has nothing to do with the rest of the engine, including ECS, resources, systems.
     struct VKContext {
         // a context, so OS can handle many apps
         VkInstance instance = VK_NULL_HANDLE;

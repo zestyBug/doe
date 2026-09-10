@@ -187,6 +187,7 @@ OBJS= \
 	$(OBJ)/$(srcDir)/ECS/ChunkStore.o \
 	$(OBJ)/$(srcDir)/ECS/SharedComponentStore.o \
 	$(OBJ)/$(srcDir)/ECS/EntityStore.o \
+	$(OBJ)/$(srcDir)/ECS/Window.o \
 	$(OBJ)/$(srcDir)/vulkan/wrapper.o \
 	$(OBJ)/$(srcDir)/vulkan/VKContext.o \
 	$(OBJ)/$(srcDir)/cutil/HashHelper.o \

@@ -1,7 +1,7 @@
 #include "ECS/ThreadPool.hpp"
 #include "ECS/JobChunk.hpp"
 #include "ECS/Engine.hpp"
-#include "ECS/Base/Window.hpp"
+#include "Window.hpp"
 #include "uv.h"
 
 std::vector<ECS::ISystem*(*)(ECS::DOE&)>& ECS::_get_initialize_list() {
@@ -228,15 +228,15 @@ void iterate_systems(uv__work *w,int) {
 void iterate_systems(){
     again:;
     {
-        std::unique_ptr<ISystem> *begin =         sharedEngine->sys.data();
-        std::unique_ptr<ISystem> *end   = begin + sharedEngine->sys.size();
+        std::unique_ptr<ISystem> *begin =         ECS::sharedEngine->sys.data();
+        std::unique_ptr<ISystem> *end   = begin + ECS::sharedEngine->sys.size();
         if(unlikely(sharedData.bitmask & Request::Exit)) {
             uv_timer_stop(sharedData.fixedTimer);
             uv_unref((uv_handle_t*)sharedData.wakecall);
             uv_stop(uv_default_loop());
             while (begin != end){
                 try {
-                    (*begin)->OnDestroy(*sharedEngine);
+                    (*begin)->OnDestroy(*ECS::sharedEngine);
                 } catch(const std::exception& e) {
                 #ifdef DEBUG
                     printf("caught std::exception OnDestroy: %s\n",e.what());
@@ -248,12 +248,12 @@ void iterate_systems(){
         } else if(sharedData.bitmask & Request::Timer) {
             {
                 uint64_t realtime = uv_hrtime();
-                sharedEngine->fixedDelta      = realtime - sharedEngine->fixedTimeBuffer;
-                sharedEngine->fixedTimeBuffer = realtime;
+                ECS::sharedEngine->fixedDelta      = realtime - ECS::sharedEngine->fixedTimeBuffer;
+                ECS::sharedEngine->fixedTimeBuffer = realtime;
             }
             while (begin != end){
                 try {
-                    (*begin)->OnFixedUpdate(*sharedEngine);
+                    (*begin)->OnFixedUpdate(*ECS::sharedEngine);
                 } catch(const std::exception& e) {
                 #ifdef DEBUG
                     printf("caught std::exception OnFixedUpdate: %s\n",e.what());
@@ -267,12 +267,13 @@ void iterate_systems(){
         } else if(sharedData.bitmask & Request::Render) {
             {
                 uint64_t realtime = uv_hrtime();
-                sharedEngine->updateDelta      = (double)(realtime - sharedEngine->updateTimeBuffer) / 1.0e9;
-                sharedEngine->updateTimeBuffer = realtime;
+                ECS::sharedEngine->updateDelta      = (double)(realtime - ECS::sharedEngine->updateTimeBuffer) / 1.0e9;
+                ECS::sharedEngine->updateTimeBuffer = realtime;
             }
+            ECS::sharedWindow.beginFrame();
             while (begin != end){
                 try {
-                    (*begin)->OnUpdate(*sharedEngine);
+                    (*begin)->OnUpdate(*ECS::sharedEngine);
                 } catch(const std::exception& e) {
                 #ifdef DEBUG
                     printf("caught std::exception OnUpdate: %s\n",e.what());
@@ -282,6 +283,7 @@ void iterate_systems(){
                 }
                 begin++;
             }
+            ECS::sharedWindow.endFrame();
             sharedData.bitmask &= ~Request::Render;
         } else {
             sharedData.activeThreads--;

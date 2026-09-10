@@ -1,6 +1,6 @@
 #include "ECS/Engine.hpp"
 #include "ECS/ThreadPool.hpp"
-#include "ECS/Base/Window.hpp"
+#include "Window.hpp"
 #include "uv.h"
 #include "imgui.h"
 #define NOMINMAX 1
@@ -73,20 +73,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ECS::sharedWindow.height = rect.bottom - rect.top;
     }
 
+    ECS::sharedWindow.contextInit();
 
     uv_setup_args(1,&lpCmdLine);
     loop = uv_default_loop();
     uv_idle_init(loop, &idle);
     uv_idle_start(&idle, messageIdle);
 
-    ImGui::CreateContext();
-    ImGui::GetMainViewport()->PlatformHandleRaw = (void*)ECS::sharedWindow.hWnd;
-    {
-        ImGuiIO& io=ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable some options
-        io.BackendPlatformUserData = nullptr;
-        io.BackendPlatformName = "imgui_impl_my";
-    }
     ECS::sharedEngine = std::make_unique<ECS::DOE>();
     ECS::TypeManager::Initialize();
     ECS::JobsUtility::init();
@@ -95,10 +88,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     uv_idle_stop(&idle);
     ECS::sharedEngine.reset();
-    ImGui::DestroyContext();
     uv_loop_close(loop);
     uv_library_shutdown();
 
+    ECS::sharedWindow.contextDestroy();
     ::DestroyWindow(ECS::sharedWindow.hWnd);
     return 0;
 }

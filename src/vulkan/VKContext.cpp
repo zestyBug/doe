@@ -1,5 +1,5 @@
 #include "vulkan/VKContext.hpp"
-#include "ECS/Base/Window.hpp"
+#include "Window.hpp"
 #include <vector>
 #define arrayCount(X) (sizeof(X)/sizeof(*X))
 using namespace ECS;

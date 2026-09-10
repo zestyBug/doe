@@ -27,7 +27,7 @@
 
 #include "ECS/Engine.hpp"
 #include "ECS/ThreadPool.hpp"
-#include "ECS/Base/Window.hpp"
+#include "Window.hpp"
 #include "uv.h"
 #include "imgui.h"
 #define Status int
@@ -131,6 +131,7 @@ int main(int argc, char *argv[])
             XSetWMProtocols(ECS::sharedWindow.display, ECS::sharedWindow.window, &del_atom, 1);
         }
     }
+    ECS::sharedWindow.contextInit();
 
     uv_setup_args(argc,argv);
     loop = uv_default_loop();
@@ -138,13 +139,6 @@ int main(int argc, char *argv[])
     uv_poll_init(loop, &x11_poll, XConnectionNumber(ECS::sharedWindow.display));
     uv_poll_start(&x11_poll, UV_READABLE, &WndProc);
 
-    ImGui::CreateContext();
-    {
-        ImGuiIO& io=ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable some options
-        io.BackendPlatformUserData = nullptr;
-        io.BackendPlatformName = "imgui_impl_my";
-    }
     ECS::sharedEngine = std::make_unique<ECS::DOE>();
     ECS::TypeManager::Initialize();
     ECS::JobsUtility::init();
@@ -153,10 +147,10 @@ int main(int argc, char *argv[])
 
     uv_poll_stop(&x11_poll);
     ECS::sharedEngine.reset();
-    ImGui::DestroyContext();
     uv_loop_close(loop);
     uv_library_shutdown();
 
+    ECS::sharedWindow.contextDestroy();
 #ifdef DEBUG
     // one for the Threadpool jobs + 2 for TypeManager
     if(allocator_counter){
