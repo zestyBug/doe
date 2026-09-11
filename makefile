@@ -82,7 +82,7 @@ else
 	OBJS_GLFW+= $(OBJ)/main_linux.o
 	DEFS+=-DVK_USE_PLATFORM_XLIB_KHR
 	LDFLAGS+=-lX11 -lXi -lXcursor
-#install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev 
+#install build-essential libx11-dev libxi-dev libxcursor-dev libxrandr-dev libxinerama-dev
 endif
 
 
@@ -193,12 +193,11 @@ OBJS= \
 	$(OBJ)/$(srcDir)/vulkan/wrapper.o \
 	$(OBJ)/$(srcDir)/vulkan/VKContext.o \
 	$(OBJ)/$(srcDir)/cutil/HashHelper.o \
-	$(OBJ)/$(srcDir)/cutil/snprintf.o \
+	$(OBJ)/$(srcDir)/cutil/nostdio.o \
 	$(OBJ)/$(srcDir)/cutil/basics.o
 
 DEPS = $(OBJS:.o=.d)
 DEPS += $(SYSS:.o=.d)
-DEPS += $(OBJS_GLFW:.o=.d)
 DEPS += $(libuv_la_SOURCES:.o=.d)
 DEPS += $(IMGUI_OBJS:.o=.d)
 -include $(DEPS)
