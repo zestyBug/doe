@@ -39,7 +39,7 @@ Index of this file:
 #include "misc/freetype/imgui_freetype.h"
 #endif
 
-#include <stdio.h>      // vsnprintf, sscanf, printf
+#include "nostdio.h"    // vsnprintf, sscanf, printf
 #include <stdint.h>     // intptr_t
 
 // Visual Studio warnings

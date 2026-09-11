@@ -2,7 +2,7 @@
 #define MINI_TEST_HPP
 
 #ifdef DEBUG
-#include <stdio.h>
+#include "nostdio.h"
 #endif
 #include <iosfwd>
 #include <functional>

@@ -48,15 +48,7 @@
 # define UV__ERR(x) (x)
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-int vsnprintf(char *string, size_t length, const char *format, va_list args) __attribute__((format(printf, 3, 0)));
-int snprintf(char *string, size_t length, const char *format, ...) __attribute__((format(printf, 3, 4)));
-int sscanf(const char *buffer, const char *format, ...) __attribute__ ((format (scanf, 2, 3)));
-#ifdef __cplusplus
-}
-#endif
+#include "nostdio.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 

@@ -20,6 +20,7 @@ Its not an exact copy, there are some differents. ChunkIndex is not used, for pe
 
 
 ### TODO
+- replace c runtime libraries with platform dependant functions (printf, strXXX, memXXX, malloc/free, STD containers)
 - batched chunk allocator
 - 32 bit systems compatibility
 - a better README and documentation

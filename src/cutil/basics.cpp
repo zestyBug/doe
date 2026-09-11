@@ -1,6 +1,6 @@
 #include "cutil/basics.hpp"
 #ifdef DEBUG
-#include <stdio.h>
+#include "nostdio.h"
 ssize_t allocator_counter;
 #endif
 void* _allocate(size_t __n){

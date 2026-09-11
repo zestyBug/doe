@@ -93,7 +93,7 @@
 #include <stdarg.h>
 #include <stddef.h>
 
-
+#include "nostdio.h"
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -977,6 +977,31 @@ int snprintf(char *string, size_t length, const char *format, ...) {
   return rval;
 }
 
+int printf(const char *__fmt, ...)
+{
+  char buffer[2048];
+  int rval;
+  va_list args;
+
+  va_start(args, __fmt);
+  rval = vsnprintf(buffer, 2040, __fmt, args);
+  va_end(args);
+
+  return rval;
+}
+int fprintf(FILE *,const char *__fmt, ...)
+{
+  char buffer[2048];
+  int rval;
+  va_list args;
+
+  memcpy(buffer,"fprintf:",8);
+  va_start(args, __fmt);
+  rval = vsnprintf(buffer+8, 2030, __fmt, args);
+  va_end(args);
+
+  return rval;
+}
 
 #ifdef __clang__
 #pragma clang diagnostic pop

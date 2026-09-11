@@ -14,9 +14,9 @@ ifndef DEBUG
 OBJ=obj/release
 BIN=bin/release
 LDFLAGS=-m64 -s -march=native
-CPPFLAGS=-DNDEBUG -std=c++17 -g0 -O3 -m64 -fno-rtti -fexceptions $(WARNS) $(INCLUDE) -MMD -MP -march=native
+CPPFLAGS=-std=c++17 -g0 -O3 -m64 -fno-rtti -fexceptions $(WARNS) $(INCLUDE) -MMD -MP -march=native
 CFLAGS=-std=c17 -g0 -O3 -m64 $(WARNS) $(INCLUDE) -MMD -MP -march=native
-
+DEFS=-DNDEBUG
 else
 
 OBJ=obj/test-v2
@@ -24,10 +24,11 @@ BIN=bin/test-v2
 # -fsanitize=address -static-libasan
 LDFLAGS=-m64
 # -fsanitize=address
-CPPFLAGS=-DDEBUG -std=c++17 -g3 -O0 -m64 -fno-rtti -fexceptions $(WARNS) $(INCLUDE) -MMD -MP
+CPPFLAGS=-std=c++17 -g3 -O0 -m64 -fno-rtti -fexceptions $(WARNS) $(INCLUDE) -MMD -MP
 CFLAGS=-std=c17 -g3 -O0 -m64 -fexceptions $(WARNS) $(INCLUDE) -MMD -MP
-
+DEFS=-DDEBUG
 endif
+
 
 
 cutilDir=external/cutil
@@ -41,28 +42,31 @@ systemDir=src/system
 
 $(OBJ)/$(srcDir)/vulkan/%.o: $(srcDir)/vulkan/%.cpp
 	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(DEFS) -c $< -o $@
 $(OBJ)/$(srcDir)/system/%.o: $(srcDir)/system/%.cpp
 	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(DEFS) -c $< -o $@
 $(OBJ)/$(srcDir)/ECS/%.o: $(srcDir)/ECS/%.cpp
 	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(DEFS) -c $< -o $@
 $(OBJ)/$(srcDir)/libuv/%.o: $(srcDir)/libuv/%.c
 	mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(libuv_la_CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(DEFS) $(libuv_la_CFLAGS) -c $< -o $@
+$(OBJ)/$(srcDir)/cutil/%.o: $(srcDir)/cutil/%.c
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS) $(DEFS) -c $< -o $@
 $(OBJ)/$(srcDir)/cutil/%.o: $(srcDir)/cutil/%.cpp
 	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CPPFLAGS) $(DEFS) -c $< -o $@
 $(OBJ)/$(testDir)/test-%.o: $(testDir)/test-%.cpp
 	mkdir -p $(@D)
-	$(CXX) -c $(CPPFLAGS) $< -o $@
+	$(CXX) -c $(CPPFLAGS) $(DEFS) $< -o $@
 $(OBJ)/%.o: $(srcDir)/%.cpp
 	mkdir -p $(@D)
-	$(CXX) -c $(CPPFLAGS) $< -o $@
+	$(CXX) -c $(CPPFLAGS) $(DEFS) $< -o $@
 $(OBJ)/$(srcDir)/imgui/%.o: $(srcDir)/imgui/%.cpp
 	mkdir -p $(@D)
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	$(CXX) -c $(CPPFLAGS) $(DEFS) $< -o $@
 
 
 
@@ -71,14 +75,12 @@ $(OBJ)/$(srcDir)/imgui/%.o: $(srcDir)/imgui/%.cpp
 
 OBJS_GLFW=
 ifeq ($(OS),Windows_NT)
-	OBJS_GLFW+= \
-		$(OBJ)/main_win32.o
-	CPPFLAGS+=-DVK_USE_PLATFORM_WIN32_KHR
+	OBJS_GLFW+= $(OBJ)/main_win32.o
+	DEFS+=-DVK_USE_PLATFORM_WIN32_KHR
 	LDFLAGS+=-lgdi32
 else
-	OBJS_GLFW+= \
-		$(OBJ)/main_linux.o
-	CPPFLAGS+=-DVK_USE_PLATFORM_XLIB_KHR
+	OBJS_GLFW+= $(OBJ)/main_linux.o
+	DEFS+=-DVK_USE_PLATFORM_XLIB_KHR
 	LDFLAGS+=-lX11 -lXi -lXcursor
 #install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev 
 endif
@@ -96,7 +98,6 @@ libuv_la_SOURCES= \
 	$(OBJ)/$(srcDir)/libuv/strtok.o \
 	$(OBJ)/$(srcDir)/libuv/threadpool.o \
 	$(OBJ)/$(srcDir)/libuv/uv-common.o \
-	$(OBJ)/$(srcDir)/libuv/snprintf.o \
 	$(OBJ)/$(srcDir)/libuv/sscanf.o \
 	$(OBJ)/$(srcDir)/libuv/timer.o \
 	$(OBJ)/$(srcDir)/libuv/uv-data-getter-setters.o \
@@ -158,6 +159,7 @@ libuv_la_SOURCES += \
 
 endif  # WINNT
 
+DEFS+=-DIMGUI_DISABLE_FILE_FUNCTIONS
 IMGUI_OBJS += \
 	$(OBJ)/$(srcDir)/imgui/imgui.o \
 	$(OBJ)/$(srcDir)/imgui/imgui_widgets.o \
@@ -191,6 +193,7 @@ OBJS= \
 	$(OBJ)/$(srcDir)/vulkan/wrapper.o \
 	$(OBJ)/$(srcDir)/vulkan/VKContext.o \
 	$(OBJ)/$(srcDir)/cutil/HashHelper.o \
+	$(OBJ)/$(srcDir)/cutil/snprintf.o \
 	$(OBJ)/$(srcDir)/cutil/basics.o
 
 DEPS = $(OBJS:.o=.d)

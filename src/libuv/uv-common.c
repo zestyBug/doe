@@ -22,6 +22,9 @@
 #include "uv.h"
 #include "uv-common.h"
 
+#ifdef DEBUG
+#include "nostdio.h"
+#endif
 #include <assert.h>
 #include <errno.h>
 #include <stdarg.h>

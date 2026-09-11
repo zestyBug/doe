@@ -1,6 +1,6 @@
 #if !defined(PROTOTYPE_HPP)
 #define PROTOTYPE_HPP
-#include <stdio.h>
+#include "nostdio.h"
 
 class prototype
 {

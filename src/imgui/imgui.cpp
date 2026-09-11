@@ -1139,7 +1139,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
 #include "imgui_internal.h"
 
 // System includes
-#include <stdio.h>      // vsnprintf, sscanf, printf
+#include "nostdio.h"    // vsnprintf, sscanf, printf
 #include <stdint.h>     // intptr_t
 
 // [Windows] On non-Visual Studio compilers, we default to IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS unless explicitly enabled
