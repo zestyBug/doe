@@ -183,17 +183,19 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
         }
         case WM_CHAR:
-            if (IsWindowUnicode(_hWnd))
-            {
-                // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
-                if (wParam > 0 && wParam < 0x10000)
-                    io.AddInputCharacterUTF16((unsigned short)wParam);
-            }
-            else
-            {
-                wchar_t wch = 0;
-                ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (char*)&wParam, 1, &wch, 1);
-                io.AddInputCharacter(wch);
+            if(unlikely(io.WantTextInput)){
+                if (IsWindowUnicode(_hWnd))
+                {
+                    // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
+                    if (wParam > 0 && wParam < 0x10000)
+                        io.AddInputCharacterUTF16((unsigned short)wParam);
+                }
+                else
+                {
+                    wchar_t wch = 0;
+                    ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (char*)&wParam, 1, &wch, 1);
+                    io.AddInputCharacter(wch);
+                }
             }
             break;
         case WM_MOUSEWHEEL:

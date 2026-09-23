@@ -200,11 +200,13 @@ void WndProc(uv_poll_t *handle, int, int)
             io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiModKey(keysym), true);
             io.AddKeyEvent(ImGui_ImplLinux_VirtualKeyToImGuiKey   (keysym), true);
 
-            len = Xutf8LookupString(xic, &event.xkey, utf8, sizeof(utf8)-1, NULL, &status);
-            if (status == XLookupChars || status == XLookupBoth)
-            {
-                utf8[len] = '\0';
-                io.AddInputCharacter(decodeUTF8(utf8));
+            if(unlikely(io.WantTextInput)) {
+                len = Xutf8LookupString(xic, &event.xkey, utf8, sizeof(utf8)-1, NULL, &status);
+                if (status == XLookupChars || status == XLookupBoth)
+                {
+                    utf8[len] = '\0';
+                    io.AddInputCharacter(decodeUTF8(utf8));
+                }
             }
             break;
         case KeyRelease:
