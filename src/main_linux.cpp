@@ -55,13 +55,6 @@ static Bool WaitForMapNotify(Display *d, XEvent *e, char *arg)
 	return d && e && arg && (e->type == MapNotify) && (e->xmap.window == *(Window*)arg);
 }
 
-static int ctxErrorHandler( Display *dpy, XErrorEvent *ev )
-{
-    (void)dpy;(void)ev;
-    fputs("Error at context creation\n", stderr);
-    return 0;
-}
-
 static void WndProc(uv_poll_t *handle, int status, int events);
 
 int main(int argc, char *argv[])
@@ -184,8 +177,8 @@ static uint32_t decodeUTF8(const char* s){
     return 0;
 }
 
-ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(unsigned int keysym);
-ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey   (unsigned int keysym);
+ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(KeySym keysym);
+ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey   (KeySym keysym);
 void WndProc(uv_poll_t *handle, int, int)
 {
     XEvent event;
@@ -278,7 +271,7 @@ void WndProc(uv_poll_t *handle, int, int)
 
 
 
-ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(unsigned int keysym)
+ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(KeySym keysym)
 {
     switch (keysym)
 	{
@@ -295,7 +288,7 @@ ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiModKey(unsigned int keysym)
         return ImGuiMod_None;
     }
 }
-ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey(unsigned int keysym)
+ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey(KeySym keysym)
 {
 	switch (keysym)
 	{

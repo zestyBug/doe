@@ -32,7 +32,7 @@ enum Request : uint32_t {
     Render = 2,
     Timer = 4
 };
-alignas(Constants::CacheLineSize) struct ECS::JobDataChunk {
+struct alignas(Constants::CacheLineSize) ECS::JobDataChunk {
     void resizeJobPool(uint32_t);
     void prepareJobs();
     void init()
@@ -118,18 +118,18 @@ JobHandle JobsUtility::combineDependencies(const_span<JobHandle> jobs){
     }
     return max;
 }
-void JobDataChunk::resizeJobPool(uint32_t capacity){
-    if(sharedData.capacity >= capacity)
+void JobDataChunk::resizeJobPool(uint32_t newcapacity){
+    if(sharedData.capacity >= newcapacity)
         return;//throw std::invalid_argument("resizeJobPool(): can't resize to smaller array");
     uint32_t size_temp[4];
-    size_temp[0] =                sizeof(JobData)  *capacity;
-    size_temp[1] = size_temp[0] + sizeof(std::atomic<uint32_t>)*capacity;
-    size_temp[2] = size_temp[1] + sizeof(JobHandle)*capacity;
-    size_temp[3] = size_temp[2] + sizeof(JobEntry) *capacity;
+    size_temp[0] =                (uint32_t)sizeof(JobData)               * newcapacity;
+    size_temp[1] = size_temp[0] + (uint32_t)sizeof(std::atomic<uint32_t>) * newcapacity;
+    size_temp[2] = size_temp[1] + (uint32_t)sizeof(JobHandle)             * newcapacity;
+    size_temp[3] = size_temp[2] + (uint32_t)sizeof(JobEntry)              * newcapacity;
     align_ptr<JobDataChunk> ptr2{(JobDataChunk*)allocator().allocate(size_temp[3])};
     if(sharedData.jobs.get())
         memcpy(ptr2.get(), sharedData.jobs.get(), sizeof(JobData)*sharedData.writeIndex);
-    sharedData.capacity = capacity;
+    sharedData.capacity = newcapacity;
     sharedData.jobs.reset((JobData*)ptr2.get());
     sharedData.beginIndex = (std::atomic<uint32_t>*)  ((uint8_t*)ptr2.get() + size_temp[0]);
     sharedData.jobsArray  = (JobHandle*)              ((uint8_t*)ptr2.get() + size_temp[1]);
@@ -248,8 +248,8 @@ void iterate_systems(){
         } else if(sharedData.bitmask & Request::Timer) {
             {
                 uint64_t realtime = uv_hrtime();
-                ECS::sharedEngine->fixedDelta      = realtime - ECS::sharedEngine->fixedTimeBuffer;
-                ECS::sharedEngine->fixedTimeBuffer = realtime;
+                ECS::sharedEngine->fixedDelta      = (double)(realtime - ECS::sharedEngine->fixedTimeBuffer);
+                ECS::sharedEngine->fixedTimeBuffer = (double)realtime;
             }
             while (begin != end){
                 try {
@@ -294,7 +294,7 @@ void iterate_systems(){
     sharedEngine->ecs.cleanChangeList();
     if(!sharedEngine->scheduleQueue.empty())
     {
-        sharedData.resizeJobPool(sharedEngine->scheduleQueue.size());
+        sharedData.resizeJobPool((uint32_t)sharedEngine->scheduleQueue.size());
         sharedData.works[0].data = NULL;
         sharedData.works[0].work_req.loop = uv_default_loop();
         sharedData.works[0].work_req.done = &queue_jobs;

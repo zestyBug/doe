@@ -8,7 +8,7 @@
 
 namespace ECS
 {
-    alignas(Constants::CacheLineSize) struct Window {
+    struct alignas(Constants::CacheLineSize) Window {
     #if defined(VK_USE_PLATFORM_WIN32_KHR)
         HWND hWnd;
         HINSTANCE hInstance;

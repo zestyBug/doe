@@ -30,8 +30,6 @@ void Archetype::addToChunkList(Chunk* chunk, SharedComponentValues sharedCompone
     changes.trackArchetype(this);
 }
 void Archetype::removeFromChunkList(Chunk &chunk, ChunkListChanges& changes){
-    if(&chunk == nullptr)
-        throw std::invalid_argument("removeFromChunkList(): invalid chunk");
     int32_t chunkListIndex = chunk.listIndex;
     if(chunkListIndex < 0)
         throw std::invalid_argument("removeFromChunkList(): invalid chunk");
@@ -48,8 +46,6 @@ void Archetype::addToChunkListWithEmptySlots(Chunk* chunk){
     chunksWithEmptySlots.push_back(chunk);
 }
 void Archetype::removeFromChunkListWithEmptySlots(Chunk &chunk){
-    if(&chunk == nullptr)
-        throw std::invalid_argument("removeFromChunkListWithEmptySlots(): invalid chunk");
     int32_t index = chunk.listWithEmptySlotsIndex;
     if((uint32_t)index >= chunksWithEmptySlots.size() || 0 > index)
         throw std::invalid_argument("removeFromChunkListWithEmptySlots(): invalid chunk");
@@ -64,7 +60,7 @@ void Archetype::removeFromChunkListWithEmptySlots(Chunk &chunk){
     chunksWithEmptySlots.pop_back();
 }
 void Archetype::emptySlotTrackingRemoveChunk(Chunk &chunk){
-    if(!&chunk || this != chunk.archetype)
+    if(this != chunk.archetype)
         throw std::invalid_argument("emptySlotTrackingRemoveChunk(): invalid chunk");
     if (numSharedComponents() == 0)
         removeFromChunkListWithEmptySlots(chunk);
@@ -127,8 +123,6 @@ int32_t Archetype::getNextIndexInTypeArray(TypeID type, int32_t lastTypeIndexInT
 }
 void Archetype::releaseChunk(Chunk &chunk)
 {
-    if(&chunk == nullptr)
-        throw std::invalid_argument("addToChunkList(): invalid chunk");
     // Remove references to shared components
     if (this->numSharedComponents() > 0)
     {
@@ -261,7 +255,7 @@ void Archetype::remove(EntityBatchInChunk batch)
         Archetype::copy(batch.chunk, fillStartIndex, batch.chunk, batch.startIndex, fillCount);
         Entity *fillEntities = (Entity*)batch.chunk->buffer + batch.startIndex;
         for (uint32_t i = 0; i < fillCount; i++)
-            entityComponentStore->setEntityInChunk(fillEntities[i], { batch.chunk, batch.startIndex + i });
+            entityComponentStore->setEntityInChunk(fillEntities[i], EntityInChunk{ batch.chunk, batch.startIndex + i });
     }
 
     archetype.chunks.setOrderVersion(batch.chunk->listIndex, entityComponentStore->getGlobalSystemVersion());
@@ -321,8 +315,6 @@ void Archetype::copyComponents(const Chunk *srcChunk, uint32_t srcIndex, const C
 }
 bool Archetype::areLayoutCompatible(Archetype &a, Archetype &b)
 {
-    if(&a == nullptr || &b == nullptr)
-        throw std::invalid_argument("areLayoutCompatible()");
     if(&a != &b)
     {
         // quick check
@@ -478,7 +470,7 @@ void Archetype::clone(Archetype &srcArchetype, EntityBatchInChunk srcBatch, Arch
 
     Entity *dstEntities = (Entity*)dstChunk->buffer + dstChunkIndex;
     for (uint32_t i = 0; i < dstCount; i++)
-        entityComponentStore->setEntityInChunk(dstEntities[i], { dstChunk, dstChunkIndex + i });
+        entityComponentStore->setEntityInChunk(dstEntities[i], EntityInChunk{ dstChunk, dstChunkIndex + i });
 
     Archetype::cloneChangeVersions(srcArchetype, srcBatch.chunk->listIndex , dstArchetype, dstChunk->listIndex, dstValidExistingVersions);
 
@@ -491,8 +483,6 @@ void Archetype::convert(Archetype &srcArchetype, Chunk &srcChunk, uint32_t srcIn
 {
     if(&srcChunk == &dstChunk)
         throw std::invalid_argument("convert(): logic error, same chunk conversion");
-    if(&srcArchetype == nullptr || &dstArchetype == nullptr || &srcChunk == nullptr || &dstArchetype == nullptr)
-        throw std::invalid_argument("convert(): nullptr");
 
     // Process non-zero-sized types
     int32_t srcI = srcArchetype.numNonZeroSizedTypes() - 1;

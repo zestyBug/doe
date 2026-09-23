@@ -1,5 +1,4 @@
-obj
-bin
+build
 *.depend
 *.layout
 *.exe

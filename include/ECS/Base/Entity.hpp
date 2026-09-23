@@ -34,7 +34,6 @@ namespace ECS
         Chunk* chunk = nullptr;
         uint32_t indexInChunk = 0;
         inline bool isNull() {return chunk == nullptr;}
-        EntityInChunk() = default;
         bool operator == (const EntityInChunk& other) const {
             return this->chunk == other.chunk && this->indexInChunk == other.indexInChunk;
         }
