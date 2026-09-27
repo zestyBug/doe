@@ -7,9 +7,7 @@ uint32_t allocator_counter2 = 0;
 void* malloc_func(size_t size)
 {
     uint8_t *ptr = (uint8_t *)malloc(size+Constants::CacheLineSize);
-    #ifdef DEBUG
-        allocator_counter2++;
-    #endif
+    allocator_counter2++;
     *(size_t*)ptr = size;
     ptr+=Constants::CacheLineSize;
     //printf("malloc_func(%lu);// %p\n",size,ptr);
@@ -18,9 +16,7 @@ void* malloc_func(size_t size)
 void* realloc_func(void* ptr, size_t size)
 {
     uint8_t *nptr = (uint8_t *)malloc(size+Constants::CacheLineSize);
-    #ifdef DEBUG
-        allocator_counter2++;
-    #endif
+    allocator_counter2++
     *(size_t*)nptr = size;
     nptr+=Constants::CacheLineSize;
     uint8_t *pptr = (uint8_t*)ptr - Constants::CacheLineSize;
@@ -28,9 +24,7 @@ void* realloc_func(void* ptr, size_t size)
     if(ptr) {
         memcpy(nptr, ptr,  std::min(*(size_t*)pptr,size));
         free(pptr);
-        #ifdef DEBUG
-            allocator_counter2--;
-        #endif
+        allocator_counter2--;
     }
     return nptr;
 }
@@ -38,9 +32,7 @@ void* calloc_func(size_t count, size_t size)
 {
     size *= count;
     uint8_t *ptr = (uint8_t *)malloc(size+Constants::CacheLineSize);
-    #ifdef DEBUG
-        allocator_counter2++;
-    #endif
+    allocator_counter2++;
     *(size_t*)ptr = size;
     ptr+=Constants::CacheLineSize;
     //printf("calloc_func(%lu);// %p\n",size,ptr);
@@ -53,9 +45,7 @@ void free_func(void* ptr)
         uint8_t *sptr = (uint8_t*)ptr - Constants::CacheLineSize;
         //printf("free_func(%p);// %lu\n", ptr, *(size_t*)sptr);
         free(sptr);
-        #ifdef DEBUG
-            allocator_counter2--;
-        #endif
+        allocator_counter2--;
     }
 }
 
@@ -83,10 +73,8 @@ int main(int argc, char*argv[]){
             printf("Libuv error: active requests\n");
         uv_library_shutdown();
     }
-#ifdef DEBUG
     // one for the threadpool
     printf("Memory leak count %li\n",allocator_counter);
     printf("Memory leak count %li\n",allocator_counter2);
-#endif
     return 0;
 }

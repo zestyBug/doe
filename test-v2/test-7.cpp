@@ -58,10 +58,8 @@ int main(int argc, char*argv[])
             printf("Libuv error: active requests\n");
         uv_library_shutdown();
     }
-#ifdef DEBUG
     // one for the threadpool
     printf("Memory leak count %li\n",allocator_counter);
     printf("Memory leak count %li\n",allocator_counter2);
-#endif
     return 0;
 }

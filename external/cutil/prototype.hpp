@@ -13,29 +13,21 @@ public:
     }
 
     prototype(int id=-1):sample{id}{
-    #ifdef DEBUG
         printf("prototype(%p:%d)\n",this,this->sample);
-    #endif
         counter++;
     }
     prototype(const prototype& v):sample{v.sample}{
-    #ifdef DEBUG
         printf("operator{%p}::operator(prototype&& {%p:%d})\n",this,&v,v.sample);
-    #endif
         counter++;
     }
     prototype(prototype&& v):sample{v.sample}{
-    #ifdef DEBUG
         printf("operator{%p}::operator(prototype&& {%p:%d})\n",this,&v,v.sample);
-    #endif
         counter++;
     }
 
     prototype& operator = (const prototype& v){
         if(this != &v){
-        #ifdef DEBUG
             printf("operator{%p:%d}::operator = (const prototype& {%p:%d})\n",this,this->sample,&v,v.sample);
-        #endif
             this->sample = v.sample;
             counter++;
         }
@@ -43,9 +35,7 @@ public:
     }
     prototype& operator = (prototype&& v){
         if(this != &v){
-        #ifdef DEBUG
             printf("operator{%p:%d}::operator = (prototype&& {%p:%d})\n",this,this->sample,&v,v.sample);
-        #endif
             this->sample = v.sample;
             v.sample = -1;
             counter++;
@@ -53,9 +43,7 @@ public:
         return *this;
     }
     ~prototype(){
-    #ifdef DEBUG
         printf("operator{%p:%d}::~prototype()\n",this,this->sample);
-    #endif
         counter--;
     }
 };

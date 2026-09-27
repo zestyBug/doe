@@ -184,9 +184,7 @@ void JobsUtility::init(){
         {
             sys = func(*sharedEngine.get());
         } catch(const std::exception& e) {
-        #ifdef DEBUG
             printf("caught std::exception initializing a system: %s\n",e.what());
-        #endif
             continue;
         }
         sysList.emplace_back(sys);
@@ -238,9 +236,7 @@ void iterate_systems(){
                 try {
                     (*begin)->OnDestroy(*ECS::sharedEngine);
                 } catch(const std::exception& e) {
-                #ifdef DEBUG
                     printf("caught std::exception OnDestroy: %s\n",e.what());
-                #endif
                 }
                 begin++;
             }
@@ -255,9 +251,7 @@ void iterate_systems(){
                 try {
                     (*begin)->OnFixedUpdate(*ECS::sharedEngine);
                 } catch(const std::exception& e) {
-                #ifdef DEBUG
                     printf("caught std::exception OnFixedUpdate: %s\n",e.what());
-                #endif
                     sharedData.bitmask |= Request::Exit;
                     break;
                 }
@@ -275,9 +269,7 @@ void iterate_systems(){
                 try {
                     (*begin)->OnUpdate(*ECS::sharedEngine);
                 } catch(const std::exception& e) {
-                #ifdef DEBUG
                     printf("caught std::exception OnUpdate: %s\n",e.what());
-                #endif
                     sharedData.bitmask |= Request::Exit;
                     break;
                 }

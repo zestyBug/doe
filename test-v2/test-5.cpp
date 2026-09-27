@@ -74,8 +74,6 @@ int main(int argc, char*argv[]){
     uv_loop_close(loop);
     uv_library_shutdown();
     ECS::sharedEngine.reset();
-#ifdef DEBUG
     printf("Memory leak count %li\n",allocator_counter);
-#endif
     return 0;
 }

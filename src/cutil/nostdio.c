@@ -92,7 +92,7 @@
 
 #include <stdarg.h>
 #include <stddef.h>
-
+#include "uv.h"
 #include "nostdio.h"
 
 #ifdef __clang__
@@ -987,6 +987,13 @@ int printf(const char *__fmt, ...)
   rval = vsnprintf(buffer, 2040, __fmt, args);
   va_end(args);
 
+#ifdef DEBUG
+#ifdef WIN32
+  write(GetStdHandle(STD_OUTPUT_HANDLE), buffer, rval);
+#else
+  write(1, buffer, rval);
+#endif
+#endif
   return rval;
 }
 int fprintf(FILE *,const char *__fmt, ...)
@@ -1000,6 +1007,13 @@ int fprintf(FILE *,const char *__fmt, ...)
   rval = vsnprintf(buffer+8, 2030, __fmt, args);
   va_end(args);
 
+#ifdef DEBUG
+#ifdef WIN32
+  write(GetStdHandle(STD_OUTPUT_HANDLE), buffer, rval);
+#else
+  write(1, buffer, rval);
+#endif
+#endif
   return rval;
 }
 

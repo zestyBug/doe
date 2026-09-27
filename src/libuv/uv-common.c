@@ -22,9 +22,7 @@
 #include "uv.h"
 #include "uv-common.h"
 
-#ifdef DEBUG
 #include "nostdio.h"
-#endif
 #include <assert.h>
 #include <errno.h>
 #include <stdarg.h>
@@ -519,7 +517,6 @@ void uv_walk(uv_loop_t* loop, uv_walk_cb walk_cb, void* arg) {
   }
 }
 
-#ifdef DEBUG
 static void uv__print_handles(uv_loop_t* loop, int only_active, FILE* stream) {
   const char* type;
   QUEUE* q;
@@ -559,7 +556,6 @@ void uv_print_all_handles(uv_loop_t* loop, FILE* stream) {
 void uv_print_active_handles(uv_loop_t* loop, FILE* stream) {
   uv__print_handles(loop, 1, stream);
 }
-#endif
 
 void uv_ref(uv_handle_t* handle) {
   uv__handle_ref(handle);

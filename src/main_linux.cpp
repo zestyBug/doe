@@ -144,12 +144,10 @@ int main(int argc, char *argv[])
     uv_library_shutdown();
 
     ECS::sharedWindow.contextDestroy();
-#ifdef DEBUG
     // one for the Threadpool jobs + 2 for TypeManager
     if(allocator_counter){
         printf("Memory leak count %li\n",allocator_counter);
     }
-#endif
 
     XDestroyWindow(ECS::sharedWindow.display, ECS::sharedWindow.window);
     XCloseDisplay(ECS::sharedWindow.display);
