@@ -237,11 +237,11 @@ void VKContext::initialize(){
     VkResult res = vkCreateInstance(&inst_info, nullptr, &instance);
     if (res)
         throw VulkanException(res, "vkCreateInstance");
-}
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-void VKContext::createSurface(){
     if(VKInitializeWInstance(this->instance))
         throw std::runtime_error("VKInitializeWInstance");
+}
+void VKContext::createSurface(){
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
     VkWin32SurfaceCreateInfoKHR cInfo {
         .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
         .pNext = NULL,
@@ -252,11 +252,7 @@ void VKContext::createSurface(){
     VkResult res = vkCreateWin32SurfaceKHR(this->instance, &cInfo, NULL, &this->surface);
     if(res)
         throw VulkanException(res, "vkCreateWin32SurfaceKHR");
-}
 #elif defined(VK_USE_PLATFORM_XLIB_KHR)
-void VKContext::createSurface(){
-    if(VKInitializeWInstance(this->instance))
-        throw std::runtime_error("VKInitializeWInstance");
     VkXlibSurfaceCreateInfoKHR cInfo {
         .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
         .pNext = NULL,
@@ -267,10 +263,10 @@ void VKContext::createSurface(){
     VkResult res = vkCreateXlibSurfaceKHR(this->instance, &cInfo, NULL, &this->surface);
     if(res)
         throw VulkanException(res, "vkCreateXlibSurfaceKHR");
-}
 #else
 #error
 #endif
+}
 // selects a physical device, create a logical device and command pool of that device
 // requires surface to check compatibility
 void VKContext::selectDevice(){
@@ -333,7 +329,7 @@ void VKContext::selectDevice(){
             continue;
         std::vector<VkQueueFamilyProperties> queue_family_prop{ queue_family_count };
         vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, queue_family_prop.data());
-        if (TestSurfaceSupport(pd, surface))
+        if (TestSurfaceSupport(pd, this->surface))
             continue;
 
         for (unsigned int i = 0; i < queue_family_count; i++) {
@@ -355,7 +351,7 @@ void VKContext::selectDevice(){
             // A Device may not be plugged into a monitor or not have any graphcal output
             // which could make direct interactions with displayable images difficult or impossible.
             // ie: it can render but result image must be copied to another Device that can render to display.
-            res = vkGetPhysicalDeviceSurfaceSupportKHR(pd, i, surface, &supported);
+            res = vkGetPhysicalDeviceSurfaceSupportKHR(pd, i, this->surface, &supported);
             if (res)
                 throw VulkanException(res, "vkGetPhysicalDeviceSurfaceSupportKHR");
             if (!supported)
@@ -449,7 +445,7 @@ void VKContext::initRender(){
 	if (res)
 		throw VulkanException(res, "vkCreateCommandPool");
 }
-void VKContext::resetSwapchain(){
+void VKContext::resetSwapchain(bool recreateSurface){
     for (uint32_t i=0;i<this->imageCount;i++)
         if(this->frambuffer[i])
             vkDestroyFramebuffer(this->device, this->frambuffer[i], 0);
@@ -459,6 +455,11 @@ void VKContext::resetSwapchain(){
     for (uint32_t i=0;i<this->imageCount;i++)
         if(this->imageSemaphores[i])
             vkDestroySemaphore(this->device, this->imageSemaphores[i], 0);
+    if(unlikely(recreateSurface)){
+        if(likely(this->surface))
+            vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
+        this->createSurface();
+    }
 
     memset(this->bufferView,0,sizeof(this->bufferView));
     memset(this->frambuffer,0,sizeof(this->frambuffer));

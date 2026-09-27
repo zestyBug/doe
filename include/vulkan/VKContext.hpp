@@ -55,7 +55,7 @@ namespace ECS
         // requires surface to check compatibility
         void selectDevice();
         void initRender();
-        void resetSwapchain();
+        void resetSwapchain(bool recreateSurface = false);
         int render();
     };
 } // namespace ECS
