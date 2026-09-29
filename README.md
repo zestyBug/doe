@@ -20,6 +20,8 @@ Its not an exact copy, there are some differents. ChunkIndex is not used, for pe
 
 
 ### TODO
+- Headless mode
+- garbage collctor and resource manager fully implemented
 - replace c runtime libraries with platform dependant functions (printf, strXXX, memXXX, malloc/free, STD containers)
 - batched chunk allocator
 - 32 bit systems compatibility

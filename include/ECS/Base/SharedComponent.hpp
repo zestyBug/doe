@@ -5,6 +5,9 @@
 
 namespace ECS
 {
+    /**
+     * @brief A shared component is just an integer. An index to a value inside the respected SharedComponentStore.
+     */
     struct SharedComponentIndex final {
         SharedComponentIndex() = default;
         ~SharedComponentIndex() = default;

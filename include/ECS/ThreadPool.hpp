@@ -21,8 +21,12 @@ namespace ECS
     struct JobDataChunk;
     struct DOE;
     struct JobsUtility final {
+        /// @brief initialize threadpool and systems.
+        /// @warning dont call signalRender before this
         static void init();
+        /// @brief gracefully stop the thread pool and the systems.
         static void signalQuit();
+        /// @brief signal that new command buffers are availble
         static void signalRender();
         /// @brief 
         /// @param context  

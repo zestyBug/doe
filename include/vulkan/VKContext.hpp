@@ -64,6 +64,7 @@ namespace ECS
         // selects a physical device, create a logical device and command pool of that device
         // requires surface to check compatibility
         void selectDevice();
+        // renderpass, command pool, descriptor pool, semaphores
         void initRender();
         void resetSwapchain(bool recreateSurface = false);
         int render();

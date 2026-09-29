@@ -10,6 +10,10 @@
 
 namespace ECS
 {
+    /**
+     * @brief Stores an array of reference counted same type components.
+     * @note Shared components are all destroyed at refcount == 0 (destroctor is called)
+     */
     class SharedComponentStore
     {
     protected:
