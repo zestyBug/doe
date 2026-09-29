@@ -44,6 +44,7 @@ namespace ECS {
         static constexpr uint32_t InitialJobPoolCapacity = 0x40;
         static constexpr uint32_t MaximumRefOffsetCount = 0x400;
         static constexpr uint32_t MaximumSwapchainImageCount = 8;
+        static constexpr uint32_t FrameInFlightCount = 2;
     };
 }
 

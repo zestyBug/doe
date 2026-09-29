@@ -27,8 +27,6 @@ namespace ECS
         uint32_t queueFamilyIndex = 0;
         uint32_t imageCount = 0;
         VkQueue queue = VK_NULL_HANDLE;
-        VkFence queueFence = VK_NULL_HANDLE;
-        VkSemaphore queueSemaphore = VK_NULL_HANDLE;
         // actual physical device,
         // this refrence can be used to obtain info about device
         VkPhysicalDevice pdevice = VK_NULL_HANDLE;
@@ -40,10 +38,22 @@ namespace ECS
         VkDescriptorPool dpool = VK_NULL_HANDLE;
         VkCommandPool cpool = VK_NULL_HANDLE;
         VkExtent2D surfaceExtend;
-        VkImageView bufferView[Constants::MaximumSwapchainImageCount];
-        VkFramebuffer frambuffer[Constants::MaximumSwapchainImageCount];
+        struct FrameResource {
+            VkImageView     bufferView;
+            VkFramebuffer   frambuffer;
+        };
+        struct FrameInFlight {
+            // swapchains image available semaphore
+            VkSemaphore     imageSemaphore;
+            // presentation the submit semaphore
+            VkSemaphore     queueSemaphore;
+            // submitted commands completion fence
+            VkFence         queueFence;
+            VkCommandBuffer commandBuffer;
+        };
         VkImage bufferImage[Constants::MaximumSwapchainImageCount];
-        VkSemaphore imageSemaphores[Constants::MaximumSwapchainImageCount];
+        FrameResource frameResources[Constants::MaximumSwapchainImageCount];
+        FrameInFlight frameInFlights[Constants::FrameInFlightCount];
         static VkBool32 TestSurfaceSupport(VkPhysicalDevice pd, VkSurfaceKHR surface);
         VKContext();
         ~VKContext();

@@ -28,6 +28,7 @@
 #include "ECS/Engine.hpp"
 #include "ECS/ThreadPool.hpp"
 #include "Window.hpp"
+#include "GraphicSystem.hpp"
 #include "uv.h"
 #include "imgui.h"
 #define Status int
@@ -43,7 +44,6 @@
 static constexpr int None=0;
 typedef int Bool;
 std::unique_ptr<ECS::DOE> ECS::sharedEngine;
-ECS::Window ECS::sharedWindow;
 
 static Atom del_atom;
 XIM xim;
@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
 
     /* Avoid locale-related number parsing issues */
     setlocale(LC_NUMERIC, "C");
+    ECS::graphics = make_align<ECS::GraphicSystem>();
 
     ECS::sharedWindow.display = XOpenDisplay(NULL);
     if (!ECS::sharedWindow.display)
@@ -124,7 +125,6 @@ int main(int argc, char *argv[])
             XSetWMProtocols(ECS::sharedWindow.display, ECS::sharedWindow.window, &del_atom, 1);
         }
     }
-    ECS::sharedWindow.contextInit();
 
     uv_setup_args(argc,argv);
     loop = uv_default_loop();
@@ -135,6 +135,7 @@ int main(int argc, char *argv[])
     ECS::sharedEngine = std::make_unique<ECS::DOE>();
     ECS::TypeManager::Initialize();
     ECS::JobsUtility::init();
+    ECS::graphics->contextInit();
 
     uv_run(loop, UV_RUN_DEFAULT);
 
@@ -143,7 +144,8 @@ int main(int argc, char *argv[])
     uv_loop_close(loop);
     uv_library_shutdown();
 
-    ECS::sharedWindow.contextDestroy();
+    ECS::sharedWindow.running.store(0);
+    ECS::graphics->contextDestroy();
     // one for the Threadpool jobs + 2 for TypeManager
     if(allocator_counter){
         printf("Memory leak count %li\n",allocator_counter);
@@ -151,6 +153,7 @@ int main(int argc, char *argv[])
 
     XDestroyWindow(ECS::sharedWindow.display, ECS::sharedWindow.window);
     XCloseDisplay(ECS::sharedWindow.display);
+    ECS::graphics.reset();
 	return 0;
 }
 

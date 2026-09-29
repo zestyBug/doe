@@ -1,13 +1,13 @@
 #include "ECS/Engine.hpp"
 #include "ECS/ThreadPool.hpp"
 #include "Window.hpp"
+#include "GraphicSystem.hpp"
 #include "uv.h"
 #include "imgui.h"
 #define NOMINMAX 1
 #include <windows.h>
 
 std::unique_ptr<ECS::DOE> ECS::sharedEngine;
-ECS::Window ECS::sharedWindow;
 
 LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -30,6 +30,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
     uv_loop_t *loop;
     uv_idle_t idle;
+    ECS::graphics = make_align<ECS::GraphicSystem>();
     ECS::sharedWindow.hInstance = hInstance;
     {
         WNDCLASS	wc;
@@ -73,7 +74,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ECS::sharedWindow.height = rect.bottom - rect.top;
     }
 
-    ECS::sharedWindow.contextInit();
 
     uv_setup_args(1,&lpCmdLine);
     loop = uv_default_loop();
@@ -83,6 +83,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     ECS::sharedEngine = std::make_unique<ECS::DOE>();
     ECS::TypeManager::Initialize();
     ECS::JobsUtility::init();
+    ECS::graphics.contextInit();
 
     uv_run(loop, UV_RUN_DEFAULT);
 
@@ -93,6 +94,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     ECS::sharedWindow.contextDestroy();
     ::DestroyWindow(ECS::sharedWindow.hWnd);
+    ECS::graphics.reset();
     return 0;
 }
 

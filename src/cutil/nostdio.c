@@ -93,6 +93,9 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include "uv.h"
+#ifndef WIN32
+#include <unistd.h>
+#endif
 #include "nostdio.h"
 
 #ifdef __clang__

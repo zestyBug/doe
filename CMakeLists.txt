@@ -195,6 +195,7 @@ add_executable(engine
     src/cutil/nostdio.c
     src/system/example.cpp
     src/Window.cpp
+    src/GraphicSystem.cpp
 )
 
 if(MSVC)

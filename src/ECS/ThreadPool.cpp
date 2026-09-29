@@ -1,7 +1,7 @@
 #include "ECS/ThreadPool.hpp"
 #include "ECS/JobChunk.hpp"
 #include "ECS/Engine.hpp"
-#include "Window.hpp"
+#include "GraphicSystem.hpp"
 #include "uv.h"
 
 std::vector<ECS::ISystem*(*)(ECS::DOE&)>& ECS::_get_initialize_list() {
@@ -244,8 +244,8 @@ void iterate_systems(){
         } else if(sharedData.bitmask & Request::Timer) {
             {
                 uint64_t realtime = uv_hrtime();
-                ECS::sharedEngine->fixedDelta      = (double)(realtime - ECS::sharedEngine->fixedTimeBuffer);
-                ECS::sharedEngine->fixedTimeBuffer = (double)realtime;
+                ECS::sharedEngine->fixedDelta      = (float)(realtime - ECS::sharedEngine->fixedTimeBuffer);
+                ECS::sharedEngine->fixedTimeBuffer = realtime;
             }
             while (begin != end){
                 try {
@@ -261,10 +261,10 @@ void iterate_systems(){
         } else if(sharedData.bitmask & Request::Render) {
             {
                 uint64_t realtime = uv_hrtime();
-                ECS::sharedEngine->updateDelta      = (double)(realtime - ECS::sharedEngine->updateTimeBuffer) / 1.0e9;
+                ECS::sharedEngine->updateDelta      = (float)(realtime - ECS::sharedEngine->updateTimeBuffer) / 1.0e9;
                 ECS::sharedEngine->updateTimeBuffer = realtime;
             }
-            ECS::sharedWindow.beginFrame();
+            ECS::graphics->beginFrame();
             while (begin != end){
                 try {
                     (*begin)->OnUpdate(*ECS::sharedEngine);
@@ -275,7 +275,7 @@ void iterate_systems(){
                 }
                 begin++;
             }
-            ECS::sharedWindow.endFrame();
+            ECS::graphics->endFrame();
             sharedData.bitmask &= ~Request::Render;
         } else {
             sharedData.activeThreads--;

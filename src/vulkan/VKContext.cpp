@@ -166,23 +166,25 @@ VKContext::~VKContext(){
         if(device != VK_NULL_HANDLE)
         {
             vkDeviceWaitIdle(this->device);
-            for (uint32_t i=0;i<this->imageCount;i++)
-                if(this->frambuffer[i] != VK_NULL_HANDLE)
-                    vkDestroyFramebuffer(this->device, this->frambuffer[i], 0);
-            for (uint32_t i=0;i<this->imageCount;i++) 
-                if(this->bufferView[i] != VK_NULL_HANDLE)
-                    vkDestroyImageView(this->device, this->bufferView[i], 0);
-            for (uint32_t i=0;i<this->imageCount;i++) 
-                if(this->imageSemaphores[i] != VK_NULL_HANDLE)
-                    vkDestroySemaphore(this->device, this->imageSemaphores[i], 0);
+            for (auto &frame: this->frameResources){
+                if(frame.frambuffer != VK_NULL_HANDLE)
+                    vkDestroyFramebuffer(this->device, frame.frambuffer, 0);
+                if(frame.bufferView != VK_NULL_HANDLE)
+                    vkDestroyImageView(this->device, frame.bufferView, 0);
+            }
+            for (auto &frame: this->frameInFlights){
+                if(frame.imageSemaphore != VK_NULL_HANDLE)
+                    vkDestroySemaphore(this->device, frame.imageSemaphore, 0);
+                if (frame.queueSemaphore != VK_NULL_HANDLE)
+                    vkDestroySemaphore(this->device, frame.queueSemaphore, NULL);
+                if (frame.queueFence != VK_NULL_HANDLE)
+                    vkDestroyFence(this->device, frame.queueFence, NULL);
+                // vkFreeCommandBuffers
+            }
             if (swapchain != VK_NULL_HANDLE)
 		        vkDestroySwapchainKHR(this->device, swapchain, NULL);
             if (this->renderpass != VK_NULL_HANDLE)
                 vkDestroyRenderPass(this->device, this->renderpass, NULL);
-            if (this->queueFence != VK_NULL_HANDLE)
-                vkDestroyFence(this->device, this->queueFence, NULL);
-            if (this->queueSemaphore != VK_NULL_HANDLE)
-                vkDestroySemaphore(this->device, this->queueSemaphore, NULL);
             if (this->dpool != VK_NULL_HANDLE)
                 vkDestroyDescriptorPool(this->device, this->dpool, NULL);
             if (this->cpool != VK_NULL_HANDLE)
@@ -307,14 +309,6 @@ void VKContext::selectDevice(){
         .ppEnabledExtensionNames = exts,
         .pEnabledFeatures = NULL,
     };
-    VkFenceCreateInfo fence_info = {
-		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT
-	};
-    VkSemaphoreCreateInfo sinfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .flags = VK_SEMAPHORE_TYPE_BINARY
-    };
 
     for (auto& pd : physical_devices)
     {
@@ -371,12 +365,6 @@ exit_loop:
     if(VKInitializeWDevice(this->device))
         throw std::runtime_error("VKInitializeWDevice");
     vkGetDeviceQueue(this->device, this->queueFamilyIndex, 0, &this->queue);
-    res = vkCreateFence(this->device, &fence_info, 0, &this->queueFence);
-    if (res)
-        throw std::runtime_error("vkCreateFence");
-    res = vkCreateSemaphore(this->device, &sinfo, 0, &this->queueSemaphore);
-    if (res)
-        throw std::runtime_error("vkCreateSemaphore");
 }
 
 void VKContext::initRender(){
@@ -442,29 +430,50 @@ void VKContext::initRender(){
         .queueFamilyIndex = this->queueFamilyIndex,
     };
     res = vkCreateCommandPool(this->device, &cpInfo, nullptr, &this->cpool);
-	if (res)
-		throw VulkanException(res, "vkCreateCommandPool");
+
+    VkCommandBufferAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = this->cpool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+    VkSemaphoreCreateInfo sinfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .flags = VK_SEMAPHORE_TYPE_BINARY
+    };
+    VkFenceCreateInfo finfo = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT
+    };
+    for (auto &frame: this->frameInFlights){
+        res = vkCreateSemaphore(this->device, &sinfo, 0, &frame.imageSemaphore);
+        if (res)
+            throw std::runtime_error("vkCreateSemaphore");
+        res = vkCreateSemaphore(this->device, &sinfo, 0, &frame.queueSemaphore);
+        if (res)
+            throw std::runtime_error("vkCreateSemaphore");
+        res = vkCreateFence(this->device, &finfo, 0, &frame.queueFence);
+        if (res)
+            throw std::runtime_error("vkCreateFence");
+        res = vkAllocateCommandBuffers(this->device, &allocInfo, &frame.commandBuffer);
+        if (res)
+            throw VulkanException(res, "vkCreateCommandPool");
+    }
 }
 void VKContext::resetSwapchain(bool recreateSurface){
-    for (uint32_t i=0;i<this->imageCount;i++)
-        if(this->frambuffer[i])
-            vkDestroyFramebuffer(this->device, this->frambuffer[i], 0);
-    for (uint32_t i=0;i<this->imageCount;i++)
-        if(this->bufferView[i])
-            vkDestroyImageView(this->device, this->bufferView[i], 0);
-    for (uint32_t i=0;i<this->imageCount;i++)
-        if(this->imageSemaphores[i])
-            vkDestroySemaphore(this->device, this->imageSemaphores[i], 0);
+    for (auto &frame: this->frameResources){
+        if(frame.frambuffer != VK_NULL_HANDLE)
+            vkDestroyFramebuffer(this->device, frame.frambuffer, 0);
+        if(frame.bufferView != VK_NULL_HANDLE)
+            vkDestroyImageView(this->device, frame.bufferView, 0);
+        frame.frambuffer = VK_NULL_HANDLE;
+        frame.bufferView = VK_NULL_HANDLE;
+    }
     if(unlikely(recreateSurface)){
         if(likely(this->surface))
             vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
         this->createSurface();
     }
-
-    memset(this->bufferView,0,sizeof(this->bufferView));
-    memset(this->frambuffer,0,sizeof(this->frambuffer));
-    memset(this->bufferImage,0,sizeof(this->bufferImage));
-    memset(this->imageSemaphores,0,sizeof(this->imageSemaphores));
 
     {
         VkSurfaceCapabilitiesKHR capability;
@@ -527,37 +536,31 @@ void VKContext::resetSwapchain(bool recreateSurface){
 		if (res)
 			throw VulkanException(res, "vkGetSwapchainImagesKHR");
 
-		for (uint32_t i = 0; i < img_count; i++) {
-			const VkImageViewCreateInfo vinfo = {
+        for (uint32_t i = 0; i < img_count; i++) {
+            auto &frame = this->frameResources[i];
+            const VkImageViewCreateInfo vinfo = {
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 				.image = this->bufferImage[i],
 				.viewType = VK_IMAGE_VIEW_TYPE_2D,
 				.format = VK_FORMAT_B8G8R8A8_SRGB,
 				.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1},
 			};
-            VkSemaphoreCreateInfo sinfo = {
-                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-                .flags = VK_SEMAPHORE_TYPE_BINARY
-            };
 			VkFramebufferCreateInfo fbinfo = {
 				.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 				.renderPass = this->renderpass,
 				.attachmentCount = 1,
-				.pAttachments = this->bufferView+i,
+				.pAttachments = &frame.bufferView,
 				.width = this->surfaceExtend.width,
 				.height = this->surfaceExtend.height,
 				.layers = 1,
 			};
-			res = vkCreateImageView(this->device, &vinfo, nullptr, this->bufferView+i);
+			res = vkCreateImageView(this->device, &vinfo, nullptr, &frame.bufferView);
 			if (res)
 			    throw VulkanException(res, "vkCreateImageView");
-            res = vkCreateSemaphore(this->device, &sinfo, 0, this->imageSemaphores+i);
-            if (res)
-                throw std::runtime_error("vkCreateSemaphore");
-			res = vkCreateFramebuffer(this->device, &fbinfo, nullptr, this->frambuffer+i);
+			res = vkCreateFramebuffer(this->device, &fbinfo, nullptr, &frame.frambuffer);
 			if (res)
 			    throw VulkanException(res, "vkCreateFramebuffer");
-		}
+        }
 	}
 	if (old_swapchain != VK_NULL_HANDLE)
 		vkDestroySwapchainKHR(this->device, old_swapchain, NULL);

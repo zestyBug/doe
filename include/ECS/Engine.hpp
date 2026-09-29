@@ -26,8 +26,8 @@ namespace ECS
         EntityQueryManager eqm;
         uint64_t fixedTimeBuffer = 0;
         uint64_t updateTimeBuffer = 0;
-        double fixedDelta = 0;
-        double updateDelta = 0;
+        float fixedDelta = 0;
+        float updateDelta = 0;
         /// @brief List of systems (Intenal)
         std::vector<std::unique_ptr<ISystem>> sys;
         /// @brief Temporary list of scheduled jobs. filled by systems and are executed at the end of system iteration.
