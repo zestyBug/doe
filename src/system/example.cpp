@@ -18,7 +18,7 @@ DEF_TYPE(test_2)
 void ExampleSystem::OnFixedUpdate(ECS::DOE&){
     counter++;
     if(counter == 1000000)
-        ECS::JobsUtility::signalQuit();
+        ECS::jobsUtility->signalQuit();
 }
 void ExampleSystem::OnUpdate(ECS::DOE&){
     ImGuiIO& io=ImGui::GetIO();

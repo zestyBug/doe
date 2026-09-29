@@ -81,8 +81,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     uv_idle_start(&idle, messageIdle);
 
     ECS::sharedEngine = std::make_unique<ECS::DOE>();
+    ECS::jobsUtility = make_align<ECS::JobsUtility>();
     ECS::TypeManager::Initialize();
-    ECS::JobsUtility::init();
+    ECS::jobsUtility->init();
     ECS::graphics.contextInit();
 
     uv_run(loop, UV_RUN_DEFAULT);
@@ -234,7 +235,7 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     case WM_QUIT:
     case WM_CLOSE:
-        ECS::JobsUtility::signalQuit();
+        ECS::jobsUtility->signalQuit();
         PostQuitMessage(0);
         break;
 

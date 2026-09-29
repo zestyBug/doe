@@ -27,7 +27,7 @@ void ECS::GraphicSystem::gFunc(void *arg)
     };
     vkResetCommandPool(vk.device, vk.cpool, 0);
     FIFB = vk.frameInFlights[frameInflightIndex];
-    JobsUtility::signalRender();
+    jobsUtility->signalRender();
 
     while(true)
     {
@@ -117,7 +117,7 @@ void ECS::GraphicSystem::gFunc(void *arg)
         vkCmdEndRenderPass(FIFB.commandBuffer);
         vkEndCommandBuffer(FIFB.commandBuffer);
 
-        JobsUtility::signalRender();
+        jobsUtility->signalRender();
 
         {
             res = vkResetFences(vk.device, 1, &FIFB.queueFence);

@@ -10,10 +10,14 @@ namespace ECS
     struct Chunk;
     struct Archetype;
     struct ComponentDependencyManager;
+    class JobsUtility;
     struct JobChunkWrapperBase {
+        friend class JobsUtility;
+        JobChunkWrapperBase() = default;
+        JobChunkWrapperBase(const JobChunkWrapperBase&) = default;
+    private:
         JobHandle schedule(EntityQueryImpl query,ComponentDependencyManager &);
         JobHandle scheduleParallel(EntityQueryImpl query,ComponentDependencyManager &);
-    private:
         /// @brief JobChunkProducer
         static void execute(void *, uint32_t, uint32_t);
         virtual void execute(const Chunk*, const_span<int32_t>) = 0;

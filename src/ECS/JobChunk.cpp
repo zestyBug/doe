@@ -14,7 +14,7 @@ JobHandle JobChunkWrapperBase::schedule(EntityQueryImpl _query,ComponentDependen
     param.context = this;
     param.dependsOn = dependsOn;
     param.function = &execute;
-    JobHandle handle = JobsUtility::schedule(param);
+    JobHandle handle = jobsUtility->schedule(param);
     cdm.addDependency(handle,*this->query); 
     return handle;
 }
@@ -27,7 +27,7 @@ JobHandle JobChunkWrapperBase::scheduleParallel(EntityQueryImpl _query,Component
     param.context = this;
     param.dependsOn = dependsOn;
     param.function = &execute;
-    JobHandle handle = JobsUtility::schedule(param);
+    JobHandle handle = jobsUtility->schedule(param);
     cdm.addDependency(handle,*this->query); 
     return handle;
 }

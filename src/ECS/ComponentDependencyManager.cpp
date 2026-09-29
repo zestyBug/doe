@@ -57,7 +57,7 @@ JobHandle ComponentDependencyManager::getDependency(const EntityQueryData &query
         }
         queries++;
     }
-    return JobsUtility::combineDependencies(const_span<JobHandle>{allHandles, allHandleCount});
+    return jobsUtility->combineDependencies(const_span<JobHandle>{allHandles, allHandleCount});
 }
 JobHandle ComponentDependencyManager::addDependency(JobHandle dependency, const EntityQueryData &query)
 {
@@ -81,7 +81,7 @@ JobHandle ComponentDependencyManager::addDependency(JobHandle dependency, const 
 }
 JobHandle ComponentDependencyManager::combineReadDependencies(uint32_t typeArrayIndex)
 {
-    JobHandle combined = JobsUtility::combineDependencies({readJobFences[typeArrayIndex], dependencyHandles[typeArrayIndex].numReadFences});
+    JobHandle combined = jobsUtility->combineDependencies({readJobFences[typeArrayIndex], dependencyHandles[typeArrayIndex].numReadFences});
 
     readJobFences[typeArrayIndex][0] = combined;
     dependencyHandles[typeArrayIndex].numReadFences = 1;

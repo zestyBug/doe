@@ -1,30 +1,3 @@
-/*------------------------------------------------------------------------
- * A demonstration of OpenGL in a  ARGB window
- *    => support for composited window transparency
- *
- * (c) 2011 by Wolfgang 'datenwolf' Draxinger
- *     See me at comp.graphics.api.opengl and StackOverflow.com
-
- * License agreement: This source code is provided "as is". You
- * can use this source code however you want for your own personal
- * use. If you give this source code to anybody else then you must
- * leave this message in it.
- *
- * This program is based on the simplest possible
- * Linux OpenGL program by FTB (see info below)
-
-  The simplest possible Linux OpenGL program? Maybe...
-
-  (c) 2002 by FTB. See me in comp.graphics.api.opengl
-
-  --
-  <\___/>
-  / O O \
-  \_____/  FTB.
-
-------------------------------------------------------------------------*/
-//#define _GNU_SOURCE
-
 #include "ECS/Engine.hpp"
 #include "ECS/ThreadPool.hpp"
 #include "Window.hpp"
@@ -133,8 +106,9 @@ int main(int argc, char *argv[])
     uv_poll_start(&x11_poll, UV_READABLE, &WndProc);
 
     ECS::sharedEngine = std::make_unique<ECS::DOE>();
+    ECS::jobsUtility = make_align<ECS::JobsUtility>();
     ECS::TypeManager::Initialize();
-    ECS::JobsUtility::init();
+    ECS::jobsUtility->init();
     ECS::graphics->contextInit();
 
     uv_run(loop, UV_RUN_DEFAULT);
@@ -153,6 +127,7 @@ int main(int argc, char *argv[])
 
     XDestroyWindow(ECS::sharedWindow.display, ECS::sharedWindow.window);
     XCloseDisplay(ECS::sharedWindow.display);
+    ECS::jobsUtility.reset();
     ECS::graphics.reset();
 	return 0;
 }
@@ -266,7 +241,7 @@ void WndProc(uv_poll_t *handle, int, int)
             break;
         case ClientMessage:
             if ((unsigned)(event.xclient.data.l[0]) == del_atom)
-                ECS::JobsUtility::signalQuit();
+                ECS::jobsUtility->signalQuit();
             break;
         }
     }
