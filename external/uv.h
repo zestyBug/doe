@@ -51,6 +51,7 @@ extern "C" {
 # define UV_EXTERN /* nothing */
 #endif
 
+#include "nostdio.h"
 #include "uv/errno.h"
 #include "uv/version.h"
 #include <stddef.h>

@@ -112,23 +112,22 @@ int main(int argc, char *argv[])
     ECS::graphics->contextInit();
 
     uv_run(loop, UV_RUN_DEFAULT);
+    ECS::sharedWindow.running.store(0);
 
     uv_poll_stop(&x11_poll);
     ECS::sharedEngine.reset();
     uv_loop_close(loop);
     uv_library_shutdown();
 
-    ECS::sharedWindow.running.store(0);
     ECS::graphics->contextDestroy();
-    // one for the Threadpool jobs + 2 for TypeManager
-    if(allocator_counter){
-        printf("Memory leak count %li\n",allocator_counter);
-    }
 
     XDestroyWindow(ECS::sharedWindow.display, ECS::sharedWindow.window);
     XCloseDisplay(ECS::sharedWindow.display);
     ECS::jobsUtility.reset();
     ECS::graphics.reset();
+    if(allocator_counter){
+        printf("Memory leak count %li\n",allocator_counter);
+    }
 	return 0;
 }
 

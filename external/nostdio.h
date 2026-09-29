@@ -1,3 +1,5 @@
+#include <stdio.h>
+#if 0
 #if !defined(_STDIO_H)
 #define _STDIO_H
 
@@ -24,3 +26,4 @@ int sscanf(const char *buffer, const char *format, ...) __attribute__ ((format (
 #endif
 
 #endif // _STDIO_H
+#endif

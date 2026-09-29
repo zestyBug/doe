@@ -30,7 +30,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
     uv_loop_t *loop;
     uv_idle_t idle;
-    ECS::graphics = make_align<ECS::GraphicSystem>();
     ECS::sharedWindow.hInstance = hInstance;
     {
         WNDCLASS	wc;
@@ -81,21 +80,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     uv_idle_start(&idle, messageIdle);
 
     ECS::sharedEngine = std::make_unique<ECS::DOE>();
+    ECS::graphics = make_align<ECS::GraphicSystem>();
     ECS::jobsUtility = make_align<ECS::JobsUtility>();
     ECS::TypeManager::Initialize();
     ECS::jobsUtility->init();
-    ECS::graphics.contextInit();
+    ECS::graphics->contextInit();
 
     uv_run(loop, UV_RUN_DEFAULT);
+    ECS::sharedWindow.running.store(0);
 
     uv_idle_stop(&idle);
     ECS::sharedEngine.reset();
     uv_loop_close(loop);
     uv_library_shutdown();
 
-    ECS::sharedWindow.contextDestroy();
+
+    ECS::graphics->contextDestroy();
     ::DestroyWindow(ECS::sharedWindow.hWnd);
+    ECS::jobsUtility.reset();
     ECS::graphics.reset();
+    if(allocator_counter){
+        printf("Memory leak count %li\n",allocator_counter);
+    }
     return 0;
 }
 

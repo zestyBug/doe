@@ -1,3 +1,5 @@
+#include "nostdio.h"
+#if 0
 // Copyright (C) 2019 Miroslaw Toton, mirtoto@gmail.com
 
 /**
@@ -96,7 +98,6 @@
 #ifndef WIN32
 #include <unistd.h>
 #endif
-#include "nostdio.h"
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -1022,4 +1023,5 @@ int fprintf(FILE *,const char *__fmt, ...)
 
 #ifdef __clang__
 #pragma clang diagnostic pop
+#endif
 #endif

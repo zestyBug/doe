@@ -86,10 +86,8 @@ endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(imgui PRIVATE
         X11
-    )
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    target_link_libraries(imgui PRIVATE
-        LDFLAGS+=-lX11 -lXi -lXcursor
+        Xi
+        Xcursor
     )
 endif()
 

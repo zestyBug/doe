@@ -5,6 +5,7 @@
 #if !defined(BASICS_HPP)
 #define BASICS_HPP
 
+#include "nostdio.h"
 //memory allocation
 #include <stdlib.h>
 // heavy dependancy
