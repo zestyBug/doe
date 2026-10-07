@@ -71,9 +71,9 @@ namespace ECS
         // Entity, native component data, shared components, tag components
 
         // any index above/equal this is zero sized
-        // 1 <= firstManaged<= firstTagComponent <= firstSharedComponent <= __type_count
+        // 1 <= firstNonTrivial <= firstTagComponent <= firstSharedComponent <= __type_count
 
-        uint32_t firstManagedComponent =0;
+        uint32_t firstNonTrivialComponent =0;
         uint32_t firstTagComponent = 0;
         uint32_t firstSharedComponent = 0;
         uint32_t instanceSize = 0;
@@ -102,8 +102,8 @@ namespace ECS
     public:
         inline uint32_t numNonZeroSizedTypes() const {return firstTagComponent;}
         /// @brief number of non zero sized IComponentData components (not Entity)
-        inline uint32_t numNativeComponentData() const {return firstManagedComponent - 1;}
-        inline uint32_t numManagedComponents()   const {return firstTagComponent - firstManagedComponent;}
+        inline uint32_t numNativeComponentData() const {return firstNonTrivialComponent - 1;}
+        inline uint32_t numNonTrivialComponents()   const {return firstTagComponent - firstNonTrivialComponent;}
         inline uint32_t numTagComponents()       const {return firstSharedComponent - firstTagComponent;}
         inline uint32_t numSharedComponents()    const {return typeCount - firstSharedComponent;}
         // this fucntion is a little more expensive than empty

@@ -54,6 +54,10 @@ namespace ECS
         std::atomic<uint32_t>  activeThreads = 0;
         std::atomic<uint32_t>  capacity = 0;
         std::atomic<uint32_t>  bitmask = 0;
+        uint64_t fixedTimeBuffer = 0;
+        uint64_t updateTimeBuffer = 0;
+        float fixedDelta = 0;
+        float updateDelta = 0;
         /// @brief batch begin index to start with
         alignas(Constants::CacheLineSize) align_ptr<JobData[]> jobs = NULL;
         std::atomic<uint32_t>  *beginIndex = NULL;

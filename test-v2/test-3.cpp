@@ -3,7 +3,7 @@
 
 static int counter1 = 0;
 static int counter2 = 0;
-struct test_1 : ECS::ISharedComponentData, ECS::IManagedComponentData
+struct test_1 : ECS::ISharedComponentData
 {
     int var1 = 1;
     int var2 = 2;
@@ -18,7 +18,7 @@ template<> ECS::TypeID ECS::__typeid__<test_1>(){
     static ECS::TypeID v = ECS::TypeManager::registerType<test_1>("test_1");
     return v;
 }
-struct test_2 : ECS::IComponentData, ECS::IManagedComponentData
+struct test_2 : ECS::IComponentData
 {
     int var1 = 1;
     int var2 = 2;

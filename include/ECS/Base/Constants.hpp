@@ -6,6 +6,8 @@
 namespace ECS {
     /// @brief Set of constant values shared by multiple classes and the value can be changed to a valid value depending on situations.
     struct Constants {
+        /// @details Considerations: any number larger than 0xFFFF may cause overflow in offset array!
+        static constexpr uint32_t ChunkSize = 16 * 1024;
         /// @brief To align structures to cache line size to get performance by avoiding false sharing.
         /// @note This value is only guarantied to be bigger equal than sizeof(void*). (32 ~ 256)
         /// @warning This value does not 100% guaranty multithread access safety!
@@ -30,6 +32,7 @@ namespace ECS {
         /// 4_ 15 bit for type index in an uint16_t + 1 bit for RW/RO
         /// 5_ the larger the number the larger EntityComponentStore byte size
         static constexpr uint16_t MaximumTypesCount = 1 << 12;
+        static constexpr uint16_t MaximumComponentSize = 0x800;
         static constexpr uint16_t MaximumResourcesCount = 1 << 8;
         static constexpr uint16_t ResourceBlockCount = 1 << 8;
         static constexpr uint16_t ResourceBlockSize = 1 << 8;

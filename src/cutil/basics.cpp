@@ -12,17 +12,17 @@ void* _allocate(size_t __n){
 #endif
     if(ret == nullptr) throw std::bad_alloc();
     allocator_counter++;
-    printf("allocate(): %u byte in %p\n",(uint32_t)__n,ret);
+    printf("_allocate(): %u byte in %p\n",(uint32_t)__n,ret);
     return ret;
 }
 void _deallocate(void *__p){
-    if(likely(__p != nullptr)){
-    printf("deallocate(): %p\n",__p);
+    if(unlikely(__p != nullptr))
+        throw std::invalid_argument("_deallocate(): avoid bad practice!");
+    printf("_deallocate(): %p\n",__p);
     allocator_counter--;
 #if DOE_WIN32
     _aligned_free(__p);
 #else
     free(__p);
 #endif
-    }
 }

@@ -10,15 +10,12 @@
 namespace ECS
 {
     struct JobChunkWrapperBase;
-    struct DOE {
+    /// @brief This struct must remain passive, no external calls
+    struct DOE final {
         /// @brief Entities & components are stored here
         EntityComponentStore ecs;
         /// @brief Entiry query are stored here
         EntityQueryManager eqm;
-        uint64_t fixedTimeBuffer = 0;
-        uint64_t updateTimeBuffer = 0;
-        float fixedDelta = 0;
-        float updateDelta = 0;
         /// @brief List of systems (Intenal)
         std::vector<std::unique_ptr<ISystem>> sys;
         /// @brief Manages loading resources from budles. An asset is a bundle of resources  (Intenal)

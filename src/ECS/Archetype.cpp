@@ -177,7 +177,7 @@ void Archetype::initializeComponents(Chunk* chunk, uint32_t dstIndex, uint32_t c
         uint32_t sizeOf = sizeOfs[t];
         TypeID type = types[t];
         uint8_t *dst = dstBuffer + (offsets[t] + sizeOf * dstIndex);
-        if(!type.isManagedComponent()){
+        if(!type.isNonTrivial()){
             memset(dst, 0, sizeOf*count);
         }else{
             TypeManager::DefaultFunction dCon = dCons[t];
@@ -487,7 +487,7 @@ void Archetype::convert(Archetype &srcArchetype, Chunk &srcChunk, uint32_t srcIn
     // Process non-zero-sized types
     int32_t srcI = srcArchetype.numNonZeroSizedTypes() - 1;
     int32_t dstI = dstArchetype.numNonZeroSizedTypes() - 1;
-    uint32_t srcFirstManagedComponent = srcArchetype.firstManagedComponent;
+    uint32_t srcFirstNonTrivialComponent = srcArchetype.firstNonTrivialComponent;
 
     const TypeManager::DefaultFunction *srcDDes = srcArchetype._dDestructor;
     const TypeID *srcTypes = srcArchetype._types;
@@ -537,7 +537,7 @@ void Archetype::convert(Archetype &srcArchetype, Chunk &srcChunk, uint32_t srcIn
     sourceTypesToDealloc[sourceTypesToDeallocCount] = 0;
 
     uint32_t iDealloc = 0;
-    if (sourceTypesToDealloc[iDealloc] >= srcFirstManagedComponent)
+    if (sourceTypesToDealloc[iDealloc] >= srcFirstNonTrivialComponent)
     {
         do
         {
@@ -551,7 +551,7 @@ void Archetype::convert(Archetype &srcArchetype, Chunk &srcChunk, uint32_t srcIn
                 src += srcStride;
             }
         }
-        while ((sourceTypesToDealloc[++iDealloc] >= srcFirstManagedComponent));
+        while ((sourceTypesToDealloc[++iDealloc] >= srcFirstNonTrivialComponent));
     }
 #pragma endregion unsafe ChunkDataUtility
 }

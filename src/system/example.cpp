@@ -6,7 +6,7 @@
 ECS::SystemRegister<ExampleSystem> _{};
 static bool isOpen = true;
 
-struct test_2 : ECS::IComponentData, ECS::IManagedComponentData
+struct test_2 : ECS::IComponentData
 {
     test_2(){
         value = 69;

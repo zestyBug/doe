@@ -3,7 +3,7 @@
 #define COUNT 100
 static int counter1 = 0;
 static int counter2 = 0;
-struct test_1 : ECS::ISharedComponentData, ECS::IManagedComponentData
+struct test_1 : ECS::ISharedComponentData
 {
     int var1 = 1;
     int var2 = 2;

@@ -1,7 +1,7 @@
 #include "ECS/Base/TypeID.hpp"
 #include "cutil/mini_test.hpp"
 
-struct test_1 : ECS::ISharedComponentData, ECS::IManagedComponentData
+struct test_1 : ECS::ISharedComponentData
 {
     int test1;
     ~test_1(){

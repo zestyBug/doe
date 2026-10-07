@@ -30,14 +30,10 @@ namespace ECS
         friend class Archetype;
         friend class ChunkStore;
         friend class EntityComponentStore;
-        // MAGIC NUMBER. Header size. DO NOT TOUCH.
         /// @details Considerations: must be cache line aligned
         static constexpr uint32_t MemoryOffset = Constants::CacheLineSize;
-        // MAGIC NUMBER. Chunk size. DO NOT TOUCH.
-        /// @details Considerations: any number larger than 0xFFFF may cause overflow in offset array!
-        static constexpr uint32_t MemorySize = 16 * 1024;
         /// @brief Maximum usable memory size
-        static constexpr uint32_t BufferSize = MemorySize - MemoryOffset;
+        static constexpr uint32_t BufferSize = Constants::ChunkSize - MemoryOffset;
         Archetype *archetype = nullptr;
         uint32_t count = 0;
         // index in chunksWithEmptySlots or freeChunksBySharedComponents
@@ -48,7 +44,7 @@ namespace ECS
         ChunkIndex index = ChunkIndex();
         alignas(MemoryOffset) mutable uint8_t buffer[BufferSize];
     };
-    static_assert(sizeof(Chunk) == Chunk::MemorySize);
+    static_assert(sizeof(Chunk) == Constants::ChunkSize);
 }
 
 #endif

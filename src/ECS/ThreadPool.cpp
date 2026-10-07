@@ -141,7 +141,7 @@ void ECS::JobsUtility::init()
         }
         sysList.emplace_back(sys);
     }
-    sharedEngine->fixedTimeBuffer = sharedEngine->updateTimeBuffer = uv_hrtime();
+    this->fixedTimeBuffer = this->updateTimeBuffer = uv_hrtime();
     uv_timer_init(uv_default_loop(), this->fixedTimer);
     uv_async_init(uv_default_loop(), this->wakecall, wakeThread);
     uv_timer_start(this->fixedTimer, on_fixed_timer, 0, 20);
@@ -210,8 +210,8 @@ void ECS::JobsUtility::iterate_systems(ECS::JobsUtility *thiz){
         } else if(thiz->bitmask & Request::Timer) {
             {
                 uint64_t realtime = uv_hrtime();
-                ECS::sharedEngine->fixedDelta      = (float)(realtime - ECS::sharedEngine->fixedTimeBuffer);
-                ECS::sharedEngine->fixedTimeBuffer = realtime;
+                thiz->fixedDelta      = (float)(realtime - thiz->fixedTimeBuffer);
+                thiz->fixedTimeBuffer = realtime;
             }
             while (begin != end){
                 try {
@@ -227,8 +227,8 @@ void ECS::JobsUtility::iterate_systems(ECS::JobsUtility *thiz){
         } else if(thiz->bitmask & Request::Render) {
             {
                 uint64_t realtime = uv_hrtime();
-                ECS::sharedEngine->updateDelta      = (float)(realtime - ECS::sharedEngine->updateTimeBuffer) / 1.0e9;
-                ECS::sharedEngine->updateTimeBuffer = realtime;
+                thiz->updateDelta      = (float)(realtime - thiz->updateTimeBuffer) / 1.0e9;
+                thiz->updateTimeBuffer = realtime;
             }
             ECS::graphics->beginFrame();
             while (begin != end){

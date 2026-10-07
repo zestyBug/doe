@@ -11,7 +11,7 @@ EntityComponentStore::~EntityComponentStore(){
         for (uint32_t c = 0; c != archetype->chunks.count(); c++)
         {
             Chunk* chunk = archetype->chunks[c];
-            this->deallocateManagedComponents(EntityBatchInChunk{.chunk=chunk, .startIndex=0, .count = chunk->count});
+            this->deallocateNonTrivialComponents(EntityBatchInChunk{.chunk=chunk, .startIndex=0, .count = chunk->count});
             this->entityStore.deallocateEntities({(Entity*)chunk->buffer, chunk->count});
         }
     }
@@ -110,8 +110,8 @@ Archetype* EntityComponentStore::createArchetype(const_span<TypeID> types){
         do arch->firstTagComponent = i;
         while (types[--i].isZeroSized());
         i++;
-        do arch->firstManagedComponent = i;
-        while (types[--i].isManagedComponent());
+        do arch->firstNonTrivialComponent = i;
+        while (types[--i].isNonTrivial());
     }
     arch->instanceSize = 0;
     arch->instanceSizeWithOverhead = 0;
@@ -345,7 +345,7 @@ void EntityComponentStore::deallocateDataEntitiesInChunk(EntityBatchInChunk batc
 {
     if(batch.chunk->count < (batch.startIndex + batch.count))
         throw std::out_of_range("deallocateDataEntitiesInChunk(): invalid batch");
-    deallocateManagedComponents(batch);
+    deallocateNonTrivialComponents(batch);
 
     Entity* entities = (Entity*)batch.chunk->buffer + batch.startIndex;
 
@@ -373,14 +373,14 @@ void EntityComponentStore::deallocateDataEntitiesInChunk(EntityBatchInChunk batc
 
     Archetype::copy(batch.chunk, startIndex, batch.chunk, batch.startIndex, patchCount);
 }
-void EntityComponentStore::deallocateManagedComponents(EntityBatchInChunk batch)
+void EntityComponentStore::deallocateNonTrivialComponents(EntityBatchInChunk batch)
 {
     Archetype &archetype = *getArchetype(*batch.chunk);
-    if (archetype.numManagedComponents() == 0)
+    if (archetype.numNonTrivialComponents() == 0)
         return;
-    uint32_t firstManagedComponent = archetype.firstManagedComponent;
-    uint32_t endManagedComponents = firstManagedComponent + archetype.numManagedComponents();
-    for (uint32_t localTypeIndex = firstManagedComponent; localTypeIndex < endManagedComponents; ++localTypeIndex)
+    uint32_t firstNonTrivialComponent = archetype.firstNonTrivialComponent;
+    uint32_t endNonTrivialComponents = firstNonTrivialComponent + archetype.numNonTrivialComponents();
+    for (uint32_t localTypeIndex = firstNonTrivialComponent; localTypeIndex < endNonTrivialComponents; ++localTypeIndex)
     {
         TypeManager::DefaultFunction dFunc = TypeManager::GetTypeInfo(archetype._types[localTypeIndex]).defaultDestruct;
         uint32_t sizeOf = archetype._sizeOfs[localTypeIndex];

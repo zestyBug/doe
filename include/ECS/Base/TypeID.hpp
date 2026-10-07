@@ -10,7 +10,6 @@
 namespace ECS {
     struct ISharedComponentData {};
     struct IComponentData {};
-    struct IManagedComponentData {};
     struct TypeID final {
         TypeID()=default;
         /// @brief Just in case you know what you are doing
@@ -30,7 +29,7 @@ namespace ECS {
         inline uint32_t flags() const;
         inline bool isSharedComponent() const;
         inline bool isZeroSized() const;
-        inline bool isManagedComponent() const ;
+        inline bool isNonTrivial() const ;
         inline bool hasAssetRef() const;
         static bool compare(const_span<TypeID> v1,const_span<TypeID> v2)
         {
@@ -53,9 +52,8 @@ namespace ECS {
         /// @details Considerations: SharedComponent must comes before ZeroSized components
         static constexpr uint32_t SharedComponentTypeFlag  = 1 << 29;
         static constexpr uint32_t ZeroSizeInChunkTypeFlag  = 1 << 28;
-        /// @brief MAGIC NUMBER, destruction is managed by the engine
-        /// @details Considerations: SharedComponent must comes before ZeroSized components
-        static constexpr uint32_t ManagedComponentTypeFlag = 1 << 17;
+        /// @brief MAGIC NUMBER, it means destruction call is managed by the engine
+        static constexpr uint32_t NonTrivialComponentTypeFlag = 1 << 17;
         static constexpr uint32_t AssetRefFlag             = 1 << 18;
         static constexpr uint32_t ClearFlagsMask = Constants::MaximumTypesCount-1;
         enum class TypeCategory : uint16_t {
@@ -120,25 +118,32 @@ namespace ECS {
             if(index >= typeCount) throw std::bad_typeid();
             return sharedTypeInfos[index].Name;
         }
+        /// @brief Register informations about a component type.
+        /// @note A component MUST be publicly default constuctable. And publicly copiable and destrcutable
+        /// @warning Call this function only once per type.
+        /// @tparam T Component
+        /// @param name A name to be called with.
+        /// @param assetRefs list of byte indecies that contain a pointer to a resouce, to handle garbage collection automated.
+        /// @return An unique id that the informations are linked with.
         template<typename T>
         static TypeID registerType(const char* name, const_span<uint16_t> assetRefs = {}) {
             if(!initialized)
                 Initialize();
             // MAGIC NUMBER
-            static_assert(sizeof(T) <= 0x800 && alignof(T) <= 0x800);
+            static_assert(sizeof(T) <= Constants::MaximumComponentSize && alignof(T) <= Constants::MaximumComponentSize);
             static_assert(std::is_class_v<T> && std::is_default_constructible_v<T>);
             static_assert(std::is_same_v<T,Entity> || std::is_base_of_v<IComponentData,T> || (std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>));
             if(unlikely(typeCount >= Constants::MaximumTypesCount))
                 throw std::runtime_error("registerType(): Constants::MaximumTypesCount");
 
-            uint32_t index = typeCount++;
+            const uint32_t index = typeCount++;
 
             uint32_t value = index;
-            if(std::is_base_of_v<ISharedComponentData,T>)
+            if constexpr (std::is_base_of_v<ISharedComponentData,T>)
                 value |= SharedComponentTypeFlag;
-            if(std::is_base_of_v<IManagedComponentData,T>)
-                value |= ManagedComponentTypeFlag;
-            if(std::is_empty_v<T>)
+            if constexpr (!std::is_trivially_destructible_v<T> || !std::is_trivially_copy_constructible_v<T>)
+                value |= NonTrivialComponentTypeFlag;
+            if constexpr (std::is_empty_v<T>)
                 value |= ZeroSizeInChunkTypeFlag;
             if(!assetRefs.empty())
                 value |= AssetRefFlag;
@@ -148,11 +153,11 @@ namespace ECS {
             sharedTypeInfos[index].SizeInChunk = std::is_empty_v<T> ? 0 : sizeof(T);
             sharedTypeInfos[index].AlignmentInBytes = alignof(T);
 
-            if(std::is_same_v<T,Entity>)
+            if constexpr (std::is_same_v<T,Entity>)
                 sharedTypeInfos[index].Category = TypeCategory::Entity;
-            else if(std::is_base_of_v<IComponentData,T>)
+            else if constexpr (std::is_base_of_v<IComponentData,T>)
                 sharedTypeInfos[index].Category = TypeCategory::IComponentData;
-            else if(std::is_base_of_v<ISharedComponentData,T>)
+            else if constexpr (std::is_base_of_v<ISharedComponentData,T>)
                 sharedTypeInfos[index].Category = TypeCategory::ISharedComponentData;
             else
                 throw std::bad_typeid();
@@ -182,6 +187,9 @@ namespace ECS {
         }
     };
 
+    /// @brief A generic funcion you must define for each component type.
+    /// @note use DEF_TYPE helper macro to define your __typeid__
+    /// @return the id that is returned from registerType.
     template<typename> TypeID __typeid__() = delete;
     template<> TypeID __typeid__<std::nullptr_t>();
     template<> TypeID __typeid__<ECS::Entity>();
@@ -191,11 +199,17 @@ namespace ECS {
     uint32_t TypeID::flags() const {return this->value & ~TypeManager::ClearFlagsMask;}
     bool TypeID::isSharedComponent() const {return this->value & TypeManager::SharedComponentTypeFlag;}
     bool TypeID::isZeroSized() const {return this->value & TypeManager::ZeroSizeInChunkTypeFlag;}
-    bool TypeID::isManagedComponent() const {return this->value & TypeManager::ManagedComponentTypeFlag;}
+    bool TypeID::isNonTrivial() const {return this->value & TypeManager::NonTrivialComponentTypeFlag;}
     bool TypeID::hasAssetRef() const {return this->value & TypeManager::AssetRefFlag;}
 
+    /// @brief A compile-time helper to call __typeid__
+    /// @warning Dont define getTypeID manually.
     template<typename T>
     inline TypeID getTypeID() { return __typeid__<std::remove_const_t<std::remove_reference_t<T>>>(); }
+    template<typename T>
+    constexpr bool isNonTrivialComponent() { return !std::is_trivially_destructible_v<T> || !std::is_trivially_copy_constructible_v<T>; }
+    template<typename T>
+    constexpr bool isSharedComponent() { return std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>; }
 
     namespace internal
     {

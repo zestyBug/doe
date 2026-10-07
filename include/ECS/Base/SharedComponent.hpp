@@ -18,7 +18,6 @@ namespace ECS
         inline bool isNull() {return value == 0;}
         static constexpr uint32_t IndexMask = 0xFFFF;
         static constexpr uint32_t TypeIndexBitOffset = 16;
-        //static constexpr uint32_t UnmanagedFlag = 1 << 31;
     private:
         uint32_t value = 0;
     };

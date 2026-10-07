@@ -235,7 +235,7 @@ void ECS::GraphicSystem::contextDestroy(){
 }
 void ECS::GraphicSystem::beginFrame(){
     ImGuiIO& io=ImGui::GetIO();
-    io.DeltaTime = sharedEngine->updateDelta;
+    io.DeltaTime = jobsUtility->updateDelta;
     io.DisplaySize = ImVec2((float)vk.surfaceExtend.width, (float)vk.surfaceExtend.height);
     ImGui_ImplVulkan_NewFrame();
     ImGui::NewFrame();
