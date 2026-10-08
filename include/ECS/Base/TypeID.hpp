@@ -31,7 +31,7 @@ namespace ECS {
         inline bool isZeroSized() const;
         inline bool isNonTrivial() const ;
         inline bool hasAssetRef() const;
-        static bool compare(const_span<TypeID> v1,const_span<TypeID> v2)
+        static bool compare(span<const TypeID> v1,span<const TypeID> v2)
         {
             if (v1.size() != v2.size())
                 return false;
@@ -93,10 +93,10 @@ namespace ECS {
         static std::unique_ptr<uint16_t[]> assetRefOffsetList;
     public:
         static void Initialize();
-        static inline const_span<uint16_t> GetAssetRefOffsetsPointer(){
+        static inline span<const uint16_t> GetAssetRefOffsetsPointer(){
             return {assetRefOffsetList.get(), assetRefOffsetIndex};
         }
-        static inline const_span<TypeInfo> GetTypeInfoPointer(){
+        static inline span<const TypeInfo> GetTypeInfoPointer(){
             return {sharedTypeInfos.get(), typeCount};
         }
         static uint32_t GetTypeCount() {
@@ -126,7 +126,7 @@ namespace ECS {
         /// @param assetRefs list of byte indecies that contain a pointer to a resouce, to handle garbage collection automated.
         /// @return An unique id that the informations are linked with.
         template<typename T>
-        static TypeID registerType(const char* name, const_span<uint16_t> assetRefs = {}) {
+        static TypeID registerType(const char* name, span<const uint16_t> assetRefs = {}) {
             if(!initialized)
                 Initialize();
             // MAGIC NUMBER
@@ -235,12 +235,12 @@ namespace ECS {
     } // namespace internal
 
     template<typename ... T>
-    const_span<uint16_t> componentIndecies() {
+    span<const uint16_t> componentIndecies() {
         static const static_array<uint16_t,sizeof...(T)> ret = internal::_INIT_COMPONENTS_INDECIES_<T...>();
         return {ret.data(),ret.size()};
     }
     template<typename ... T>
-    const_span<TypeID> componentTypes() {
+    span<const TypeID> componentTypes() {
         static const static_array<TypeID,sizeof...(T)> ret = internal::_INIT_COMPONENTS_TYPES_<T...>();
         return {ret.data(),ret.size()};
     }

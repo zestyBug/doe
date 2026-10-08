@@ -4,7 +4,7 @@
 #include "ECS/EntityComponentStore.hpp"
 
 using namespace ECS;
-bool EntityQueryManager::testMatchingArchetypeRequiredComponent(const_span<TypeID> archetypeTypes, const_span<EntityQueryData::TypeQuery> queryTypes){
+bool EntityQueryManager::testMatchingArchetypeRequiredComponent(span<const TypeID> archetypeTypes, span<const EntityQueryData::TypeQuery> queryTypes){
     if (queryTypes.size() == 0)
         return true; // no types to search for
     uint32_t iNextQueryType = 0;
@@ -24,7 +24,7 @@ bool EntityQueryManager::testMatchingArchetypeRequiredComponent(const_span<TypeI
     // Ran out of archetype types & didn't find all required types
     return false;
 }
-bool EntityQueryManager::testMatchingArchetypeOptionalComponent(const_span<TypeID> archetypeTypes, const_span<EntityQueryData::TypeQuery> queryTypes){
+bool EntityQueryManager::testMatchingArchetypeOptionalComponent(span<const TypeID> archetypeTypes, span<const EntityQueryData::TypeQuery> queryTypes){
     if (queryTypes.size() == 0)
         return true; // no types to search for
     uint32_t iNextQueryType = 0;
@@ -44,7 +44,7 @@ bool EntityQueryManager::testMatchingArchetypeOptionalComponent(const_span<TypeI
     // Ran out of archetype types & didn't find all required types
     return false;
 }
-bool EntityQueryManager::testMatchingArchetypeExcludedComponent(const_span<TypeID> archetypeTypes, const_span<EntityQueryData::TypeQuery> queryTypes){
+bool EntityQueryManager::testMatchingArchetypeExcludedComponent(span<const TypeID> archetypeTypes, span<const EntityQueryData::TypeQuery> queryTypes){
     if (queryTypes.size() == 0)
         return true; // no types to search for
     uint32_t iNextQueryType = 0;
@@ -68,7 +68,7 @@ void EntityQueryManager::addArchetypeIfMatching(Archetype *archetype, EntityQuer
     const uint32_t noneCount = query.queryCount - query.firstNoneIndex;
     const uint32_t anyCount = query.firstNoneIndex - query.firstAnyIndex;
     const uint32_t allCount = query.firstAnyIndex;
-    const_span<ECS::TypeID> archetypeTypes = archetype->getTypes();
+    span<const ECS::TypeID> archetypeTypes = archetype->getTypes();
     EntityQueryData::TypeQuery *queries = query.queries.get();
     if (archetypeTypes.size() < allCount)
         return;
@@ -224,7 +224,7 @@ void EntityQueryManager::iterate(EntityComponentStore &ecs, EntityQueryImpl quer
         const Chunk *ch = cacheFrom->value;
         Archetype *arch = ch->archetype;
         uint32_t count  = ch->count;
-        const_span<int32_t> index{typesIndex + (typesCount * cacheFrom->archetypeIndex),typesCount};
+        span<const int32_t> index{typesIndex + (typesCount * cacheFrom->archetypeIndex),typesCount};
         while(count--){
             for(uint32_t i = typesCount;i--;)
                 args[i] = arch->getComponentDataRO(ch,count,index[i]);
@@ -263,7 +263,7 @@ void EntityQueryManager::rebuildMatchingChunkCache(EntityQueryData &query){
     while(archetypeCount){
         archetypeCount--;
         const Archetype *archetype = archs[archetypeCount];
-        const_span<ECS::Chunk*> chunks = archetype->getChunks();
+        span<const ECS::Chunk*> chunks = archetype->getChunks();
         if (archetype->entityCount > 0)
             for (const Chunk *v:chunks){
                 *caches = EntityQueryData::ChunkCache{v, archetypeCount};

@@ -35,7 +35,7 @@ void ArchetypeChunkData::setOrderVersion(uint32_t index, Version version)
     this->_ChangeVersion[index] = version;
 }
 
-const_span<SharedComponentIndex> ArchetypeChunkData::getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archtype){
+span<const SharedComponentIndex> ArchetypeChunkData::getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archtype){
     if(shared_component_index_in_archtype >= this->sharedComponentCount)
         throw std::out_of_range("getSharedComponentValueArrayForType()");
     return {_SharedComponentValue + (shared_component_index_in_archtype * _capacity), _capacity};

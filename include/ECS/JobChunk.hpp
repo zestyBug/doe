@@ -20,7 +20,7 @@ namespace ECS
         JobHandle scheduleParallel(EntityQueryImpl query,ComponentDependencyManager &);
         /// @brief JobChunkProducer
         static void execute(void *, uint32_t, uint32_t);
-        virtual void execute(const Chunk*, const_span<int32_t>) = 0;
+        virtual void execute(const Chunk*, span<const int32_t>) = 0;
         const EntityQueryData *query = nullptr;
     };
     template<typename IJOB>
@@ -28,7 +28,7 @@ namespace ECS
         static_assert(std::is_base_of_v<IJobChunk,IJOB>);
         IJOB jobData;
     private:
-        void execute(const Chunk* arg, const_span<int32_t> index){
+        void execute(const Chunk* arg, span<const int32_t> index){
             jobData.execute(arg, index);
         }
     };

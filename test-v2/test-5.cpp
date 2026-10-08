@@ -19,7 +19,7 @@ struct Speed : IComponentData {
 };
 DEF_TYPE(Speed)
 struct SpeedJob : IJobChunk {
-    void execute(const Chunk *ch, const_span<int32_t> index){
+    void execute(const Chunk *ch, span<const int32_t> index){
         Archetype *arch = ch->archetype;
         uint32_t count = ch->count;
         Speed    *speedArray    = (Speed*)   arch->getComponentDataRO(ch,0,index[0]);

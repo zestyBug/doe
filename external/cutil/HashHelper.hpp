@@ -24,7 +24,7 @@ namespace HashHelper
     uint32_t CombineFNV1A32(uint32_t hash, uint32_t value);
 
     template<typename T>
-    inline uint32_t FNV1A32(const_span<T> data)
+    inline uint32_t FNV1A32(span<const T> data)
     {
         return FNV1A32(data.data(),data.size_bytes());
     }

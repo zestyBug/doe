@@ -77,7 +77,7 @@ namespace ECS
         void resizeJobPool(uint32_t);
         void prepareJobs();
         JobHandle schedule(const JobParameter&);
-        JobHandle combineDependencies(const_span<JobHandle>);
+        JobHandle combineDependencies(span<const JobHandle>);
 
 
         static void on_fixed_timer(uv_timer_t *);

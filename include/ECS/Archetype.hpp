@@ -108,11 +108,11 @@ namespace ECS
         inline uint32_t numSharedComponents()    const {return typeCount - firstSharedComponent;}
         // this fucntion is a little more expensive than empty
         inline uint32_t count() const { return entityCount; }
-        inline const_span<Chunk*>   getChunks() const {return  this->chunks.getChunkArray(); }
-        inline const_span<TypeID>   getTypes()  const {return {this->_types,  this->typeCount};}
-        inline const_span<uint32_t> getOffset() const {return {this->_offsets,this->typeCount};}
-        inline const_span<uint16_t> getSize()   const {return {this->_sizeOfs,this->typeCount};}
-        inline const_span<uint16_t> getIndex()  const {return {this->_realIndecies,this->typeCount};}
+        inline span<const Chunk*>   getChunks() const {return  this->chunks.getChunkArray(); }
+        inline span<const TypeID>   getTypes()  const {return {this->_types,  this->typeCount};}
+        inline span<const uint32_t> getOffset() const {return {this->_offsets,this->typeCount};}
+        inline span<const uint16_t> getSize()   const {return {this->_sizeOfs,this->typeCount};}
+        inline span<const uint16_t> getIndex()  const {return {this->_realIndecies,this->typeCount};}
         Archetype& operator =(const Archetype&) = delete;
         Archetype(const Archetype&) = delete;
         // data structor stores pointer to itself

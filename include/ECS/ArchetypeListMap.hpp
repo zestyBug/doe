@@ -23,7 +23,7 @@ namespace ECS
         uint32_t emptyNodes=0;
 
     public:
-        static uint32_t getHashCode(const_span<TypeID> type);
+        static uint32_t getHashCode(span<const TypeID> type);
 
         ArchetypeListMap() = default;
         ArchetypeListMap(const ArchetypeListMap&) = delete;
@@ -87,7 +87,7 @@ namespace ECS
         void remove(Archetype* ptr);
         /// @brief find a pointer with a key using hash list
         /// @return value or nullptr
-        Archetype* tryGet(const_span<ECS::TypeID> key) const;
+        Archetype* tryGet(span<const ECS::TypeID> key) const;
         int32_t indexOf(Archetype* ptr) const;
         bool contains(Archetype* ptr) const {
             return indexOf(ptr) != -1;

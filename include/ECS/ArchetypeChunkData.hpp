@@ -79,7 +79,7 @@ namespace ECS
         bool insideAllocation(void *addr) {
             return (buck.get() != nullptr) && (buck.get() <= addr) && (addr <= buckEnd);
         }
-        inline const_span<Chunk*> getChunkArray() const { return {_Chunk, this->_count}; }
+        inline span<const Chunk*> getChunkArray() const { return {(const Chunk**)_Chunk, this->_count}; }
         span<Version> getChangeVersionArrayForType(uint32_t component_index_in_archetype);
         Version getChangeVersion(uint32_t component_index_in_archetype, uint32_t index) const;
         // set version of all components in a chunk
@@ -88,7 +88,7 @@ namespace ECS
         void setOrderVersion(uint32_t index, Version version);
         // set a component version of a given chunk
         void setChangeVersion(uint32_t component_index_in_archetype, uint32_t index, Version version);
-        const_span<SharedComponentIndex> getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archetype);
+        span<const SharedComponentIndex> getSharedComponentValueArrayForType(uint32_t shared_component_index_in_archetype);
         void setSharedComponentValue(uint32_t shared_component_index_in_archetype, uint32_t index, const SharedComponentIndex value);
         SharedComponentIndex getSharedComponentValue(uint32_t shared_component_index_in_archetype, uint32_t index) const;
         const SharedComponentValues getSharedComponentValues(uint32_t index) const;

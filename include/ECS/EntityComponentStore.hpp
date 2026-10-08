@@ -42,21 +42,21 @@ namespace ECS
 
     #pragma region Archetype
     private:
-        static void validateArchetype(const_span<TypeID> types);
+        static void validateArchetype(span<const TypeID> types);
         static uint32_t getComponentArraySize(uint32_t componentSize, uint32_t entityCount);
-        static uint32_t calculateSpaceRequirement(const_span<uint16_t> componentSizes, uint32_t entityCount);
-        static uint32_t calculateChunkCapacity(const_span<uint16_t> componentSizes, uint32_t bufferSize);
+        static uint32_t calculateSpaceRequirement(span<const uint16_t> componentSizes, uint32_t entityCount);
+        static uint32_t calculateChunkCapacity(span<const uint16_t> componentSizes, uint32_t bufferSize);
         /// @param types sorted array of types
-        Archetype* createArchetype(const_span<TypeID> types);
+        Archetype* createArchetype(span<const TypeID> types);
         /// @brief seaarchin for a given type
         /// @param types sorted array of types
         /// @return nullptr or a pointer to the archtype
-        inline Archetype* getExistingArchetype(const_span<TypeID> types){
+        inline Archetype* getExistingArchetype(span<const TypeID> types){
             return this->typeLookup.tryGet(types);
         }
     public:
         /// @param types sorted array of types
-        Archetype* getOrCreateArchetype(const_span<TypeID> types);
+        Archetype* getOrCreateArchetype(span<const TypeID> types);
         Archetype* getArchetype(Entity entity);
         span<Archetype*> getArchetypes();
     private:
@@ -75,7 +75,7 @@ namespace ECS
         inline Chunk* getChunk(Entity entity){
             return entityStore.getEntityInChunk(entity).chunk;
         }
-        EntityBatchInChunk getFirstEntityBatchInChunk(const_span<Entity> entities);
+        EntityBatchInChunk getFirstEntityBatchInChunk(span<const Entity> entities);
         /// @brief Create a SharedComponent list based on the provided chunk, after changing the value of a shared component.
         /// @param chunk sourse chunk
         /// @param type the shared component type to modify
@@ -112,9 +112,9 @@ namespace ECS
         /// @brief Free all entities in a chunk from EntityStore
         void freeEntities(Chunk* chunk);
     public:
-        void validateEntities(span<Entity> entities);
+        void validateEntities(span<const Entity> entities);
         /// @brief A wrapper to call destroyBatch
-        void destroyEntities(const_span<Entity> entities);
+        void destroyEntities(span<const Entity> entities);
         void freeAllEntities(bool resetVersion);
     private:
         void addExistingEntitiesInChunk(Chunk* chunk);
@@ -145,10 +145,10 @@ namespace ECS
     private:
         Archetype* getArchetypeWithAddedComponent(Archetype &archetype, TypeID type, uint32_t* indexInTypeArray = nullptr);
         /// @param types sorted
-        Archetype* getArchetypeWithAddedComponents(Archetype &srcArchetype, const_span<TypeID> types);
+        Archetype* getArchetypeWithAddedComponents(Archetype &srcArchetype, span<const TypeID> types);
         Archetype* getArchetypeWithRemovedComponent(Archetype &archetype, TypeID type, uint32_t* indexInOldTypeArray = nullptr);
         /// @param types sorted
-        Archetype* getArchetypeWithRemovedComponents(Archetype &archetype, const_span<TypeID> types);
+        Archetype* getArchetypeWithRemovedComponents(Archetype &archetype, span<const TypeID> types);
     private:
         void moveAndSetChangeVersion(EntityBatchInChunk batch, Archetype &archetype, const SharedComponentValues sharedComponentValues, TypeID type);
         /// @brief move subset of chunk data into another chunk.
@@ -180,17 +180,17 @@ namespace ECS
     public:
         bool addComponent(Entity entity, TypeID type);
         /// @param types sorted
-        bool addComponents(Entity entity, const_span<TypeID> types);
+        bool addComponents(Entity entity, span<const TypeID> types);
         bool removeComponent(Entity entity, TypeID type);
         /// @param types sorted
-        bool removeComponents(Entity entity, const_span<TypeID> types);
+        bool removeComponents(Entity entity, span<const TypeID> types);
         /// @param value shared component index, ignored if type is not a shared component.
         bool addComponent(EntityBatchInChunk entityBatchInChunk, TypeID type, SharedComponentIndex value);
         bool removeComponent(EntityBatchInChunk entityBatchInChunk, TypeID type);
         /// @param types sorted
-        bool addComponents(EntityBatchInChunk entityBatchInChunk, const_span<TypeID> types);
+        bool addComponents(EntityBatchInChunk entityBatchInChunk, span<const TypeID> types);
         /// @param types sorted
-        bool removeComponents(EntityBatchInChunk entityBatchInChunk, const_span<TypeID> types);
+        bool removeComponents(EntityBatchInChunk entityBatchInChunk, span<const TypeID> types);
     
     #pragma endregion move
 

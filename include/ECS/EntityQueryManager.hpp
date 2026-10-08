@@ -82,9 +82,9 @@ namespace ECS {
     struct EntityQueryManager { 
     private:
         static_array<EntityQueryData,Constants::MaximumQueryCount> entityQueryDatas;
-        static bool testMatchingArchetypeRequiredComponent(const_span<TypeID> archetypeTypes, const_span<EntityQueryData::TypeQuery> queryTypes);
-        static bool testMatchingArchetypeOptionalComponent(const_span<TypeID> archetypeTypes, const_span<EntityQueryData::TypeQuery> queryTypes);
-        static bool testMatchingArchetypeExcludedComponent(const_span<TypeID> archetypeTypes, const_span<EntityQueryData::TypeQuery> queryTypes);
+        static bool testMatchingArchetypeRequiredComponent(span<const TypeID> archetypeTypes, span<const EntityQueryData::TypeQuery> queryTypes);
+        static bool testMatchingArchetypeOptionalComponent(span<const TypeID> archetypeTypes, span<const EntityQueryData::TypeQuery> queryTypes);
+        static bool testMatchingArchetypeExcludedComponent(span<const TypeID> archetypeTypes, span<const EntityQueryData::TypeQuery> queryTypes);
     public:
         EntityQueryManager(){}
         EntityQueryImpl createEntityQuery(const EntityQueryBuilder&, EntityComponentStore &ecs);

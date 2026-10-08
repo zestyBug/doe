@@ -8,7 +8,7 @@ namespace ECS
 {
     struct Chunk;
     struct IJobChunk {
-        void execute(const Chunk*,const_span<uint32_t>){};
+        void execute(const Chunk*,span<const uint32_t>){};
     };
 }
 

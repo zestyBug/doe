@@ -39,7 +39,7 @@ void ArchetypeListMap::resize(uint32_t size){
     temp.appendFrom(*this);
     *this = std::move(temp);
 }
-uint32_t ArchetypeListMap::getHashCode(const_span<TypeID> type)
+uint32_t ArchetypeListMap::getHashCode(span<const TypeID> type)
 {
     uint32_t result = HashHelper::FNV1A32(type);
     if (result == 0 || result == _SkipCode)
@@ -93,7 +93,7 @@ void ArchetypeListMap::remove(Archetype* ptr){
     ++emptyNodes;
     possiblyShrink();
 }
-Archetype* ArchetypeListMap::tryGet(const_span<ECS::TypeID> key) const {
+Archetype* ArchetypeListMap::tryGet(span<const ECS::TypeID> key) const {
     uint32_t desiredHash = getHashCode(key);
     uint32_t offset = desiredHash & hashMask();
     uint32_t attempts = 0;

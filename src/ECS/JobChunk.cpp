@@ -42,7 +42,7 @@ void JobChunkWrapperBase::execute(void *j, uint32_t from, uint32_t to){
     while(cacheFrom < cacheTo){
         base->execute(
             cacheFrom->value,
-            const_span<int32_t>{typesIndex + (typesCount * cacheFrom->archetypeIndex),typesCount}
+            span<const int32_t>{typesIndex + (typesCount * cacheFrom->archetypeIndex),typesCount}
         );
         cacheFrom++;
     }

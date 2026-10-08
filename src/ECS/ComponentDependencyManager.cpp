@@ -57,7 +57,7 @@ JobHandle ComponentDependencyManager::getDependency(const EntityQueryData &query
         }
         queries++;
     }
-    return jobsUtility->combineDependencies(const_span<JobHandle>{allHandles, allHandleCount});
+    return jobsUtility->combineDependencies(span<const JobHandle>{allHandles, allHandleCount});
 }
 JobHandle ComponentDependencyManager::addDependency(JobHandle dependency, const EntityQueryData &query)
 {

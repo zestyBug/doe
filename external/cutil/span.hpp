@@ -7,13 +7,8 @@
 #include "static_array.hpp"
 
 template<typename _Type>
-class const_span;
-
-template<typename _Type>
 class span
 {
-	friend class const_span<_Type>;
-
 public:
 	// member types
 	using element_type           = _Type;
@@ -38,6 +33,9 @@ public:
 	constexpr span& operator=(const span&) noexcept = default;
 	~span() noexcept = default;
 
+	inline constexpr operator span<const _Type> () const {
+		return {(const _Type*)this->_M_ptr,this->size};
+	}
 
 
 	// observers
@@ -134,143 +132,5 @@ private:
 	pointer _M_ptr;
 	size_type _M_count;
 };
-
-/// @brief A span that guaranties "const" data access only
-template<typename _Type>
-class const_span
-{
-
-public:
-	// member types
-	using element_type           = _Type;
-	using size_type              = uint32_t;
-	using const_pointer          = const _Type*;
-	using const_reference        = const _Type&;
-	using const_iterator         = const_pointer;
-	using const_reverse_iterator = const_pointer;
-	
-
-	constexpr const_span(const span<element_type>& v) noexcept :_M_ptr{v._M_ptr},_M_count{v._M_count} {} ;
-	constexpr const_span(const const_span&) noexcept = default;
-	constexpr const_span():_M_ptr(nullptr),_M_count(0){}
-	constexpr const_span(const_pointer data,size_type size):_M_ptr(data),_M_count(size){}
-	template<typename Allocator>
-	constexpr const_span(const std::vector<element_type,Allocator>& v):_M_ptr((element_type*)v.data()),_M_count((uint32_t)v.size()){}
-	template<size_t S>
-	constexpr const_span(const std::array<element_type,S>& v):_M_ptr((element_type*)v.data()),_M_count(S){}
-	template<size_t S>
-	constexpr const_span(const static_array<element_type,S>& v):_M_ptr((element_type*)v.data()),_M_count((uint32_t)v.size()){}
-
-	const_span& operator=(const span<element_type>& v) noexcept {
-		this->_M_ptr = v._M_ptr;
-		this->_M_count = v._M_count;
-		return *this;
-	};
-	constexpr const_span& operator=(const const_span&) noexcept = default;
-	~const_span() noexcept = default;
-
-
-
-	// observers
-
-	[[nodiscard]] constexpr
-	size_type size()
-	const noexcept
-	{ return _M_count; }
-
-	[[nodiscard]] constexpr
-	size_type size_bytes()
-	const noexcept
-	{ return _M_count * sizeof(element_type); }
-
-	[[nodiscard]] constexpr inline
-	bool empty()
-	const noexcept { 
-		return size() == 0; 
-	}
-
-	// element access
-
-	constexpr
-	const_reference front()
-	const noexcept {
-		if(empty())
-			throw std::runtime_error("front(): empty span");
-		return *this->_M_ptr;
-	}
-
-	constexpr
-	const_reference back()
-	const noexcept {
-		if(empty())
-			throw std::runtime_error("back(): empty span");
-		return *(this->_M_ptr + (size() - 1));
-	}
-
-	constexpr const_reference operator[](const size_type __idx) const noexcept {
-		return *(this->_M_ptr + __idx);
-	}
-	
-	constexpr const_reference at(const size_type __idx) const {
-		if(__idx >= size())
-			throw std::out_of_range("at(): invalid index");
-		return *(this->_M_ptr + __idx);
-	}
-
-	constexpr inline const_pointer data() const noexcept
-	{ return this->_M_ptr; }
-
-	inline const_span<element_type>& operator++(){
-		if(_M_count>0){
-			_M_ptr++;
-			_M_count--;
-		}
-		return *this;
-	}
-
-	inline void operator +=(uint32_t step) {
-		if(_M_count > step){
-			_M_count -= step;
-			_M_ptr   += step;
-		}else{
-			_M_count = 0;
-			_M_ptr   = nullptr;
-		}
-	}
-
-	inline const_span<element_type> operator+(uint32_t step) {
-		if(_M_count > step)
-			return const_span<element_type>{_M_ptr+step,_M_count-step};
-		else
-			return const_span<element_type>{nullptr,0};
-	}
-
-	inline const const_span<element_type> operator+(uint32_t step) const {
-		if(_M_count > step)
-			return const_span<element_type>{_M_ptr+step,_M_count-step};
-		else
-			return const_span<element_type>{nullptr,0};
-	}
-
-	bool operator == (const const_span<element_type> &v) const {
-		if(v.size_bytes() == this->size_bytes()){
-			if(0 == this->size_bytes())
-				return true;
-			return memcmp(this->data(),v.data(),this->size_bytes()) == 0;
-		}
-		return false;
-	}
-
-	// iterator support
-
-	constexpr const_iterator begin() const noexcept { return const_iterator(this->_M_ptr); }
-	constexpr const_iterator end()   const noexcept { return const_iterator(this->_M_ptr + this->size()); }
-	constexpr const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(this->end()); }
-	constexpr const_reverse_iterator rend()   const noexcept { return const_reverse_iterator(this->begin()); }
-private:
-	const_pointer _M_ptr;
-	size_type _M_count;
-};
-
 
 #endif // SPAN_HPP

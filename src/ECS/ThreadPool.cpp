@@ -67,7 +67,7 @@ void ECS::JobsUtility::prepareJobs(){
     for(uint32_t i=0;i<count;i++)
         this->jobsArray[i] = bufferPtr[i].handle;
 }
-ECS::JobHandle ECS::JobsUtility::combineDependencies(const_span<JobHandle> jobs){
+ECS::JobHandle ECS::JobsUtility::combineDependencies(span<const JobHandle> jobs){
     JobHandle max = JobHandle();
     uint32_t maxLevel = 0;
     for(const JobHandle &j:jobs){
