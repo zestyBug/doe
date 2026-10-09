@@ -70,8 +70,7 @@ Archetype* EntityComponentStore::createArchetype(span<const TypeID> types){
     std::unique_ptr<Archetype> arch;
     uint32_t numSharedComponents = 0;
     for (uint32_t i = 0; i < types.size(); ++i) {
-        const auto& ct = TypeManager::GetTypeInfo(types[i]);
-        if (ct.Category == TypeManager::TypeCategory::ISharedComponentData)
+        if (types[i].isSharedComponent())
             ++numSharedComponents;
     }
     if(Constants::MaximumArchetypeSharedComponentCount < numSharedComponents)
@@ -197,6 +196,13 @@ Archetype* EntityComponentStore::getArchetype(Entity entity){
         throw std::runtime_error("getArchetype(): unexpected chunk index");
     return chunk->archetype;
 }
+const Archetype* EntityComponentStore::getArchetype(Entity entity) const {
+    validateEntities({&entity, 1});
+    const Chunk* chunk = getChunk(entity);
+    if(chunk == nullptr)
+        throw std::runtime_error("getArchetype(): unexpected chunk index");
+    return chunk->archetype;
+}
 Archetype* EntityComponentStore::getArchetype(ChunkIndex chunk){
     Chunk* pointer = chunks.getChunkPointer(chunk);
     if(!pointer || !pointer->archetype)
@@ -204,6 +210,17 @@ Archetype* EntityComponentStore::getArchetype(ChunkIndex chunk){
     return pointer->archetype;
 }
 Archetype* EntityComponentStore::getArchetype(Chunk &chunk){
+    if(!chunk.archetype)
+        throw std::runtime_error("getArchetype(): invalid chunk");
+    return chunk.archetype;
+}
+const Archetype* EntityComponentStore::getArchetype(ChunkIndex chunk) const {
+    const Chunk* pointer = chunks.getChunkPointer(chunk);
+    if(!pointer || !pointer->archetype)
+        throw std::runtime_error("getArchetype(): invalid chunk");
+    return pointer->archetype;
+}
+const Archetype* EntityComponentStore::getArchetype(Chunk &chunk) const {
     if(!chunk.archetype)
         throw std::runtime_error("getArchetype(): invalid chunk");
     return chunk.archetype;
@@ -260,7 +277,7 @@ void* EntityComponentStore::getComponentDataWithTypeRW(Entity entity, TypeID typ
     return archetype.getComponentDataWithTypeRW(entityInChunk.chunk, entityInChunk.indexInChunk, type, globalVersion);
 }
 
-void EntityComponentStore::validateEntities(span<const Entity> entities){
+void EntityComponentStore::validateEntities(span<const Entity> entities) const {
     for(auto entity:entities){
         if(!entity.isValid())
             throw std::out_of_range("validateEntities(): invalid index");
@@ -286,7 +303,7 @@ void EntityComponentStore::createEntities(Archetype &archetype, span<Entity> ent
         entities += allocateCount;
     }
 }
-EntityBatchInChunk EntityComponentStore::getFirstEntityBatchInChunk(span<const Entity> entities){
+EntityBatchInChunk EntityComponentStore::getFirstEntityBatchInChunk(span<const Entity> entities) const {
     EntityBatchInChunk ret;
     EntityInChunk entityInChunk;
     Entity entity;
@@ -439,19 +456,19 @@ bool EntityComponentStore::getArchetypeChunkFilterWithChangedSharedComponent(Chu
 
 
 
-bool EntityComponentStore::exists(Entity entity){
+bool EntityComponentStore::exists(Entity entity) const {
     if(!entity.isValid())
         return false;
-    Chunk* chunk = this->entityStore.getChunkIfExists(entity);
+    const Chunk* chunk = this->entityStore.getChunkIfExists(entity);
     if(chunk == nullptr)
         return false;
     return true;
 }
-bool EntityComponentStore::hasComponent(Entity entity, TypeID type){
+bool EntityComponentStore::hasComponent(Entity entity, TypeID type) const {
     bool entityExists = exists(entity);
     if (unlikely(!entityExists))
         return false;
-    Archetype *arch = getArchetype(entity);
+    const Archetype *arch = getArchetype(entity);
     return arch->getIndexInTypeArray(type) != -1;
 }
 

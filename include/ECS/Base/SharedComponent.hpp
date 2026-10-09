@@ -14,9 +14,11 @@ namespace ECS
         SharedComponentIndex(uint32_t ini):value{ini}{};
         SharedComponentIndex(const SharedComponentIndex&) = default;
         SharedComponentIndex& operator = (const SharedComponentIndex&) = default;
-        operator uint32_t (){ return this->value; }
-        inline bool isNull() {return value == 0;}
+        operator uint32_t () const { return this->value; }
+        inline bool isNull() const { return this->value == 0;}
+        /// @brief Magic number
         static constexpr uint32_t IndexMask = 0xFFFF;
+        /// @brief Magic number
         static constexpr uint32_t TypeIndexBitOffset = 16;
     private:
         uint32_t value = 0;

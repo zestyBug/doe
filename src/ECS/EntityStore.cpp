@@ -1,10 +1,10 @@
 #include "ECS/EntityStore.hpp"
 using namespace ECS;
 
-void EntityStore::ExistsOrThrow(uint32_t blockIndex, uint32_t indexInBlock) {
+void EntityStore::ExistsOrThrow(uint32_t blockIndex, uint32_t indexInBlock) const {
     if(blockIndex >= BlockCount)
         throw std::invalid_argument("ExistsOrThrow(): entity does not exists");
-    DataBlock* block = dataBlocks[blockIndex].get();
+    const DataBlock* block = dataBlocks[blockIndex].get();
     if(block==nullptr)
         throw std::invalid_argument("ExistsOrThrow(): entity does not exists");
     if((block->allocated[indexInBlock / 32] & (1UL << (indexInBlock % 32)))==0)
@@ -33,6 +33,19 @@ void EntityStore::integrityCheck()
     {
         integrityCheck(i);
     }
+}
+const Chunk* EntityStore::getChunkIfExists(Entity entity) const
+{
+    uint32_t blockIndex   = entity.index() / EntitiesInBlock;
+    uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+    if(blockIndex >= BlockCount)
+        return nullptr;
+    const DataBlock* block = dataBlocks[blockIndex].get();
+    if (block == nullptr)
+        return nullptr;
+    if (/*(entity.version() & 1) == 0 || */block->versions[indexInBlock] != entity.version())
+        return nullptr;
+    return block->entityInChunk[indexInBlock].chunk;
 }
 Chunk* EntityStore::getChunkIfExists(Entity entity)
 {
@@ -63,12 +76,12 @@ void EntityStore::setEntityVersion(Entity entity, uint32_t version)
     DataBlock* block = dataBlocks[blockIndex].get();
     block->versions[indexInBlock] = version;
 }
-EntityInChunk EntityStore::getEntityInChunk(Entity entity)
+EntityInChunk EntityStore::getEntityInChunk(Entity entity) const
 {
     uint32_t blockIndex   = entity.index() / EntitiesInBlock;
     uint32_t indexInBlock = entity.index() % EntitiesInBlock;
     ExistsOrThrow(blockIndex, indexInBlock);
-    DataBlock* block = dataBlocks[blockIndex].get();
+    const DataBlock* block = dataBlocks[blockIndex].get();
     return block->entityInChunk[indexInBlock];
 }
 void EntityStore::allocateEntities(span<Entity> entities, Chunk *chunk, uint32_t firstEntityInChunkIndex)

@@ -30,6 +30,7 @@ namespace ECS
         uint32_t _version=0;
     };
 
+    /// @brief Entity --> EntityStore --EntityInChunk--> Chunk --> Archetype
     struct EntityInChunk final {
         Chunk* chunk = nullptr;
         uint32_t indexInChunk = 0;
@@ -47,7 +48,7 @@ namespace ECS
         }
     };
 
-    struct EntityBatchInChunk {
+    struct EntityBatchInChunk final {
         Chunk* chunk;
         uint32_t startIndex;
         uint32_t count;

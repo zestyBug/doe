@@ -24,6 +24,11 @@ Chunk* ChunkStore::getChunkPointer(const ChunkIndex chunk) {
         return nullptr;
     return chunks[chunk].load();
 }
+const Chunk* ChunkStore::getChunkPointer(const ChunkIndex chunk) const {
+    if(chunk > Constants::MaximumChunkCount)
+        return nullptr;
+    return chunks[chunk].load();
+}
 ChunkIndex ChunkStore::allocateChunk() {
     uint32_t bitmask;
     uint32_t buffer;

@@ -18,6 +18,7 @@ namespace ECS
         ChunkStore() = default;
         ~ChunkStore();
         Chunk* getChunkPointer(const ChunkIndex chunk);
+        const Chunk* getChunkPointer(const ChunkIndex chunk) const;
         ChunkIndex allocateChunk();
         void freeChunk(const ChunkIndex chunk);
     };

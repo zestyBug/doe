@@ -26,7 +26,7 @@ namespace ECS {
         static constexpr uint32_t MaximumArchetypeComponentCount = 0x6f;
         static constexpr uint32_t MaximumArchetypeSharedComponentCount = 16;
         /// @brief Maximum number of unique component types supported by the TypeManager
-        /// @details Considerations: 1_ SharedComponentIndex can only use up to 19 bit for the sharead component type
+        /// @details Considerations: 1_ SharedComponentIndex can only use up to 16 bit for the shared component type
         /// 2_ TypeManager::ClearFlagsMask this number must be power of 2
         /// 3_ we must keep atleast 4 last bits (of an uint32_t) as flags.
         /// 4_ 15 bit for type index in an uint16_t + 1 bit for RW/RO

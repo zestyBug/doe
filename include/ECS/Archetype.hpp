@@ -120,6 +120,7 @@ namespace ECS
         Archetype(Archetype&&) = delete;
         ~Archetype() = default;
         void addToChunkList(Chunk* chunk, SharedComponentValues sharedComponentIndices, uint32_t changeVersion, ChunkListChanges&);
+        /// @brief removing the chunk from ArchetypeChunkData and tracing archetypical changes.
         void removeFromChunkList(Chunk &chunk, ChunkListChanges&);
 
     #pragma region ChunkDataUtility
@@ -132,7 +133,10 @@ namespace ECS
         /// @brief Check if non-zero-sized components are same. Means chunks can be moved between archetypes.
         static bool areLayoutCompatible(Archetype &a, Archetype &b);
     private:
+        /// @brief Shared components refcount update + removing it from empty chunk list + removeFromChunkList + actual releasing the chunk
         void releaseChunk(Chunk &chunk);
+        /// @brief Update the chunk capacity, and manage the emptiness of the chunk
+        /// @note calls releaseChunk if newCount be zero
         void setChunkCount(Chunk* chunk, uint32_t newCount);
 
         void initializeComponents(Chunk* chunk, uint32_t dstIndex, uint32_t count);

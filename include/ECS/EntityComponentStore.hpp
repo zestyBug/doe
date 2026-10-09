@@ -46,7 +46,7 @@ namespace ECS
         static uint32_t getComponentArraySize(uint32_t componentSize, uint32_t entityCount);
         static uint32_t calculateSpaceRequirement(span<const uint16_t> componentSizes, uint32_t entityCount);
         static uint32_t calculateChunkCapacity(span<const uint16_t> componentSizes, uint32_t bufferSize);
-        /// @param types sorted array of types
+        /// @param types sorted array of types (and must include the type flags)
         Archetype* createArchetype(span<const TypeID> types);
         /// @brief seaarchin for a given type
         /// @param types sorted array of types
@@ -58,11 +58,14 @@ namespace ECS
         /// @param types sorted array of types
         Archetype* getOrCreateArchetype(span<const TypeID> types);
         Archetype* getArchetype(Entity entity);
+        const Archetype* getArchetype(Entity entity) const;
         span<Archetype*> getArchetypes();
     private:
         inline void setArchetype(Chunk &chunk, Archetype *arch){chunk.archetype = arch;}
         Archetype* getArchetype(ChunkIndex chunk);
         Archetype* getArchetype(Chunk &chunk);
+        const Archetype* getArchetype(ChunkIndex chunk) const;
+        const Archetype* getArchetype(Chunk &chunk) const;
     #pragma endregion Archetype
 
     #pragma region Chunk and Batch
@@ -75,7 +78,10 @@ namespace ECS
         inline Chunk* getChunk(Entity entity){
             return entityStore.getEntityInChunk(entity).chunk;
         }
-        EntityBatchInChunk getFirstEntityBatchInChunk(span<const Entity> entities);
+        inline const Chunk* getChunk(Entity entity) const {
+            return entityStore.getEntityInChunk(entity).chunk;
+        }
+        EntityBatchInChunk getFirstEntityBatchInChunk(span<const Entity> entities) const;
         /// @brief Create a SharedComponent list based on the provided chunk, after changing the value of a shared component.
         /// @param chunk sourse chunk
         /// @param type the shared component type to modify
@@ -89,17 +95,17 @@ namespace ECS
     public:
         uint32_t countEntities();
         void createEntities(Archetype &archetype, span<Entity> entities, const SharedComponentValues values = SharedComponentValues());
-        bool exists(Entity entity);
-        bool hasComponent(Entity entity, TypeID type);
-        const EntityName* getName(Entity entity);
+        bool exists(Entity entity) const;
+        bool hasComponent(Entity entity, TypeID type) const;
+        const EntityName* getName(Entity entity) const;
         void setName(Entity entity, const EntityName* name);
     private:
         /// @brief Allocating some Entity's in entityStore
-        /// @param arch 
-        /// @param chunk 
-        /// @param baseIndex 
-        /// @param count 
-        /// @param outputEntities 
+        /// @param arch target archetype, this arguemnt is for validation.
+        /// @param chunk entites are stored inside chunk
+        /// @param baseIndex base index in the "chunk"
+        /// @param count number of entites to allocate
+        /// @param outputEntities (optional, array lenght of "count") result Entitys
         void allocateEntities(Archetype &arch, Chunk *chunk, uint32_t baseIndex, uint32_t count, Entity* outputEntities = nullptr);
         /// @brief A wrapper to deallocate components, entites and fill the space
         /// @details EntityComponentStore::deallocateNonTrivialComponents, EntityStore::deallocateEntities, Archetype::copy
@@ -112,8 +118,9 @@ namespace ECS
         /// @brief Free all entities in a chunk from EntityStore
         void freeEntities(Chunk* chunk);
     public:
-        void validateEntities(span<const Entity> entities);
-        /// @brief A wrapper to call destroyBatch
+        void validateEntities(span<const Entity> entities) const;
+        /// @brief A wrapper to call destroyBatch.
+        /// @note destroying process includes deleting components and entites themselves
         void destroyEntities(span<const Entity> entities);
         void freeAllEntities(bool resetVersion);
     private:
@@ -121,7 +128,7 @@ namespace ECS
         inline void setEntityInChunk(Entity entity, EntityInChunk entityInChunk){
             entityStore.setEntityInChunk(entity, entityInChunk);
         }
-        inline EntityInChunk getEntityInChunk(Entity entity) {
+        inline EntityInChunk getEntityInChunk(Entity entity) const {
             return entityStore.getEntityInChunk(entity);
         }
     #pragma endregion Entity

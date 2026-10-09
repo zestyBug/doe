@@ -70,8 +70,7 @@ namespace ECS {
             /// @brief Blittable size of the component type.
             uint16_t     TypeSize = 0;
             /// @brief The number of bytes used in a Chunk to store an instance of this component.
-            /// @note this includes internal capacity and header overhead for buffers. Also, note
-            /// that components with no member variables will have a SizeInChunk of 0, but will have a
+            /// @note Components with no member variables will have a SizeInChunk of 0, but will have a
             /// TypeSize of GREATER than 0 (since C++ does not allow for zero-sized types).
             uint16_t     SizeInChunk = 0;
             /// @brief The alignment requirement for the component.

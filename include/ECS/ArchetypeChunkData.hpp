@@ -76,7 +76,7 @@ namespace ECS
             return _Chunk[i];
         }
         /// @brief If a SharedComponentValues is stored inside ArchetypeChunkData and it resizes, pointers are no longer valid.
-        bool insideAllocation(void *addr) {
+        bool insideAllocation(const void *addr) {
             return (buck.get() != nullptr) && (buck.get() <= addr) && (addr <= buckEnd);
         }
         inline span<const Chunk*> getChunkArray() const { return {(const Chunk**)_Chunk, this->_count}; }
