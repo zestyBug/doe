@@ -4,6 +4,12 @@
 #include "ECS/EntityComponentStore.hpp"
 using namespace ECS;
 
+SharedComponentValues Archetype::defaultSharedComponentValues() const {
+    return {
+        this->defaultSharedComponents,
+        sizeof(SharedComponentIndex)
+    };
+}
 void Archetype::addToChunkList(Chunk* chunk, SharedComponentValues sharedComponentIndices, uint32_t changeVersion, ChunkListChanges& changes) {
     if(chunk == nullptr)
         throw std::invalid_argument("addToChunkList(): invalid chunk");
@@ -201,7 +207,7 @@ uint32_t Archetype::allocate(Chunk* chunk, uint32_t count, Entity *entities)
     Version globalSystemVersion = entityComponentStore->getGlobalSystemVersion();
     uint32_t allocatedIndex;
     uint32_t allocatedCount = this->allocateIntoChunk(chunk, count, allocatedIndex);
-    entityComponentStore->allocateEntities(*this, chunk, allocatedIndex, allocatedCount, entities);
+    entityComponentStore->allocateEntities(chunk, allocatedIndex, allocatedCount, entities);
     initializeComponents(chunk, allocatedIndex, allocatedCount);
 
     // Add Entities in Chunk. ChangeVersion:Yes OrderVersion:Yes

@@ -25,26 +25,41 @@ namespace ECS
     };
     /// @brief A (pointer) container
     struct SharedComponentValues final {
-        SharedComponentIndex* firstIndex = nullptr;
-        int32_t stride = sizeof(SharedComponentIndex);
+        const SharedComponentIndex* firstIndex;
+        int32_t stride;
+        SharedComponentValues() = delete;
         SharedComponentIndex operator[](int32_t i) const
         {
+            if(unlikely(this->firstIndex == nullptr))
+                throw std::out_of_range("operator[]: empty SharedComponentValues");
             return *(SharedComponentIndex*)(((uint8_t*)firstIndex) + i * stride);
         }
         bool equalTo(SharedComponentValues otherValues, int sharedComponentCount) const
         {
+            if(unlikely(this->firstIndex == nullptr))
+                throw std::runtime_error("equalTo(): empty SharedComponentValues");
+            if(unlikely(otherValues.firstIndex == nullptr))
+                throw std::invalid_argument("equalTo(): empty SharedComponentValues");
+
             for (int i = 0; i < sharedComponentCount; ++i)
-                if (otherValues[i] != (*this)[i])
+                if (otherValues.at(i) != this->at(i))
                     return false;
             return true;
         }
         void copyTo(SharedComponentIndex* dest, int startIndex, int count) const
         {
+            if(unlikely(dest == nullptr))
+                throw std::invalid_argument("copyTo(): null pointer");
             for (int i = 0; i < count; ++i)
-                dest[i] = (*this)[startIndex + i];
+                dest[i] = this->at(startIndex+i);
         }
         inline void operator ++ (){
             firstIndex = (SharedComponentIndex*)((uint8_t*)firstIndex + stride);
+        }
+    private:
+        SharedComponentIndex at(int32_t i) const
+        {
+            return *(SharedComponentIndex*)(((uint8_t*)firstIndex) + i * stride);
         }
     };
 }

@@ -86,7 +86,6 @@ EntityInChunk EntityStore::getEntityInChunk(Entity entity) const
 }
 void EntityStore::allocateEntities(span<Entity> entities, Chunk *chunk, uint32_t firstEntityInChunkIndex)
 {
-    uint32_t entityInChunkIndex = firstEntityInChunkIndex;
     /// @brief the current chunk index we are searching for empty slots
     for (uint32_t i = 0; i < BlockCount; i++)
     {
@@ -134,11 +133,10 @@ void EntityStore::allocateEntities(span<Entity> entities, Chunk *chunk, uint32_t
                                 throw std::runtime_error("allocateEntities(): out of entity index");
                             entities[0] = Entity{(int32_t)index, ++versions[indexInBlock]};
                             if (chunk != nullptr)
-                                entityInChunk[indexInBlock] = EntityInChunk{chunk,entityInChunkIndex};
+                                entityInChunk[indexInBlock] = EntityInChunk{chunk,firstEntityInChunkIndex++};
                             else
                                 entityInChunk[indexInBlock] = EntityInChunk();
                             ++entities;
-                            entityInChunkIndex++;
                             remainingCount--;
                             if (remainingCount == 0)
                                 break;

@@ -62,6 +62,7 @@ namespace ECS
         uint16_t* _sizeOfs = nullptr;
         TypeManager::DefaultFunction *_dDestructor = nullptr;
         TypeManager::DefaultFunction *_dConstructor = nullptr;
+        SharedComponentIndex *defaultSharedComponents;
         uint32_t typeCount;
         // maximum number of entities that can be fit into a single chunk
         uint32_t chunkCapacity = 0;
@@ -119,6 +120,7 @@ namespace ECS
         // any move operation requires recalculation
         Archetype(Archetype&&) = delete;
         ~Archetype() = default;
+        SharedComponentValues defaultSharedComponentValues() const;
         void addToChunkList(Chunk* chunk, SharedComponentValues sharedComponentIndices, uint32_t changeVersion, ChunkListChanges&);
         /// @brief removing the chunk from ArchetypeChunkData and tracing archetypical changes.
         void removeFromChunkList(Chunk &chunk, ChunkListChanges&);

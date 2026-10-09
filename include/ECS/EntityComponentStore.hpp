@@ -94,19 +94,19 @@ namespace ECS
     #pragma region Entity
     public:
         uint32_t countEntities();
-        void createEntities(Archetype &archetype, span<Entity> entities, const SharedComponentValues values = SharedComponentValues());
+        void createEntities(Archetype &archetype, span<Entity> entities, SharedComponentValues values);
+        void createEntities(span<Entity> entities);
         bool exists(Entity entity) const;
         bool hasComponent(Entity entity, TypeID type) const;
         const EntityName* getName(Entity entity) const;
         void setName(Entity entity, const EntityName* name);
     private:
         /// @brief Allocating some Entity's in entityStore
-        /// @param arch target archetype, this arguemnt is for validation.
         /// @param chunk entites are stored inside chunk
         /// @param baseIndex base index in the "chunk"
         /// @param count number of entites to allocate
         /// @param outputEntities (optional, array lenght of "count") result Entitys
-        void allocateEntities(Archetype &arch, Chunk *chunk, uint32_t baseIndex, uint32_t count, Entity* outputEntities = nullptr);
+        void allocateEntities(Chunk *chunk, uint32_t baseIndex, uint32_t count, Entity* outputEntities = nullptr);
         /// @brief A wrapper to deallocate components, entites and fill the space
         /// @details EntityComponentStore::deallocateNonTrivialComponents, EntityStore::deallocateEntities, Archetype::copy
         void deallocateDataEntitiesInChunk(EntityBatchInChunk batch);

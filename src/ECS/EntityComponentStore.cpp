@@ -76,7 +76,7 @@ Archetype* EntityComponentStore::createArchetype(span<const TypeID> types){
     if(Constants::MaximumArchetypeSharedComponentCount < numSharedComponents)
         throw std::invalid_argument("validateArchetype(): too shareed components");
     {
-        uint32_t offsets[7];
+        uint32_t offsets[8];
         offsets[0] =              alignPointerSize(sizeof(Archetype));
         offsets[1] = offsets[0] + alignPointerSize(sizeof(TypeID)*types.size());
         offsets[2] = offsets[1] + alignPointerSize(sizeof(uint16_t)*types.size());
@@ -84,7 +84,8 @@ Archetype* EntityComponentStore::createArchetype(span<const TypeID> types){
         offsets[4] = offsets[3] + alignPointerSize(sizeof(uint16_t)*types.size());
         offsets[5] = offsets[4] + alignPointerSize(sizeof(TypeManager::DefaultFunction)*types.size());
         offsets[6] = offsets[5] + alignPointerSize(sizeof(TypeManager::DefaultFunction)*types.size());
-        arch.reset((Archetype*)std::allocator<uint8_t>().allocate(offsets[6]));
+        offsets[7] = offsets[6] + alignPointerSize(sizeof(SharedComponentIndex)*numSharedComponents);
+        arch.reset((Archetype*)std::allocator<uint8_t>().allocate(offsets[7]));
         new (&arch->chunks) ArchetypeChunkData(types.size(),numSharedComponents);
         // arch->chunks.grow(Constants::InitialChunkListSize);
         new (&arch->chunksWithEmptySlots) std::vector<Chunk*>();
@@ -97,6 +98,7 @@ Archetype* EntityComponentStore::createArchetype(span<const TypeID> types){
         arch->_sizeOfs      = (uint16_t*)((uint8_t*)(arch.get()) + offsets[3]);
         arch->_dDestructor  = (TypeManager::DefaultFunction*)((uint8_t*)(arch.get()) + offsets[4]);
         arch->_dConstructor = (TypeManager::DefaultFunction*)((uint8_t*)(arch.get()) + offsets[5]);
+        arch->defaultSharedComponents=(SharedComponentIndex*)((uint8_t*)(arch.get()) + offsets[6]);
     }
     arch->typeCount   = types.size();
     arch->chunkCapacity = 0;
@@ -133,6 +135,9 @@ Archetype* EntityComponentStore::createArchetype(span<const TypeID> types){
         arch->_dDestructor[i] = TypeManager::GetTypeInfo(types[i]).defaultDestruct;
     for (uint32_t i = 0; i < types.size(); ++i)
         arch->_dConstructor[i] = TypeManager::GetTypeInfo(types[i]).defaultConstruct;
+    for (uint32_t i = 0,s = 0; s < numSharedComponents && i < types.size(); ++i,s++)
+        if(types[i].isSharedComponent())
+            arch->defaultSharedComponents[s] = this->sharedComponents.getDefaultValue(types[i]);
 
 
     arch->chunkCapacity = std::min(
@@ -303,6 +308,11 @@ void EntityComponentStore::createEntities(Archetype &archetype, span<Entity> ent
         entities += allocateCount;
     }
 }
+void EntityComponentStore::createEntities(span<Entity> entities)
+{
+    if(!entities.empty())
+        this->entityStore.allocateEntities(entities, nullptr, 0);
+}
 EntityBatchInChunk EntityComponentStore::getFirstEntityBatchInChunk(span<const Entity> entities) const {
     EntityBatchInChunk ret;
     EntityInChunk entityInChunk;
@@ -346,8 +356,12 @@ void EntityComponentStore::destroyEntities(span<const Entity> entities){
         entities += batch.count;
     }
 }
-void EntityComponentStore::allocateEntities(Archetype &arch, Chunk *chunk, uint32_t baseIndex, uint32_t count, Entity* outputEntities)
+void EntityComponentStore::allocateEntities(Chunk *chunk, uint32_t baseIndex, uint32_t count, Entity* outputEntities)
 {
+    if(!chunk || !chunk->archetype)
+        throw std::invalid_argument("allocateEntities(): invalid archetype");
+
+    Archetype &arch = *chunk->archetype;
     if(arch._types[0] != TypeID::fromIndex(1) || arch._offsets[0] != 64)
         throw std::invalid_argument("allocateEntities(): invalid archetype");
 
