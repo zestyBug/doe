@@ -44,14 +44,12 @@ void TypeID::Debug() {
                 "\tCategory: %s\n"
                 "\tisSharedComponent: %i\n"
                 "\tisZeroSized: %i\n"
-                "\tisNonTrivial: %i\n"
         ,name, info.TypeIndex.index(), info.TypeSize, info.SizeInChunk,
         info.Category == TypeManager::TypeCategory::Entity ? "Entity" : 
          info.Category == TypeManager::TypeCategory::IComponentData ? "IComponentData" : 
           info.Category == TypeManager::TypeCategory::ISharedComponentData ? "ISharedComponentData" : "Unknown",
         this->isSharedComponent(),
-        this->isZeroSized(),
-        this->isNonTrivial());
+        this->isZeroSized());
 }
 
 template<> TypeID __typeid__<std::nullptr_t>(){

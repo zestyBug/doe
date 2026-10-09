@@ -98,7 +98,7 @@ SharedComponentStore::~SharedComponentStore() {
     for (uint32_t i=0;i<Constants::MaximumTypesCount;i++)
     {
         SharedComponentChunk *ptr = dataChunk[i].get();
-        if(ptr && TypeManager::GetTypeInfoPointer()[i].TypeIndex.isNonTrivial())
+        if(ptr)
         {
             const uint32_t typesize = TypeManager::GetTypeInfo(i).TypeSize;
             TypeManager::DefaultFunction dFunc = TypeManager::GetTypeInfo(i).defaultDestruct;

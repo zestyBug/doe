@@ -183,15 +183,7 @@ void Archetype::initializeComponents(Chunk* chunk, uint32_t dstIndex, uint32_t c
         uint32_t sizeOf = sizeOfs[t];
         TypeID type = types[t];
         uint8_t *dst = dstBuffer + (offsets[t] + sizeOf * dstIndex);
-        if(!type.isNonTrivial()){
-            memset(dst, 0, sizeOf*count);
-        }else{
-            TypeManager::DefaultFunction dCon = dCons[t];
-            for (uint32_t i = 0; i != count; i++){
-                dCon(dst);
-                dst += sizeOf;
-            }
-        }
+        memset(dst, 0, sizeOf*count);
     }
 }
 uint32_t Archetype::allocateIntoChunk(Chunk *chunk, uint32_t count, uint32_t& outIndex)
@@ -493,7 +485,7 @@ void Archetype::convert(Archetype &srcArchetype, Chunk &srcChunk, uint32_t srcIn
     // Process non-zero-sized types
     int32_t srcI = srcArchetype.numNonZeroSizedTypes() - 1;
     int32_t dstI = dstArchetype.numNonZeroSizedTypes() - 1;
-    uint32_t srcFirstNonTrivialComponent = srcArchetype.firstNonTrivialComponent;
+    uint32_t firstTagComponent = srcArchetype.firstTagComponent;
 
     const TypeManager::DefaultFunction *srcDDes = srcArchetype._dDestructor;
     const TypeID *srcTypes = srcArchetype._types;
@@ -506,16 +498,11 @@ void Archetype::convert(Archetype &srcArchetype, Chunk &srcChunk, uint32_t srcIn
     uint8_t *srcChunkBuffer = (uint8_t*)&srcChunk;
     uint8_t *dstChunkBuffer = (uint8_t*)&dstChunk;
 
-    uint32_t sourceTypesToDealloc[srcI + 1];
-    uint32_t sourceTypesToDeallocCount = 0;
-
     while (dstI >= 0){
         TypeID srcType = srcTypes[srcI];
         TypeID dstType = dstTypes[dstI];
 
         if (srcType > dstType){
-            //Type in source is not moved so deallocate it
-            sourceTypesToDealloc[sourceTypesToDeallocCount++] = srcI;
             --srcI;
             continue;
         }
@@ -535,29 +522,6 @@ void Archetype::convert(Archetype &srcArchetype, Chunk &srcChunk, uint32_t srcIn
             memset(dst, 0, count * dstStride);
             --dstI;
         }
-    }
-
-    if (sourceTypesToDeallocCount == 0)
-        return;
-
-    sourceTypesToDealloc[sourceTypesToDeallocCount] = 0;
-
-    uint32_t iDealloc = 0;
-    if (sourceTypesToDealloc[iDealloc] >= srcFirstNonTrivialComponent)
-    {
-        do
-        {
-            srcI = sourceTypesToDealloc[iDealloc];
-            uint32_t srcStride = srcSizeOfs[srcI];
-            TypeManager::DefaultFunction dFunc = srcDDes[srcI];
-            uint8_t *src = srcChunkBuffer + srcOffsets[srcI] + srcIndex * srcStride;
-            for (uint32_t i = 0; i < count; i++)
-            {
-                dFunc(src);
-                src += srcStride;
-            }
-        }
-        while ((sourceTypesToDealloc[++iDealloc] >= srcFirstNonTrivialComponent));
     }
 #pragma endregion unsafe ChunkDataUtility
 }

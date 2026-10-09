@@ -108,10 +108,8 @@ namespace ECS
         /// @param outputEntities (optional, array lenght of "count") result Entitys
         void allocateEntities(Chunk *chunk, uint32_t baseIndex, uint32_t count, Entity* outputEntities = nullptr);
         /// @brief A wrapper to deallocate components, entites and fill the space
-        /// @details EntityComponentStore::deallocateNonTrivialComponents, EntityStore::deallocateEntities, Archetype::copy
+        /// @details EntityStore::deallocateEntities, Archetype::copy
         void deallocateDataEntitiesInChunk(EntityBatchInChunk batch);
-        /// @brief calling destructor for managed non-zero-sized components in a batch
-        void deallocateNonTrivialComponents(EntityBatchInChunk batch);
         /// @brief destroying a batch of entities.
         /// @details a wrapper to call arch->deallocate
         void destroyBatch(EntityBatchInChunk batch);

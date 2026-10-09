@@ -11,7 +11,6 @@ EntityComponentStore::~EntityComponentStore(){
         for (uint32_t c = 0; c != archetype->chunks.count(); c++)
         {
             Chunk* chunk = archetype->chunks[c];
-            this->deallocateNonTrivialComponents(EntityBatchInChunk{.chunk=chunk, .startIndex=0, .count = chunk->count});
             this->entityStore.deallocateEntities({(Entity*)chunk->buffer, chunk->count});
         }
     }
@@ -110,9 +109,6 @@ Archetype* EntityComponentStore::createArchetype(span<const TypeID> types){
         i++;
         do arch->firstTagComponent = i;
         while (types[--i].isZeroSized());
-        i++;
-        do arch->firstNonTrivialComponent = i;
-        while (types[--i].isNonTrivial());
     }
     arch->instanceSize = 0;
     arch->instanceSizeWithOverhead = 0;
@@ -347,12 +343,10 @@ void EntityComponentStore::destroyEntities(span<const Entity> entities){
     while(!entities.empty())
     {
         EntityBatchInChunk batch = getFirstEntityBatchInChunk(entities);
-        if (batch.chunk == nullptr)
+        if (unlikely(batch.chunk != nullptr))
         {
-            entities += batch.count;
-            continue;
+            destroyBatch(batch);
         }
-        destroyBatch(batch);
         entities += batch.count;
     }
 }
@@ -376,7 +370,6 @@ void EntityComponentStore::deallocateDataEntitiesInChunk(EntityBatchInChunk batc
 {
     if(batch.chunk->count < (batch.startIndex + batch.count))
         throw std::out_of_range("deallocateDataEntitiesInChunk(): invalid batch");
-    deallocateNonTrivialComponents(batch);
 
     Entity* entities = (Entity*)batch.chunk->buffer + batch.startIndex;
 
@@ -403,24 +396,6 @@ void EntityComponentStore::deallocateDataEntitiesInChunk(EntityBatchInChunk batc
     uint32_t startIndex = batch.chunk->count - patchCount;
 
     Archetype::copy(batch.chunk, startIndex, batch.chunk, batch.startIndex, patchCount);
-}
-void EntityComponentStore::deallocateNonTrivialComponents(EntityBatchInChunk batch)
-{
-    Archetype &archetype = *getArchetype(*batch.chunk);
-    if (archetype.numNonTrivialComponents() == 0)
-        return;
-    uint32_t firstNonTrivialComponent = archetype.firstNonTrivialComponent;
-    uint32_t endNonTrivialComponents = firstNonTrivialComponent + archetype.numNonTrivialComponents();
-    for (uint32_t localTypeIndex = firstNonTrivialComponent; localTypeIndex < endNonTrivialComponents; ++localTypeIndex)
-    {
-        TypeManager::DefaultFunction dFunc = TypeManager::GetTypeInfo(archetype._types[localTypeIndex]).defaultDestruct;
-        uint32_t sizeOf = archetype._sizeOfs[localTypeIndex];
-        uint8_t *ptr = (uint8_t*)archetype.getComponentDataRO(batch.chunk, 0, localTypeIndex);
-        for (uint32_t ei = 0; ei < batch.count; ++ei)
-        {
-            dFunc(ptr + sizeOf * (ei + batch.startIndex));
-        }
-    }
 }
 void EntityComponentStore::addExistingEntitiesInChunk(Chunk *chunk)
 {

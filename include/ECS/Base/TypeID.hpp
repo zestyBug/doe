@@ -29,7 +29,6 @@ namespace ECS {
         inline uint32_t flags() const;
         inline bool isSharedComponent() const;
         inline bool isZeroSized() const;
-        inline bool isNonTrivial() const ;
         inline bool hasAssetRef() const;
         static bool compare(span<const TypeID> v1,span<const TypeID> v2)
         {
@@ -52,8 +51,6 @@ namespace ECS {
         /// @details Considerations: SharedComponent must comes before ZeroSized components
         static constexpr uint32_t SharedComponentTypeFlag  = 1 << 29;
         static constexpr uint32_t ZeroSizeInChunkTypeFlag  = 1 << 28;
-        /// @brief MAGIC NUMBER, it means destruction call is managed by the engine
-        static constexpr uint32_t NonTrivialComponentTypeFlag = 1 << 17;
         static constexpr uint32_t AssetRefFlag             = 1 << 18;
         static constexpr uint32_t ClearFlagsMask = Constants::MaximumTypesCount-1;
         enum class TypeCategory : uint16_t {
@@ -131,7 +128,11 @@ namespace ECS {
             // MAGIC NUMBER
             static_assert(sizeof(T) <= Constants::MaximumComponentSize && alignof(T) <= Constants::MaximumComponentSize);
             static_assert(std::is_class_v<T> && std::is_default_constructible_v<T>);
-            static_assert(std::is_same_v<T,Entity> || std::is_base_of_v<IComponentData,T> || (std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>));
+            static_assert(
+                std::is_same_v<T,Entity> || 
+                (std::is_base_of_v<IComponentData,T> && std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>) || 
+                (std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>)
+            );
             if(unlikely(typeCount >= Constants::MaximumTypesCount))
                 throw std::runtime_error("registerType(): Constants::MaximumTypesCount");
 
@@ -140,8 +141,6 @@ namespace ECS {
             uint32_t value = index;
             if constexpr (std::is_base_of_v<ISharedComponentData,T>)
                 value |= SharedComponentTypeFlag;
-            if constexpr (!std::is_trivially_destructible_v<T> || !std::is_trivially_copy_constructible_v<T>)
-                value |= NonTrivialComponentTypeFlag;
             if constexpr (std::is_empty_v<T>)
                 value |= ZeroSizeInChunkTypeFlag;
             if(!assetRefs.empty())
@@ -198,15 +197,12 @@ namespace ECS {
     uint32_t TypeID::flags() const {return this->value & ~TypeManager::ClearFlagsMask;}
     bool TypeID::isSharedComponent() const {return this->value & TypeManager::SharedComponentTypeFlag;}
     bool TypeID::isZeroSized() const {return this->value & TypeManager::ZeroSizeInChunkTypeFlag;}
-    bool TypeID::isNonTrivial() const {return this->value & TypeManager::NonTrivialComponentTypeFlag;}
     bool TypeID::hasAssetRef() const {return this->value & TypeManager::AssetRefFlag;}
 
     /// @brief A compile-time helper to call __typeid__
     /// @warning Dont define getTypeID manually.
     template<typename T>
     inline TypeID getTypeID() { return __typeid__<std::remove_const_t<std::remove_reference_t<T>>>(); }
-    template<typename T>
-    constexpr bool isNonTrivialComponent() { return !std::is_trivially_destructible_v<T> || !std::is_trivially_copy_constructible_v<T>; }
     template<typename T>
     constexpr bool isSharedComponent() { return std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>; }
 
