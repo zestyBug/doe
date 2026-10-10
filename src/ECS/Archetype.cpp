@@ -331,9 +331,9 @@ bool Archetype::areLayoutCompatible(Archetype &a, Archetype &b)
 
 void Archetype::setSharedComponentDataIndex(Entity entity, const SharedComponentValues sharedComponentValues, TypeID typeIndex)
 {
-    Chunk *chunk = entityComponentStore->getChunk(entity);
+    Chunk &chunk = entityComponentStore->getChunk(entity);
     // chunk should still be in the same archetype
-    if(this != chunk->archetype)
+    if(this != chunk.archetype)
         throw std::invalid_argument("setSharedComponentDataIndex(): invalid archetype");
     int32_t indexInTypeArray = this->getIndexInTypeArray(typeIndex);
     if(indexInTypeArray < 0)
@@ -342,7 +342,7 @@ void Archetype::setSharedComponentDataIndex(Entity entity, const SharedComponent
 
     entityComponentStore->move(entity, *this, sharedComponentValues);
 
-    this->chunks.setChangeVersion(indexInTypeArray, chunk->listIndex, globalSystemVersion);
+    this->chunks.setChangeVersion(indexInTypeArray, chunk.listIndex, globalSystemVersion);
 }
 
 void Archetype::setSharedComponentDataIndex(Chunk *chunk, const SharedComponentValues sharedComponentValues, TypeID typeIndex)
