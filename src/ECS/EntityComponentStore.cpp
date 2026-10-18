@@ -22,6 +22,8 @@ EntityComponentStore::EntityComponentStore(){
     this->componentTypeOrderVersion = std::make_unique<Version[]>(Constants::MaximumTypesCount);
     this->typeLookup.init   (Constants::InitialArchetypeArraySize);
     this->archetypes.reserve(Constants::InitialArchetypeArraySize);
+    const TypeID type = getTypeID<Entity>();
+    this->emptyArchetype = &this->getOrCreateArchetype({&type,1});
 }
 uint32_t EntityComponentStore::getComponentArraySize(uint32_t componentSize, uint32_t entityCount)
 {
@@ -49,6 +51,9 @@ void EntityComponentStore::validateArchetype(span<const TypeID> types) {
         throw std::invalid_argument("validateArchetype(): archetype with unexpected component count");
     if(types[0] != getTypeID<Entity>())
         throw std::invalid_argument("validateArchetype(): the first type must be Entity");
+    for (uint32_t i = 1; i < types.size(); ++i)
+        if (unlikely(types[i].index() <= types[i-1].index()))
+            throw std::invalid_argument("validateArchetype(): the first type must be Entity");
 }
 void EntityComponentStore::incrementComponentOrderVersion(Archetype &archetype, SharedComponentValues sharedComponentValues)
 {
@@ -97,7 +102,7 @@ Archetype& EntityComponentStore::createArchetype(span<const TypeID> types){
         arch->_sizeOfs      = (uint16_t*)((uint8_t*)(arch.get()) + offsets[3]);
         arch->_dDestructor  = (TypeManager::DefaultFunction*)((uint8_t*)(arch.get()) + offsets[4]);
         arch->_dConstructor = (TypeManager::DefaultFunction*)((uint8_t*)(arch.get()) + offsets[5]);
-        arch->defaultSharedComponents=(SharedComponentIndex*)((uint8_t*)(arch.get()) + offsets[6]);
+        arch->_defaultSharedComponents=(SharedComponentIndex*)((uint8_t*)(arch.get()) + offsets[6]);
     }
     arch->typeCount   = types.size();
     arch->chunkCapacity = 0;
@@ -133,7 +138,7 @@ Archetype& EntityComponentStore::createArchetype(span<const TypeID> types){
         arch->_dConstructor[i] = TypeManager::GetTypeInfo(types[i]).defaultConstruct;
     for (uint32_t i = 0,s = 0; s < numSharedComponents && i < types.size(); ++i,s++)
         if(types[i].isSharedComponent())
-            arch->defaultSharedComponents[s] = this->sharedComponents.getDefaultValue(types[i]);
+            arch->_defaultSharedComponents[s] = this->sharedComponents.getDefaultValue(types[i]);
 
 
     arch->chunkCapacity = std::min(
@@ -279,6 +284,85 @@ void* EntityComponentStore::getComponentDataWithTypeRW(Entity entity, TypeID typ
     EntityInChunk entityInChunk = this->getEntityInChunk(entity);
     Archetype &archetype = this->getArchetype(*entityInChunk.chunk);
     return archetype.getComponentDataWithTypeRW(entityInChunk.chunk, entityInChunk.indexInChunk, type, globalVersion);
+}
+
+void EntityComponentStore::setComponentDataRawEntityHasComponent(Entity entity, TypeID type, span<const uint8_t> data)
+{
+    if(TypeManager::GetTypeInfo(type).SizeInChunk != data.size())
+        throw std::invalid_argument("setComponentDataRawEntityHasComponent(): invalid data size");
+    void *ptr = getComponentDataWithTypeRW(entity, type);
+    memcpy(ptr, data.data(), data.size());
+}
+void EntityComponentStore::assertEntitiesExist(span<const Entity> entities) const {
+    for (Entity entity:entities)
+    {
+        validateEntity(entity);
+        if (!entityStore.getChunkIfExists(entity))
+            throw std::runtime_error(
+                "An EntityManager command is operating on an invalid entity. This usually means that the Entity has already been destroyed or was never created."
+                " This can happen when a subscene is opened or closed between when a EntityCommandBuffer has been recorded and played back. This can invalidate recorded Entities."
+            );
+    }
+}
+void EntityComponentStore::validateEntity(Entity entity) const {
+    if (!entity.isValid())
+        throw std::runtime_error("All entities created using EntityCommandBuffer::CreateEntity() must be realized via playback(). One of the entities is still deferred .");
+    if (entity.index() >= EntityStore::MaximumTheoreticalAmountOfEntities)
+        throw std::runtime_error("An Entity index is higher than the valid range. This means the Entity::index got corrupted or incorrectly assigned and it may not be used.");
+}
+void EntityComponentStore::checkInternalConsistency() const {
+    uint32_t entityCountByArchetype = 0;
+    for (auto&archPtr : this->archetypes)
+    {
+        const Archetype &archetype = *archPtr.get();
+        if(this != archetype.entityComponentStore)
+            throw std::runtime_error("archetype refers to the wrong EntityComponentStore");
+
+        uint32_t countInArchetype = 0;
+        uint32_t capacity = archetype.chunkCapacity;
+        for (uint32_t j = 0; j < archetype.chunks.count(); ++j)
+        {
+            const Chunk *chunk = archetype.chunks[j];
+            if(chunk == nullptr)
+                throw std::runtime_error("Null");
+            if(chunk->archetype != &archetype)
+                throw std::runtime_error("chunk belongs to incorrect archetype");
+            uint32_t chunkCount = chunk->count;
+            if(capacity < chunkCount)
+                throw std::runtime_error("chunk entity count exceeds chunk capacity");
+            if(0 == chunkCount)
+                throw std::runtime_error("found chunk with entity count of 0; this should never happen");
+
+            const Entity* chunkEntities = (const Entity*)chunk->buffer;
+            assertEntitiesExist({chunkEntities, chunkCount});
+
+            if (archetype.numSharedComponents() == 0)
+            {
+                if(chunk->listWithEmptySlotsIndex >= 0)
+                {
+                    if(chunk->listWithEmptySlotsIndex > archetype.chunksWithEmptySlots.size())
+                        throw std::runtime_error("chunk with empty slots is not tracked correctly");
+                    if(chunk != archetype.chunksWithEmptySlots[chunk->listWithEmptySlotsIndex])
+                        throw std::runtime_error("chunk with empty slots is not tracked correctly");
+                }
+            }
+            else
+            {
+                if(!archetype.freeChunksBySharedComponents.contains(*chunk))
+                    throw std::runtime_error("chunk with empty slots and shared components is not tracked correctly");
+            }
+
+            countInArchetype += chunkCount;
+        }
+
+        if(countInArchetype != archetype.entityCount)
+            throw std::runtime_error("archetype's cached entity count is incorrect");
+
+        entityCountByArchetype += countInArchetype;
+    }
+
+    if(entityCountByArchetype != entityStore.integrityCheck())
+        throw std::runtime_error("EntityStore's Entity count doesnt match the expected number");
 }
 
 void EntityComponentStore::validateEntities(span<const Entity> entities) const {
@@ -689,7 +773,7 @@ bool EntityComponentStore::removeComponents(EntityBatchInChunk entityBatchInChun
     this->move(entityBatchInChunk, dstArchetype, {outSharedComponentValues,sizeof(SharedComponentIndex)});
     return true;
 }
-bool EntityComponentStore::addComponent(span<const Entity> entities, TypeID type){
+void EntityComponentStore::addComponent(span<const Entity> entities, TypeID type){
     SharedComponentIndex shCom = type.isSharedComponent() ? 
         sharedComponents.getDefaultValue(type) : SharedComponentIndex();
     while(!entities.empty())
@@ -700,7 +784,7 @@ bool EntityComponentStore::addComponent(span<const Entity> entities, TypeID type
         entities += batch.count;
     }
 }
-bool EntityComponentStore::removeComponent(span<const Entity> entities, TypeID type){
+void EntityComponentStore::removeComponent(span<const Entity> entities, TypeID type){
     while(!entities.empty())
     {
         EntityBatchInChunk batch = getFirstEntityBatchInChunk(entities);
@@ -709,7 +793,7 @@ bool EntityComponentStore::removeComponent(span<const Entity> entities, TypeID t
         entities += batch.count;
     }
 }
-bool EntityComponentStore::addComponents(span<const Entity> entities, span<const TypeID> types){
+void EntityComponentStore::addComponents(span<const Entity> entities, span<const TypeID> types){
     while(!entities.empty())
     {
         EntityBatchInChunk batch = getFirstEntityBatchInChunk(entities);
@@ -718,7 +802,7 @@ bool EntityComponentStore::addComponents(span<const Entity> entities, span<const
         entities += batch.count;
     }
 }
-bool EntityComponentStore::removeComponents(span<const Entity> entities, span<const TypeID> types){
+void EntityComponentStore::removeComponents(span<const Entity> entities, span<const TypeID> types){
     while(!entities.empty())
     {
         EntityBatchInChunk batch = getFirstEntityBatchInChunk(entities);

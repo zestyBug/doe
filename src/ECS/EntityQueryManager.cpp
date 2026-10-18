@@ -132,7 +132,7 @@ void EntityQueryManager::addArchetypeIfMatching(Archetype *archetype, EntityQuer
 EntityQueryImpl EntityQueryManager::createEntityQuery(const EntityQueryBuilder& query, EntityComponentStore &ecs)
 {
     uint32_t qcount = query.count;
-    if(qcount < 1 || qcount > EntityQueryBuilder::capacity)
+    if(qcount < 1 || qcount > Constants::EntityQueryBuilderCapacity)
         throw std::invalid_argument("createEntityQuery(): invalid query");
     uint32_t id = this->entityQueryDatas.size();
     EntityQueryData *queryData = &this->entityQueryDatas.emplace_back();

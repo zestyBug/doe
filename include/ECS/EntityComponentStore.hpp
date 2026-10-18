@@ -37,6 +37,7 @@ namespace ECS
         ChunkStore chunks{};
         /// @brief used by EntityQueryManager
         uint32_t previousArchetypeCount = 0;
+        Archetype *emptyArchetype;
     public:
         void cleanChangeList();
 
@@ -59,6 +60,9 @@ namespace ECS
         Archetype& getArchetype(Entity entity);
         const Archetype& getArchetype(Entity entity) const;
         span<Archetype*> getArchetypes();
+        Archetype& getEmptyArchetype(){
+            return *emptyArchetype;
+        }
     private:
         inline void setArchetype(Chunk &chunk, Archetype *arch){chunk.archetype = arch;}
         Archetype& getArchetype(ChunkIndex chunk);
@@ -86,7 +90,6 @@ namespace ECS
                 throw std::runtime_error("getChunk(): unexpected chunk");
             return *chunk;
         }
-        EntityBatchInChunk getFirstEntityBatchInChunk(span<const Entity> entities) const;
         /// @brief Create a SharedComponent list based on the provided chunk, after changing the value of a shared component.
         /// @param chunk sourse chunk
         /// @param type the shared component type to modify
@@ -94,6 +97,8 @@ namespace ECS
         /// @param result a pointer to where the new value should be writen
         /// @return true if success, false if no change is detected
         bool getArchetypeChunkFilterWithChangedSharedComponent(Chunk *chunk, TypeID type, SharedComponentIndex value, SharedComponentIndex *result);
+    public:
+        EntityBatchInChunk getFirstEntityBatchInChunk(span<const Entity> entities) const;
     #pragma endregion Chunk and Batch
 
     #pragma region Entity
@@ -104,6 +109,9 @@ namespace ECS
         bool hasComponent(Entity entity, TypeID type) const;
         const EntityName& getName(Entity entity) const;
         void setName(Entity entity, const EntityName* name);
+        void checkInternalConsistency() const;
+        void assertEntitiesExist(span<const Entity> entities) const;
+        void validateEntity(Entity entity) const;
     private:
         /// @brief Allocating some Entity's in entityStore
         /// @param chunk entites are stored inside chunk
@@ -140,6 +148,7 @@ namespace ECS
         SharedComponentIndex getSharedComponentDataIndex(Entity entity, TypeID typeIndex);
         const void* getComponentDataWithTypeRO(Entity entity, TypeID typeIndex);
         void* getComponentDataWithTypeRW(Entity entity, TypeID typeIndex);
+        void setComponentDataRawEntityHasComponent(Entity entity, TypeID type, span<const uint8_t>);
     private:
         void moveAllSharedComponents(EntityComponentStore* srcEntityComponentStore);
         void incrementComponentOrderVersion(Archetype &archetype, const SharedComponentValues sharedComponentValues);
@@ -203,13 +212,13 @@ namespace ECS
         bool removeComponents(EntityBatchInChunk entityBatchInChunk, span<const TypeID> types);
 
         /// @param types sorted
-        bool addComponent(span<const Entity> entities, TypeID type);
+        void addComponent(span<const Entity> entities, TypeID type);
         /// @param types sorted
-        bool removeComponent(span<const Entity> entities, TypeID type);
+        void removeComponent(span<const Entity> entities, TypeID type);
         /// @param types sorted
-        bool addComponents(span<const Entity> entities, span<const TypeID> types);
+        void addComponents(span<const Entity> entities, span<const TypeID> types);
         /// @param types sorted
-        bool removeComponents(span<const Entity> entities, span<const TypeID> types);
+        void removeComponents(span<const Entity> entities, span<const TypeID> types);
     
     #pragma endregion move
 

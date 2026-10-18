@@ -25,9 +25,8 @@ namespace ECS
     };
     /// @brief A (pointer) container
     struct SharedComponentValues final {
-        const SharedComponentIndex* firstIndex;
-        int32_t stride;
-        SharedComponentValues() = delete;
+        const SharedComponentIndex* firstIndex = nullptr;
+        int32_t stride = sizeof(SharedComponentIndex);
         SharedComponentIndex operator[](int32_t i) const
         {
             if(unlikely(this->firstIndex == nullptr))

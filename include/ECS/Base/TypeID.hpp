@@ -123,8 +123,7 @@ namespace ECS {
         /// @return An unique id that the informations are linked with.
         template<typename T>
         static TypeID registerType(const char* name, span<const uint16_t> assetRefs = {}) {
-            if(!initialized)
-                Initialize();
+            Initialize();
             // MAGIC NUMBER
             static_assert(sizeof(T) <= Constants::MaximumComponentSize && alignof(T) <= Constants::MaximumComponentSize);
             static_assert(std::is_class_v<T> && std::is_default_constructible_v<T>);

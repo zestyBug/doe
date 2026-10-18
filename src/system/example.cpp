@@ -1,10 +1,10 @@
 #include "example.hpp"
 #include "ECS/Engine.hpp"
+#include "ECS/Archetype.hpp"
 #include "ECS/ThreadPool.hpp"
 #include "imgui.h"
 
 ECS::SystemRegister<ExampleSystem> _{};
-static bool isOpen = true;
 
 struct test_2 : ECS::IComponentData
 {
@@ -49,9 +49,9 @@ ExampleSystem::ExampleSystem(ECS::DOE &e):ISystem{e}{
         ECS::EntityQueryBuilder builder;
         builder.withAllRW(ECS::getTypeID<test_2>());
         this->query = ECS::sharedEngine->eqm.createEntityQuery(builder,ECS::sharedEngine->ecs);
-        ECS::Archetype *arch = ECS::sharedEngine->ecs.getOrCreateArchetype(ECS::componentTypes<ECS::Entity,test_2>());
+        ECS::Archetype &arch = ECS::sharedEngine->ecs.getOrCreateArchetype(ECS::componentTypes<ECS::Entity,test_2>());
         ECS::Entity ents[10];
-        ECS::sharedEngine->ecs.createEntities(*arch,{ents,10});
+        ECS::sharedEngine->ecs.createEntities(arch, span<ECS::Entity>{ents,10}, arch.defaultSharedComponent());
         //ECS::sharedEngine->ecs.getArchetype
     }
 }

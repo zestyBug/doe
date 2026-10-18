@@ -31,6 +31,7 @@ namespace ECS {
         /// 3_ we must keep atleast 4 last bits (of an uint32_t) as flags.
         /// 4_ 15 bit for type index in an uint16_t + 1 bit for RW/RO
         /// 5_ the larger the number the larger EntityComponentStore byte size
+        static constexpr uint32_t EntityQueryBuilderCapacity = 32;
         static constexpr uint16_t MaximumTypesCount = 1 << 12;
         static constexpr uint16_t MaximumComponentSize = 0x800;
         static constexpr uint16_t MaximumResourcesCount = 1 << 8;
@@ -38,6 +39,8 @@ namespace ECS {
         static constexpr uint16_t ResourceBlockSize = 1 << 8;
         static constexpr uint32_t MaximumChunkCount = 0x10000;
         static constexpr uint32_t MaxJobCount = 0xFFFFF;
+        static constexpr uint32_t EntityStoreBlockSize = 8192;
+        static constexpr uint32_t EntityStoreBlockCount = 4096;
         static constexpr uint32_t InitialSystemCapacity = 0x80;
         static constexpr uint32_t InitialArchetypeArraySize = 0x80;
         static constexpr uint32_t InitialChunkListSize = 0x80;
@@ -48,6 +51,7 @@ namespace ECS {
         static constexpr uint32_t MaximumRefOffsetCount = 0x400;
         static constexpr uint32_t MaximumSwapchainImageCount = 8;
         static constexpr uint32_t FrameInFlightCount = 2;
+        static constexpr uint32_t EntityCommandBufferChunkSize = 0x1000;
     };
 }
 

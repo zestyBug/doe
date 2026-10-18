@@ -2,7 +2,7 @@
 using namespace ECS;
 
 void EntityStore::ExistsOrThrow(uint32_t blockIndex, uint32_t indexInBlock) const {
-    if(blockIndex >= BlockCount)
+    if(blockIndex >= Constants::EntityStoreBlockCount)
         throw std::invalid_argument("ExistsOrThrow(): entity does not exists");
     const DataBlock* block = dataBlocks[blockIndex].get();
     if(block==nullptr)
@@ -10,76 +10,79 @@ void EntityStore::ExistsOrThrow(uint32_t blockIndex, uint32_t indexInBlock) cons
     if((block->allocated[indexInBlock / 32] & (1UL << (indexInBlock % 32)))==0)
         throw std::invalid_argument("ExistsOrThrow(): entity does not exists");
 }
-void EntityStore::integrityCheck(uint32_t blockIndex)
+uint32_t EntityStore::integrityCheck(uint32_t blockIndex) const
 {
     // It is assumed that integrity check is performed on a stable state.
     // In other words, no potential concurrent access.
-    DataBlock* block = dataBlocks[blockIndex].get();
+    const DataBlock* block = dataBlocks[blockIndex].get();
     if(block == nullptr) {
         if(0 != entityCount[blockIndex])
             throw std::runtime_error("integrityCheck()");
-        return;
+        return 0;
     }
-    uint32_t* allocated = block->allocated;
+    const uint32_t* allocated = block->allocated;
     uint32_t count = 0;
-    for (uint32_t i = 0; i < EntitiesInBlock; ++i)
+    for (uint32_t i = 0; i < Constants::EntityStoreBlockSize; ++i)
         count += (allocated[i / 32] >> (i % 32)) & 1;
     if(count != entityCount[blockIndex])
         throw std::runtime_error("integrityCheck()");
+    return count;
 }
-void EntityStore::integrityCheck()
+uint32_t EntityStore::integrityCheck() const
 {
-    for (uint32_t i = 0; i < BlockCount; i++)
+    uint32_t sum=0;
+    for (uint32_t i = 0; i < Constants::EntityStoreBlockCount; i++)
     {
-        integrityCheck(i);
+        sum += integrityCheck(i);
     }
+    return sum;
 }
 const Chunk* EntityStore::getChunkIfExists(Entity entity) const
 {
-    uint32_t blockIndex   = entity.index() / EntitiesInBlock;
-    uint32_t indexInBlock = entity.index() % EntitiesInBlock;
-    if(blockIndex >= BlockCount)
+    uint32_t blockIndex   = entity.index() / Constants::EntityStoreBlockSize;
+    uint32_t indexInBlock = entity.index() % Constants::EntityStoreBlockSize;
+    if(blockIndex >= Constants::EntityStoreBlockCount)
         return nullptr;
     const DataBlock* block = dataBlocks[blockIndex].get();
     if (block == nullptr)
         return nullptr;
-    if (/*(entity.version() & 1) == 0 || */block->versions[indexInBlock] != entity.version())
+    if (!entity.isValid() || block->versions[indexInBlock] != entity.version())
         return nullptr;
     return block->entityInChunk[indexInBlock].chunk;
 }
 Chunk* EntityStore::getChunkIfExists(Entity entity)
 {
-    uint32_t blockIndex   = entity.index() / EntitiesInBlock;
-    uint32_t indexInBlock = entity.index() % EntitiesInBlock;
-    if(blockIndex >= BlockCount)
+    uint32_t blockIndex   = entity.index() / Constants::EntityStoreBlockSize;
+    uint32_t indexInBlock = entity.index() % Constants::EntityStoreBlockSize;
+    if(blockIndex >= Constants::EntityStoreBlockCount)
         return nullptr;
     DataBlock* block = dataBlocks[blockIndex].get();
     if (block == nullptr)
         return nullptr;
-    if (/*(entity.version() & 1) == 0 || */block->versions[indexInBlock] != entity.version())
+    if (!entity.isValid() || block->versions[indexInBlock] != entity.version())
         return nullptr;
     return block->entityInChunk[indexInBlock].chunk;
 }
 void EntityStore::setEntityInChunk(Entity entity, EntityInChunk entityInChunk)
 {
-    uint32_t blockIndex   = entity.index() / EntitiesInBlock;
-    uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+    uint32_t blockIndex   = entity.index() / Constants::EntityStoreBlockSize;
+    uint32_t indexInBlock = entity.index() % Constants::EntityStoreBlockSize;
     ExistsOrThrow(blockIndex, indexInBlock);
     DataBlock* block = dataBlocks[blockIndex].get();
     ((EntityInChunk*)block->entityInChunk)[indexInBlock] = entityInChunk;
 }
 void EntityStore::setEntityVersion(Entity entity, uint32_t version)
 {
-    uint32_t blockIndex   = entity.index() / EntitiesInBlock;
-    uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+    uint32_t blockIndex   = entity.index() / Constants::EntityStoreBlockSize;
+    uint32_t indexInBlock = entity.index() % Constants::EntityStoreBlockSize;
     ExistsOrThrow(blockIndex, indexInBlock);
     DataBlock* block = dataBlocks[blockIndex].get();
     block->versions[indexInBlock] = version;
 }
 EntityInChunk EntityStore::getEntityInChunk(Entity entity) const
 {
-    uint32_t blockIndex   = entity.index() / EntitiesInBlock;
-    uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+    uint32_t blockIndex   = entity.index() / Constants::EntityStoreBlockSize;
+    uint32_t indexInBlock = entity.index() % Constants::EntityStoreBlockSize;
     ExistsOrThrow(blockIndex, indexInBlock);
     const DataBlock* block = dataBlocks[blockIndex].get();
     return block->entityInChunk[indexInBlock];
@@ -87,12 +90,12 @@ EntityInChunk EntityStore::getEntityInChunk(Entity entity) const
 void EntityStore::allocateEntities(span<Entity> entities, Chunk *chunk, uint32_t firstEntityInChunkIndex)
 {
     /// @brief the current chunk index we are searching for empty slots
-    for (uint32_t i = 0; i < BlockCount; i++)
+    for (uint32_t i = 0; i < Constants::EntityStoreBlockCount; i++)
     {
         uint32_t blockCount = entityCount[i].load();
-        if (blockCount == BlockBusy || blockCount == EntitiesInBlock) {continue;}
+        if (blockCount == BlockBusy || blockCount == Constants::EntityStoreBlockSize) {continue;}
         /// the blocks available entities
-        uint32_t blockAvailable = EntitiesInBlock - blockCount;
+        uint32_t blockAvailable = Constants::EntityStoreBlockSize - blockCount;
         /// number of entities to allocate in this block
         uint32_t count = std::min(blockAvailable, entities.size());
         // Set the count to a flag indicating that this block is busy (-1)
@@ -114,10 +117,10 @@ void EntityStore::allocateEntities(span<Entity> entities, Chunk *chunk, uint32_t
         uint32_t* allocated = block->allocated;
         uint32_t* versions = block->versions;
         EntityInChunk* entityInChunk = block->entityInChunk;
-        uint32_t baseEntityIndex = i * EntitiesInBlock;
+        uint32_t baseEntityIndex = i * Constants::EntityStoreBlockSize;
 
         while (remainingCount > 0)
-            for (uint32_t maskIndex = 0; maskIndex < EntitiesInBlock / 32; maskIndex++)
+            for (uint32_t maskIndex = 0; maskIndex < Constants::EntityStoreBlockSize / 32; maskIndex++)
                 if (allocated[maskIndex] != ~0UL)
                 {
                     // There is some space in this one
@@ -131,7 +134,7 @@ void EntityStore::allocateEntities(span<Entity> entities, Chunk *chunk, uint32_t
                             uint32_t index = baseEntityIndex + indexInBlock;
                             if(index > Constants::MaximumEntityCount)
                                 throw std::runtime_error("allocateEntities(): out of entity index");
-                            entities[0] = Entity{(int32_t)index, ++versions[indexInBlock]};
+                            entities[0] = Entity{index, ++versions[indexInBlock]};
                             if (chunk != nullptr)
                                 entityInChunk[indexInBlock] = EntityInChunk{chunk,firstEntityInChunkIndex++};
                             else
@@ -161,16 +164,16 @@ void EntityStore::deallocateEntities(span<Entity> entities)
     {
         uint32_t rangeStart = i;
         uint32_t startIndex = entities[i].index();
-        uint32_t blockIndex = startIndex / EntitiesInBlock;
-        if(blockIndex >= BlockCount)
+        uint32_t blockIndex = startIndex / Constants::EntityStoreBlockSize;
+        if(blockIndex >= Constants::EntityStoreBlockCount)
             throw std::invalid_argument("deallocateEntities(): entity does not exists");
-        uint32_t prevIndexInBlock = startIndex % EntitiesInBlock;
+        uint32_t prevIndexInBlock = startIndex % Constants::EntityStoreBlockSize;
         for (i++; i < entities.size(); i++)
         {
-            if (entities[i].index() / EntitiesInBlock != blockIndex)
+            if (entities[i].index() / Constants::EntityStoreBlockSize != blockIndex)
                 // Different data block
                 break;
-            uint32_t indexInBlock = entities[i].index() % EntitiesInBlock;
+            uint32_t indexInBlock = entities[i].index() % Constants::EntityStoreBlockSize;
             if (indexInBlock != prevIndexInBlock + 1)
                 // Same data block, but not the next entity in range
                 break;
@@ -223,7 +226,7 @@ void EntityStore::deallocateEntities(span<Entity> entities)
 
         for (uint32_t j = startIndex, indexInEntitiesArray = rangeStart; j < endIndex; j++, indexInEntitiesArray++)
         {
-            uint32_t indexInBlock = j % EntitiesInBlock;
+            uint32_t indexInBlock = j % Constants::EntityStoreBlockSize;
             if (versions[indexInBlock] == entities[indexInEntitiesArray].version())
             {
                 // Matching versions confirm that we are deallocating the intended entity
@@ -243,16 +246,16 @@ void EntityStore::deallocateEntities(span<Entity> entities)
 }
 const EntityName* EntityStore::getEntityName(Entity entity)
 {
-    uint32_t blockIndex   = entity.index() / EntitiesInBlock;
-    uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+    uint32_t blockIndex   = entity.index() / Constants::EntityStoreBlockSize;
+    uint32_t indexInBlock = entity.index() % Constants::EntityStoreBlockSize;
     ExistsOrThrow(blockIndex, indexInBlock);
     DataBlock* block = dataBlocks[blockIndex].get();
     return &block->names[indexInBlock];
 }
 void EntityStore::setEntityName(Entity entity, EntityName* name)
 {
-    uint32_t blockIndex   = entity.index() / EntitiesInBlock;
-    uint32_t indexInBlock = entity.index() % EntitiesInBlock;
+    uint32_t blockIndex   = entity.index() / Constants::EntityStoreBlockSize;
+    uint32_t indexInBlock = entity.index() % Constants::EntityStoreBlockSize;
     ExistsOrThrow(blockIndex, indexInBlock);
     DataBlock* block = dataBlocks[blockIndex].get();
     if(name != nullptr)

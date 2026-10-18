@@ -33,16 +33,16 @@ Comments serve as the documentation as of right now. Report any ambiguity in the
 - [ ] write some tests
 - [x] assets manager
 - [x] vulkan imgui
+- [x] EntityCommandBuffer
 
-### What is not implemented? (dont ask for it)
+### What is not implemented?
 - Enable bits, and enableable components
 - Aspect
 - Lookup cache
 - Baker
-- SystemAPI, thread safty
-- Journaling
+- SystemAPI, EntityDataAccess, thread safety
+- Journaling and profiler
 - Serialization
 - stable hash, memory order
 - Cleanup and meta archetype
 - Buffer, cleanup, managed and chunk components
-- EntityCommandBuffer

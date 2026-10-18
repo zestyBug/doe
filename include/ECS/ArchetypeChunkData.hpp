@@ -64,13 +64,20 @@ namespace ECS
         inline bool full() const {
             return this->_count >= this->_capacity;
         }
+        // maximum number of chunk data can stored before resize
         inline uint32_t capacity() const {
             return this->_capacity;
         }
+        // number of chunk data stored in the struct
         inline uint32_t count() const {
             return this->_count;
         }
         Chunk* operator[](uint32_t i) {
+            if(i >= this->_count)
+                throw std::out_of_range("ArchetypeChunkData::operator[]");
+            return _Chunk[i];
+        }
+        const Chunk* operator[](uint32_t i) const {
             if(i >= this->_count)
                 throw std::out_of_range("ArchetypeChunkData::operator[]");
             return _Chunk[i];

@@ -26,6 +26,12 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/external
 )
 
+
+
+
+
+
+
 add_library(ECS STATIC
 	src/ECS/ResourceManager.cpp
 	src/ECS/AssetsManager.cpp
@@ -43,6 +49,7 @@ add_library(ECS STATIC
 	src/ECS/ChunkStore.cpp
 	src/ECS/SharedComponentStore.cpp
 	src/ECS/EntityStore.cpp
+	src/ECS/EntityCommandBuffer.cpp
 )
 if(MSVC)
     target_compile_options(ECS PRIVATE
@@ -66,6 +73,11 @@ target_compile_features(ECS PRIVATE
 
 
 
+
+
+
+
+
 add_library(imgui STATIC
     src/imgui/imgui.cpp
 	src/imgui/imgui_widgets.cpp
@@ -74,11 +86,11 @@ add_library(imgui STATIC
 	src/imgui/imgui_draw.cpp
 )
 if(MSVC)
-    target_compile_options(ECS PRIVATE
+    target_compile_options(imgui PRIVATE
         /W2
     )
 elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(ECS PRIVATE
+    target_compile_options(imgui PRIVATE
         -Wall
     )
 endif()
@@ -98,6 +110,13 @@ target_compile_features(imgui PRIVATE
 target_compile_definitions(imgui PRIVATE   
     IMGUI_DISABLE_FILE_FUNCTIONS
 )
+
+
+
+
+
+
+
 
 
 
@@ -180,6 +199,35 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 
+
+
+
+
+
+add_library(cutil STATIC
+    src/cutil/basics.cpp
+    src/cutil/HashHelper.cpp
+    src/cutil/nostdio.c
+)
+if(MSVC)
+    target_compile_options(cutil PRIVATE
+        /W2
+    )
+elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(cutil PRIVATE
+        -Wall
+    )
+endif()
+
+target_compile_features(cutil PRIVATE
+    cxx_std_17
+    c_std_17
+)
+
+
+
+
+
 # $(BIN)/test-7: $(OBJ)/$(testDir)/test-7.o $(libuv_la_SOURCES) $(OBJ)/$(srcDir)/ECS/TypeID.o $(OBJ)/$(cutilDir)/HashHelper.o $(OBJ)/$(srcDir)/ECS/AssetsManager.o $(OBJ)/$(srcDir)/ECS/ResourceManager.o
 # $(BIN)/test-6: $(OBJ)/$(testDir)/test-6.o $(libuv_la_SOURCES) $(OBJ)/$(srcDir)/ECS/TypeID.o $(OBJ)/$(cutilDir)/HashHelper.o $(OBJ)/$(srcDir)/ECS/AssetsManager.o
 # $(BIN)/test-5: $(OBJ)/$(testDir)/test-5.o $(OBJS) $(libuv_la_SOURCES) $(OBJS_GLFW)
@@ -188,9 +236,6 @@ endif()
 add_executable(engine
     src/vulkan/wrapper.cpp
 	src/vulkan/VKContext.cpp
-    src/cutil/basics.cpp
-    src/cutil/HashHelper.cpp
-    src/cutil/nostdio.c
     src/system/example.cpp
     src/Window.cpp
     src/GraphicSystem.cpp
@@ -238,5 +283,12 @@ target_link_libraries(engine PRIVATE
     ECS
     imgui
     libuv
+    cutil
 )
 
+
+add_executable(test-ecb
+    test-v2/test-ecb.cpp
+)
+target_link_libraries(test-ecb PRIVATE ECS libuv cutil)
+# target_link_libraries(test_string PRIVATE core)

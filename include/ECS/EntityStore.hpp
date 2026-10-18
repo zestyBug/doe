@@ -13,28 +13,26 @@ namespace ECS
 {
     class EntityStore {
         // MAGIC NUMBER
-        static constexpr uint32_t EntitiesInBlock = 8192;
-        static constexpr uint32_t BlockCount = 4096;
-        static constexpr uint32_t MaximumTheoreticalAmountOfEntities = EntitiesInBlock * BlockCount;
         struct DataBlock
         {
-            uint32_t allocated[EntitiesInBlock / 32];
-            EntityInChunk entityInChunk[EntitiesInBlock];
-            uint32_t versions[EntitiesInBlock];
-            EntityName names[EntitiesInBlock];
+            uint32_t allocated         [Constants::EntityStoreBlockSize / 32];
+            EntityInChunk entityInChunk[Constants::EntityStoreBlockSize];
+            uint32_t versions          [Constants::EntityStoreBlockSize];
+            EntityName names           [Constants::EntityStoreBlockSize];
             DataBlock() = default;
         };
         static constexpr uint32_t BlockSize = sizeof(DataBlock);
         static constexpr uint32_t BlockBusy = ~0;
-        align_ptr<DataBlock>  dataBlocks[BlockCount];
-        std::atomic<uint32_t> entityCount[BlockCount];
+        align_ptr<DataBlock>  dataBlocks [Constants::EntityStoreBlockCount];
+        std::atomic<uint32_t> entityCount[Constants::EntityStoreBlockCount];
 
         void ExistsOrThrow(uint32_t blockIndex, uint32_t indexInBlock) const;
-        void integrityCheck(uint32_t blockIndex);
+        uint32_t integrityCheck(uint32_t blockIndex) const;
     public:
+        static constexpr uint32_t MaximumTheoreticalAmountOfEntities = Constants::EntityStoreBlockSize * Constants::EntityStoreBlockCount;
         EntityStore() = default;
         ~EntityStore() = default;
-        void integrityCheck();
+        uint32_t integrityCheck() const;
         Chunk* getChunkIfExists(Entity entity);
         const Chunk* getChunkIfExists(Entity entity) const;
         void setEntityInChunk(Entity entity, EntityInChunk entityInChunk);
@@ -50,6 +48,8 @@ namespace ECS
         void deallocateEntities(span<Entity> entities);
         const EntityName* getEntityName(Entity entity);
         void setEntityName(Entity entity, EntityName* name = nullptr);
+        /// @note Use getChunkIfExists instead.
+        bool exists(Entity entity) const;
     };
 } // namespace ECS
 

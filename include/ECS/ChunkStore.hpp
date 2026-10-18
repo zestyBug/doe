@@ -8,6 +8,7 @@
 
 namespace ECS
 {
+    /// @brief Chunks are allocated and owned by this structure, not archetypes.
     struct ChunkStore {
         static constexpr uint32_t BitmaskSize = 32;
         static constexpr uint32_t ChunkBunchCount = Constants::MaximumChunkCount / BitmaskSize;

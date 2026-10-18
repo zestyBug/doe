@@ -2,7 +2,6 @@
 #define SPAN_HPP
 
 #include <vector>
-#include <span>
 #include <array>
 #include "static_array.hpp"
 
@@ -11,11 +10,11 @@ class span
 {
 public:
 	// member types
-	using element_type           = _Type;
-	using value_type             = _Type;
+    using value_type             = std::remove_cv_t<_Type>;
 	using size_type              = uint32_t;
+	using const_pointer          = const _Type*;
 	using pointer                = _Type*;
-	using reference              = element_type&;
+	using reference              = _Type&;
 	// an iterator must have operator++ (prefix), operator!=, operator=, operator*
 	using iterator               = pointer;
 	using reverse_iterator       = pointer;
@@ -33,8 +32,8 @@ public:
 	constexpr span& operator=(const span&) noexcept = default;
 	~span() noexcept = default;
 
-	inline constexpr operator span<const _Type> () const {
-		return {(const _Type*)this->_M_ptr,this->size};
+	inline constexpr operator span<const value_type> () const {
+		return span<const value_type>{(const value_type*)this->_M_ptr,this->_M_count};
 	}
 
 
@@ -48,7 +47,7 @@ public:
 	[[nodiscard]] constexpr
 	size_type size_bytes()
 	const noexcept
-	{ return _M_count * sizeof(element_type); }
+	{ return _M_count * sizeof(_Type); }
 
 	[[nodiscard]] constexpr inline
 	bool empty()
@@ -87,8 +86,10 @@ public:
 
 	constexpr inline pointer data() noexcept
 	{ return this->_M_ptr; }
+	constexpr inline const_pointer data() const noexcept
+	{ return this->_M_ptr; }
 
-	inline span<element_type>& operator++(){
+	inline span<_Type>& operator++(){
 		if(_M_count>0){
 			_M_ptr++;
 			_M_count--;
@@ -96,7 +97,7 @@ public:
 		return *this;
 	}
 
-	inline void operator +=(uint32_t step) {
+	inline void operator +=(size_type step) {
 		if(_M_count > step){
 			_M_count -= step;
 			_M_ptr   += step;
@@ -106,14 +107,14 @@ public:
 		}
 	}
 
-	inline span<element_type> operator+(uint32_t step) const {
+	inline span<_Type> operator+(size_type step) const {
 		if(_M_count > step)
-			return span<element_type>{_M_ptr+step,_M_count-step};
+			return span<_Type>{_M_ptr+step,_M_count-step};
 		else
-			return span<element_type>{nullptr,0};
+			return span<_Type>{nullptr,0};
 	}
 
-	bool operator == (const span<element_type> &v) const {
+	bool operator == (const span<_Type> &v) const {
 		if(v.size_bytes() == this->size_bytes()){
 			if(0 == this->size_bytes())
 				return true;

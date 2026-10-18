@@ -95,7 +95,7 @@ namespace ECS
         /// @brief find a pointer with a key using hash list
         /// @return value or nullptr
         Chunk* tryGet(const SharedComponentValues sharedComponentValues, uint32_t numSharedComponents) const;
-        bool contains(Chunk*) const;
+        bool contains(const Chunk&) const;
     };
 }
 #endif

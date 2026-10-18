@@ -15,6 +15,8 @@ std::unique_ptr<uint16_t[]>              TypeManager::assetRefOffsetList = nullp
 
 
 void TypeManager::Initialize(){
+    if(likely(initialized))
+        return;
     TypeManager::initialized = 1;
     TypeManager::sharedTypeInfos    = std::make_unique<TypeManager::TypeInfo[]>(Constants::MaximumTypesCount);
     TypeManager::assetRefOffsetList = std::make_unique<uint16_t[]>(Constants::MaximumRefOffsetCount);
@@ -53,9 +55,11 @@ void TypeID::Debug() {
 }
 
 template<> TypeID __typeid__<std::nullptr_t>(){
+    TypeManager::Initialize();
     return TypeID::fromIndex(0);
 }
 template<> TypeID __typeid__<ECS::Entity>(){
+    TypeManager::Initialize();
     return TypeID::fromIndex(1);
 }
 

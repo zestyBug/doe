@@ -4,9 +4,9 @@
 #include "ECS/EntityComponentStore.hpp"
 using namespace ECS;
 
-SharedComponentValues Archetype::defaultSharedComponentValues() const {
+SharedComponentValues Archetype::defaultSharedComponent() const {
     return {
-        this->defaultSharedComponents,
+        this->_defaultSharedComponents,
         sizeof(SharedComponentIndex)
     };
 }

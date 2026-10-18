@@ -35,6 +35,7 @@ namespace ECS
         /// @brief Maximum usable memory size
         static constexpr uint32_t BufferSize = Constants::ChunkSize - MemoryOffset;
         Archetype *archetype = nullptr;
+        // allocated entity count
         uint32_t count = 0;
         // index in chunksWithEmptySlots or freeChunksBySharedComponents
          int32_t listWithEmptySlotsIndex = -1;

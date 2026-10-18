@@ -16,7 +16,7 @@ void* _allocate(size_t __n){
     return ret;
 }
 void _deallocate(void *__p){
-    if(unlikely(__p != nullptr))
+    if(unlikely(__p == nullptr))
         throw std::invalid_argument("_deallocate(): avoid bad practice!");
     printf("_deallocate(): %p\n",__p);
     allocator_counter--;

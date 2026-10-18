@@ -139,7 +139,7 @@ Chunk* ChunkListMap::tryGet(const SharedComponentValues sharedComponentValues, u
             return nullptr;
     }
 }
-bool ChunkListMap::contains(Chunk* chunk) const {
-    int32_t offset = chunk->listWithEmptySlotsIndex;
-    return 0 <= offset && (uint32_t)offset < _capacity && chunks[offset] == chunk;
+bool ChunkListMap::contains(const Chunk& chunk) const {
+    int32_t offset = chunk.listWithEmptySlotsIndex;
+    return 0 <= offset && (uint32_t)offset < _capacity && chunks[offset] == &chunk;
 }

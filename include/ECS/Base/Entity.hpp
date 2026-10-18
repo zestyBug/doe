@@ -10,8 +10,8 @@ namespace ECS
     // unless it is specified.
 
     struct Entity final {
-        constexpr Entity():_value{Null}{}
-        constexpr Entity(const int32_t v,uint32_t version=0):_value{v},_version{version}{}
+        constexpr Entity() = default;
+        constexpr Entity(const uint32_t v,uint32_t version=0):_value{v},_version{version}{}
         constexpr Entity(const Entity&) = default;
         constexpr Entity(Entity&&) = default;
         inline Entity& operator = (const Entity&) = default;
@@ -19,14 +19,11 @@ namespace ECS
         inline bool operator != (const Entity& v) const {return !(*this == v);}
         ~Entity() = default;
         // index in entity_value array
-        inline int32_t index() const {return this->_value;}
+        inline uint32_t index()   const {return this->_value;}
         inline uint32_t version() const {return this->_version;}
-        // entity id (index in entity_Value array)
-        static constexpr int32_t Null = -1;
-        // simply checks entity index validity
-        inline bool isValid() const {return this->index() >= 0;}
+        inline bool     isValid() const {return this->_version & 1;}
     protected:
-        int32_t _value;
+        uint32_t _value=0;
         uint32_t _version=0;
     };
 
