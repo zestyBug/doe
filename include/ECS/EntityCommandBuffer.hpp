@@ -93,7 +93,7 @@ namespace ECS
         /// @param e 
         inline void destroyEntity(Entity e){destroyEntity({&e,1});}
 
-        inline void addComponent(Entity e,                    TypeID type){addComponent({&e,1},type);}
+        inline void addComponent (Entity e,                    TypeID type){addComponent({&e,1},type);}
         inline void addComponents(Entity e,                    span<const TypeID> types){addComponents({&e,1},types);}
 
         template<typename T>
@@ -101,9 +101,9 @@ namespace ECS
         template<typename T>
         inline void addComponent(span<const Entity> entities){TypeID type = getTypeID<T>();addComponent(entities,type);}
         template<typename T>
-        inline void addComponent(Entity e, const T& value){addComponent({&e,1},value);}
+        inline void addComponentValue(Entity e, const T& value){addComponentValue({&e,1},value);}
         template<typename T>
-        void addComponent(span<const Entity> entities, const T& value){
+        void addComponentValue(span<const Entity> entities, const T& value){
             const TypeID id = getTypeID<T>();
             if constexpr (isSharedComponent<T>()){
                 union manualManagement
@@ -114,9 +114,9 @@ namespace ECS
                     ~manualManagement(){}
                 } stack;
                 new(&stack._) T(value);
-                addComponent(entities,id,{(uint8_t*)&stack._,sizeof(T)});
+                addComponentValue(entities,id,{(uint8_t*)&stack._,sizeof(T)});
             } else {
-                addComponent(entities,id,{(uint8_t*)&value,sizeof(T)});
+                addComponentValue(entities,id,{(uint8_t*)&value,sizeof(T)});
             }
         }
 
@@ -151,7 +151,7 @@ namespace ECS
         void destroyEntity    (span<const Entity> entities);
         void addComponent     (span<const Entity> entities, TypeID type);
         void addComponents    (span<const Entity> entities, span<const TypeID> types);
-        void addComponent     (span<const Entity> entities, TypeID type, span<const uint8_t> value);
+        void addComponentValue(span<const Entity> entities, TypeID type, span<const uint8_t> value);
         void setComponent     (span<const Entity> entities, TypeID type, span<const uint8_t> value);
         void removeComponent  (span<const Entity> entities, TypeID type);
         void removeComponents (span<const Entity> entities, span<const TypeID> types);

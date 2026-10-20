@@ -37,7 +37,7 @@ TEST(Test1) {
     ECS::EntityQueryBuilder eqb;
     ECS::Entity e = ecb.createEntity();
     ecb.addComponent<comp_1>(e);
-    ecb.addComponent<comp_2>(e,comp_2(67,69));
+    ecb.addComponentValue<comp_2>(e,comp_2(67,69));
     ecb.playback(engine.ecs);
     eqb.withAll(ECS::getTypeID<comp_2>());
     ECS::EntityQueryImpl query = engine.eqm.createEntityQuery(eqb, engine.ecs);

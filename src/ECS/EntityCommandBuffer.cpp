@@ -199,9 +199,9 @@ void ECS::EntityCommandBuffer::addComponents(span<const Entity> entities, span<c
     memcpy(h->types.data(),   types.data(),   entities.size_bytes());
 }
 
-void ECS::EntityCommandBuffer::addComponent(span<const Entity> entities, TypeID type, span<const uint8_t> value){
+void ECS::EntityCommandBuffer::addComponentValue(span<const Entity> entities, TypeID type, span<const uint8_t> value){
     if(unlikely(entities.empty() || !value.size_bytes()))
-        throw std::invalid_argument("addComponent()");
+        throw std::invalid_argument("addComponentValue()");
     uint32_t size = TypeManager::GetTypeInfo(type).SizeInChunk;
     AddComponentWValueCommand *h = (AddComponentWValueCommand*)&this->newCommand((uint32_t)sizeof(AddComponentWValueCommand) + entities.size_bytes() + size);
     h->commandId = Command::AddComponentValue;
