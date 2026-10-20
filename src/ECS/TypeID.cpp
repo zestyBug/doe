@@ -56,7 +56,7 @@ void TypeID::Debug() {
 
 template<> TypeID __typeid__<std::nullptr_t>(){
     TypeManager::Initialize();
-    return TypeID::fromIndex(0);
+    return TypeID::fromIndex(TypeManager::ZeroSizeInChunkTypeFlag);
 }
 template<> TypeID __typeid__<ECS::Entity>(){
     TypeManager::Initialize();

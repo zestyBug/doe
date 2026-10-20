@@ -8,10 +8,15 @@
 #include "ECS/Base/Entity.hpp"
 #include "Constants.hpp"
 namespace ECS {
+    struct EntityQueryData;
+    class TypeManager;
+    struct Archetype;
+    struct EntityComponentStore;
+    struct ComponentDependencyManager;
+
     struct ISharedComponentData {};
     struct IComponentData {};
     struct TypeID final {
-        TypeID()=default;
         /// @brief Just in case you know what you are doing
         /// @details if you forget to include flags, the engine may behave unexpectedly.
         inline static TypeID fromIndex(uint32_t v){
@@ -41,6 +46,13 @@ namespace ECS {
         }
         void Debug();
     private:
+        friend struct EntityQueryBuilder;
+        friend struct EntityQueryData;
+        friend class TypeManager;
+        friend struct Archetype;
+        friend struct EntityComponentStore;
+        friend struct ComponentDependencyManager;
+        TypeID()=default;
         uint32_t value=0;
     };
 
