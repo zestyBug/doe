@@ -108,7 +108,7 @@ int32_t Archetype::getIndexInTypeArray(TypeID type) const
     for (;types!=types_end;++types){
         if (type == *types)
             return (int32_t)(types_end - types);
-        else if(type < *types)
+        else if(type.value() < types->value())
             return -1;
     }
     return -1;
@@ -122,7 +122,7 @@ int32_t Archetype::getNextIndexInTypeArray(TypeID type, int32_t lastTypeIndexInT
     for (;types!=types_end;++types) {
         if (type == *types)
             return (int32_t)(types_end - types);
-        else if(type < *types)
+        else if(type.value() < types->value())
             return -1;
     }
     return -1;
@@ -487,7 +487,6 @@ void Archetype::convert(Archetype &srcArchetype, Chunk &srcChunk, uint32_t srcIn
     int32_t dstI = dstArchetype.numNonZeroSizedTypes() - 1;
     uint32_t firstTagComponent = srcArchetype.firstTagComponent;
 
-    const TypeManager::DefaultFunction *srcDDes = srcArchetype._dDestructor;
     const TypeID *srcTypes = srcArchetype._types;
     const TypeID *dstTypes = dstArchetype._types;
     const uint16_t *srcSizeOfs = srcArchetype._sizeOfs;
@@ -502,7 +501,7 @@ void Archetype::convert(Archetype &srcArchetype, Chunk &srcChunk, uint32_t srcIn
         TypeID srcType = srcTypes[srcI];
         TypeID dstType = dstTypes[dstI];
 
-        if (srcType > dstType){
+        if (srcType.value() > dstType.value()){
             --srcI;
             continue;
         }
@@ -538,7 +537,7 @@ void Archetype::cloneChangeVersions(Archetype &srcArchetype, int32_t chunkIndexI
     {
         TypeID dstType = dstTypes[idstType];
         TypeID srcType = srcTypes[isrcType];
-        while (srcType > dstType){
+        while (srcType.value() > dstType.value()){
             --isrcType;
             srcType = srcTypes[isrcType];
         }

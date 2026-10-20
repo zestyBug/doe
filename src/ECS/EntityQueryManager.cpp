@@ -18,7 +18,7 @@ bool EntityQueryManager::testMatchingArchetypeRequiredComponent(span<const TypeI
                 return true; // Ran out of query types; all required types were found.
             nextQueryType = queryTypes[iNextQueryType].type;
         }
-        else if (componentTypeIndex > nextQueryType)
+        else if (componentTypeIndex.value() > nextQueryType.value())
             return false; // A required type was not found
     }
     // Ran out of archetype types & didn't find all required types
@@ -32,7 +32,7 @@ bool EntityQueryManager::testMatchingArchetypeOptionalComponent(span<const TypeI
     for (uint32_t i = 0; i < archetypeTypes.size(); i++)
     {
         TypeID componentTypeIndex = archetypeTypes[i];
-        while(componentTypeIndex > nextQueryType)
+        while(componentTypeIndex.value() > nextQueryType.value())
         {
             if (++iNextQueryType == queryTypes.size())
                 return false; // Ran out of optional types and didn't find at least one of them
@@ -52,7 +52,7 @@ bool EntityQueryManager::testMatchingArchetypeExcludedComponent(span<const TypeI
     for (uint32_t i = 0; i < archetypeTypes.size(); i++)
     {
         TypeID componentTypeIndex = archetypeTypes[i];
-        while(componentTypeIndex > nextQueryType)
+        while(componentTypeIndex.value() > nextQueryType.value())
         {
             if (++iNextQueryType == queryTypes.size())
                 return true; // Ran out of query types. No excluded types were found

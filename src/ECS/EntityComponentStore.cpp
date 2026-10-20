@@ -52,7 +52,7 @@ void EntityComponentStore::validateArchetype(span<const TypeID> types) {
     if(types[0] != getTypeID<Entity>())
         throw std::invalid_argument("validateArchetype(): the first type must be Entity");
     for (uint32_t i = 1; i < types.size(); ++i)
-        if (unlikely(types[i].index() <= types[i-1].index()))
+        if (unlikely(types[i].value() <= types[i-1].value()))
             throw std::invalid_argument("validateArchetype(): the first type must be Entity");
 }
 void EntityComponentStore::incrementComponentOrderVersion(Archetype &archetype, SharedComponentValues sharedComponentValues)
@@ -87,9 +87,8 @@ Archetype& EntityComponentStore::createArchetype(span<const TypeID> types){
         offsets[3] = offsets[2] + alignPointerSize(sizeof(uint32_t)*types.size());
         offsets[4] = offsets[3] + alignPointerSize(sizeof(uint16_t)*types.size());
         offsets[5] = offsets[4] + alignPointerSize(sizeof(TypeManager::DefaultFunction)*types.size());
-        offsets[6] = offsets[5] + alignPointerSize(sizeof(TypeManager::DefaultFunction)*types.size());
-        offsets[7] = offsets[6] + alignPointerSize(sizeof(SharedComponentIndex)*numSharedComponents);
-        arch.reset((Archetype*)std::allocator<uint8_t>().allocate(offsets[7]));
+        offsets[6] = offsets[5] + alignPointerSize(sizeof(SharedComponentIndex)*numSharedComponents);
+        arch.reset((Archetype*)std::allocator<uint8_t>().allocate(offsets[6]));
         new (&arch->chunks) ArchetypeChunkData(types.size(),numSharedComponents);
         // arch->chunks.grow(Constants::InitialChunkListSize);
         new (&arch->chunksWithEmptySlots) std::vector<Chunk*>();
@@ -100,9 +99,8 @@ Archetype& EntityComponentStore::createArchetype(span<const TypeID> types){
         arch->_realIndecies = (uint16_t*)((uint8_t*)(arch.get()) + offsets[1]);
         arch->_offsets      = (uint32_t*)((uint8_t*)(arch.get()) + offsets[2]);
         arch->_sizeOfs      = (uint16_t*)((uint8_t*)(arch.get()) + offsets[3]);
-        arch->_dDestructor  = (TypeManager::DefaultFunction*)((uint8_t*)(arch.get()) + offsets[4]);
-        arch->_dConstructor = (TypeManager::DefaultFunction*)((uint8_t*)(arch.get()) + offsets[5]);
-        arch->_defaultSharedComponents=(SharedComponentIndex*)((uint8_t*)(arch.get()) + offsets[6]);
+        arch->_dConstructor = (TypeManager::DefaultFunction*)((uint8_t*)(arch.get()) + offsets[4]);
+        arch->_defaultSharedComponents=(SharedComponentIndex*)((uint8_t*)(arch.get()) + offsets[5]);
     }
     arch->typeCount   = types.size();
     arch->chunkCapacity = 0;
@@ -132,8 +130,6 @@ Archetype& EntityComponentStore::createArchetype(span<const TypeID> types){
         arch->_realIndecies[i] = (uint16_t)types[i].index();
     for (uint32_t i = 0; i < types.size(); ++i)
         arch->_sizeOfs[i] = (uint16_t) TypeManager::GetTypeInfo(types[i]).SizeInChunk;
-    for (uint32_t i = 0; i < types.size(); ++i)
-        arch->_dDestructor[i] = TypeManager::GetTypeInfo(types[i]).defaultDestruct;
     for (uint32_t i = 0; i < types.size(); ++i)
         arch->_dConstructor[i] = TypeManager::GetTypeInfo(types[i]).defaultConstruct;
     for (uint32_t i = 0,s = 0; s < numSharedComponents && i < types.size(); ++i,s++)
@@ -340,7 +336,7 @@ void EntityComponentStore::checkInternalConsistency() const {
             {
                 if(chunk->listWithEmptySlotsIndex >= 0)
                 {
-                    if(chunk->listWithEmptySlotsIndex > archetype.chunksWithEmptySlots.size())
+                    if((uint32_t)chunk->listWithEmptySlotsIndex > archetype.chunksWithEmptySlots.size())
                         throw std::runtime_error("chunk with empty slots is not tracked correctly");
                     if(chunk != archetype.chunksWithEmptySlots[chunk->listWithEmptySlotsIndex])
                         throw std::runtime_error("chunk with empty slots is not tracked correctly");
@@ -568,7 +564,7 @@ Archetype& EntityComponentStore::getArchetypeWithAddedComponents(Archetype &srcA
         {
             TypeID oldThing = srcTypes[oldThings];
             TypeID newThing = types[newThings];
-            if (oldThing > newThing) // put whichever is bigger at the end of the array
+            if (oldThing.value() > newThing.value()) // put whichever is bigger at the end of the array
             {
                 dstTypes[--mixedThings] = oldThing;
                 --oldThings;
@@ -598,7 +594,7 @@ Archetype& EntityComponentStore::getArchetypeWithAddedComponent(Archetype &arche
     const uint32_t oldSize = archetype.typeCount;
     TypeID newTypes[oldSize + 1];
     uint32_t t = 0;
-    while (t < oldSize && types[t] < type)
+    while (t < oldSize && types[t].value() < type.value())
     {
         newTypes[t] = types[t];
         ++t;

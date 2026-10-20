@@ -59,7 +59,7 @@ namespace ECS {
                 if(f1 == f2){
                     if(this->type == v.type)
                         throw std::invalid_argument("TypeQuery: same repeated query");
-                    return this->type < v.type;
+                    return this->type.value() < v.type.value();
                 }
                 return f1 < f2;
             }

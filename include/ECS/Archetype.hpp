@@ -60,7 +60,6 @@ namespace ECS
         /// @brief  components offsets in the chunks
         uint32_t* _offsets = nullptr;
         uint16_t* _sizeOfs = nullptr;
-        TypeManager::DefaultFunction *_dDestructor = nullptr;
         TypeManager::DefaultFunction *_dConstructor = nullptr;
         SharedComponentIndex *_defaultSharedComponents;
         uint32_t typeCount;

@@ -16,20 +16,26 @@ namespace ECS {
 
     struct ISharedComponentData {};
     struct IComponentData {};
+    /// @warning TypeIDs are expected to have flags included with them. undefined behaviour otherwise.
     struct TypeID final {
         /// @brief Just in case you know what you are doing
         /// @details if you forget to include flags, the engine may behave unexpectedly.
         inline static TypeID fromIndex(uint32_t v){
-            TypeID r;r.value = v;return r;
+            TypeID r;r._value = v;return r;
         };
         TypeID(const TypeID&)=default;
         TypeID& operator = (const TypeID&)=default;
         TypeID(TypeID&&)=default;
         TypeID& operator = (TypeID&&)=default;
-        bool operator == (const TypeID& v) const { return this->value == v.value; }
-        bool operator != (const TypeID& v) const { return this->value != v.value; }
-        bool operator <  (const TypeID& v) const { return this->value <  v.value; }
-        bool operator >  (const TypeID& v) const { return this->value >  v.value; }
+        /// @brief Flags are included.
+        bool operator == (const TypeID& v) const { return this->_value == v._value; }
+        /// @brief Flags are included.
+        bool operator != (const TypeID& v) const { return this->_value != v._value; }
+        /* 
+         * There is a different between value and index.
+         * so "operator <" and "operator >"  are not defined. 
+         */
+        inline uint32_t value() const;
         inline uint32_t index() const;
         inline uint32_t flags() const;
         inline bool isSharedComponent() const;
@@ -53,7 +59,7 @@ namespace ECS {
         friend struct EntityComponentStore;
         friend struct ComponentDependencyManager;
         TypeID()=default;
-        uint32_t value=0;
+        uint32_t _value=0;
     };
 
     class TypeManager
@@ -204,11 +210,12 @@ namespace ECS {
     template<> TypeID __typeid__<ECS::Entity>();
     #define DEF_TYPE(TYPE) template<> ECS::TypeID ECS::__typeid__<TYPE>(){static ECS::TypeID v = ECS::TypeManager::registerType<TYPE>(#TYPE);return v;}
 
-    uint32_t TypeID::index() const {return this->value & TypeManager::ClearFlagsMask;}
-    uint32_t TypeID::flags() const {return this->value & ~TypeManager::ClearFlagsMask;}
-    bool TypeID::isSharedComponent() const {return this->value & TypeManager::SharedComponentTypeFlag;}
-    bool TypeID::isZeroSized() const {return this->value & TypeManager::ZeroSizeInChunkTypeFlag;}
-    bool TypeID::hasAssetRef() const {return this->value & TypeManager::AssetRefFlag;}
+    uint32_t TypeID::value() const {return this->_value;}
+    uint32_t TypeID::index() const {return this->_value & TypeManager::ClearFlagsMask;}
+    uint32_t TypeID::flags() const {return this->_value & ~TypeManager::ClearFlagsMask;}
+    bool TypeID::isSharedComponent() const {return this->_value & TypeManager::SharedComponentTypeFlag;}
+    bool TypeID::isZeroSized() const {return this->_value & TypeManager::ZeroSizeInChunkTypeFlag;}
+    bool TypeID::hasAssetRef() const {return this->_value & TypeManager::AssetRefFlag;}
 
     /// @brief A compile-time helper to call __typeid__
     /// @warning Dont define getTypeID manually.
@@ -222,7 +229,7 @@ namespace ECS {
         inline bool customCompare (TypeID a,TypeID b) {
             if(unlikely(a == b))
                 throw std::bad_typeid();
-            return a < b;
+            return a.value() < b.value();
         }
         template<typename ... T>
         static_array<uint16_t,sizeof...(T)> _INIT_COMPONENTS_INDECIES_() {
