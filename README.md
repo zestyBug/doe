@@ -34,6 +34,8 @@ Comments serve as the documentation as of right now. Report any ambiguity in the
 - [x] assets manager
 - [x] vulkan imgui
 - [x] EntityCommandBuffer
+- [ ] System execution order
+- [ ] Better threading system
 
 ### What is not implemented?
 - Enable bits, and enableable components

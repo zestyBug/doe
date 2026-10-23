@@ -314,6 +314,8 @@ void VKContext::selectDevice(){
     {
         VkPhysicalDeviceProperties physical_device_prop = {};
         uint32_t queue_family_count = 0;
+        VkBool32 supported = false;
+        VkQueueFamilyProperties queue_family_prop[64];
 
         vkGetPhysicalDeviceProperties(pd, &physical_device_prop);
         printf("Device Name: %s\n", physical_device_prop.deviceName);
@@ -321,18 +323,19 @@ void VKContext::selectDevice(){
         vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, NULL);
         if (!queue_family_count)
             continue;
-        std::vector<VkQueueFamilyProperties> queue_family_prop{ queue_family_count };
-        vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, queue_family_prop.data());
-        if (TestSurfaceSupport(pd, this->surface))
+        queue_family_count = std::min(queue_family_count, (uint32_t)arrayCount(queue_family_prop));
+        vkGetPhysicalDeviceQueueFamilyProperties(pd, &queue_family_count, queue_family_prop);
+        if (this->surface && TestSurfaceSupport(pd, this->surface))
             continue;
 
         for (unsigned int i = 0; i < queue_family_count; i++) {
-            VkBool32 supported = false;
             // some devices are made for computation and does not support graphical commands
             if (!(queue_family_prop[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
                 continue;
             if (!(queue_family_prop[i].queueFlags & VK_QUEUE_TRANSFER_BIT))
                 continue;
+            if(!this->surface)
+                goto isSupported;
         #if defined(VK_USE_PLATFORM_WIN32_KHR)
             if(!vkGetPhysicalDeviceWin32PresentationSupportKHR(pd,i))
                 continue;
@@ -350,6 +353,7 @@ void VKContext::selectDevice(){
                 throw VulkanException(res, "vkGetPhysicalDeviceSurfaceSupportKHR");
             if (!supported)
                 continue;
+        isSupported:;
             queue_info.queueFamilyIndex = i;
             this->queueFamilyIndex = i;
             this->pdevice = pd;

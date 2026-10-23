@@ -181,7 +181,7 @@ void Archetype::initializeComponents(Chunk* chunk, uint32_t dstIndex, uint32_t c
     for (uint32_t t = 1; t != typesCount; t++)
     {
         uint32_t sizeOf = sizeOfs[t];
-        TypeID type = types[t];
+        //TypeID type = types[t];
         uint8_t *dst = dstBuffer + (offsets[t] + sizeOf * dstIndex);
         memset(dst, 0, sizeOf*count);
     }

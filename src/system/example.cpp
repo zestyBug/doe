@@ -4,7 +4,7 @@
 #include "ECS/ThreadPool.hpp"
 #include "imgui.h"
 
-ECS::SystemRegister<ExampleSystem> _{};
+static ECS::SystemRegister<ExampleSystem> _{};
 
 struct test_2 : ECS::IComponentData
 {

@@ -13,7 +13,8 @@ struct uv__work;
 namespace ECS
 {
     /**
-     * A class to encapsulate process of loading
+     * @brief Manages (and encapsulate the process of) loading resources from bundles.
+     * @note An asset is a bundle of resources.
      */
     struct AssetsManager {
     private:

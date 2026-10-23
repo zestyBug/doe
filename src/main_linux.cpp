@@ -1,8 +1,8 @@
 #include "ECS/Engine.hpp"
 #include "ECS/ThreadPool.hpp"
 #include "Window.hpp"
-#include "GraphicSystem.hpp"
 #include "uv.h"
+#ifndef HEADLESS
 #include "imgui.h"
 #define Status int
 #include <X11/Xatom.h>
@@ -16,7 +16,6 @@
 #undef Always
 static constexpr int None=0;
 typedef int Bool;
-std::unique_ptr<ECS::DOE> ECS::sharedEngine;
 
 static Atom del_atom;
 XIM xim;
@@ -25,10 +24,12 @@ XIC xic;
 
 static Bool WaitForMapNotify(Display *d, XEvent *e, char *arg)
 {
-	return d && e && arg && (e->type == MapNotify) && (e->xmap.window == *(Window*)arg);
+    return d && e && arg && (e->type == MapNotify) && (e->xmap.window == *(Window*)arg);
 }
 
 static void WndProc(uv_poll_t *handle, int status, int events);
+#endif
+std::unique_ptr<ECS::DOE> ECS::sharedEngine;
 
 int main(int argc, char *argv[])
 {
@@ -38,9 +39,9 @@ int main(int argc, char *argv[])
     uv_loop_t *loop;
 
     /* Avoid locale-related number parsing issues */
-    setlocale(LC_NUMERIC, "C");
-    ECS::graphics = make_align<ECS::GraphicSystem>();
+    setlocale(LC_NUMERIC, "C");//HEADLESS
 
+#ifndef HEADLESS
     ECS::sharedWindow.display = XOpenDisplay(NULL);
     if (!ECS::sharedWindow.display)
         throw std::runtime_error("Couldn't connect to X server\n");
@@ -98,39 +99,42 @@ int main(int argc, char *argv[])
             XSetWMProtocols(ECS::sharedWindow.display, ECS::sharedWindow.window, &del_atom, 1);
         }
     }
+#endif
 
     uv_setup_args(argc,argv);
     loop = uv_default_loop();
+#ifndef HEADLESS
     uv_poll_t x11_poll;
     uv_poll_init(loop, &x11_poll, XConnectionNumber(ECS::sharedWindow.display));
     uv_poll_start(&x11_poll, UV_READABLE, &WndProc);
+#endif
 
     ECS::sharedEngine = std::make_unique<ECS::DOE>();
-    ECS::jobsUtility = make_align<ECS::JobsUtility>();
+    ECS::jobsUtility  =      make_align <ECS::JobsUtility>();
     ECS::TypeManager::Initialize();
     ECS::jobsUtility->init();
-    ECS::graphics->contextInit();
 
     uv_run(loop, UV_RUN_DEFAULT);
-    ECS::sharedWindow.running.store(0);
 
+#ifndef HEADLESS
     uv_poll_stop(&x11_poll);
-    ECS::sharedEngine.reset();
+#endif
     uv_loop_close(loop);
     uv_library_shutdown();
-
-    ECS::graphics->contextDestroy();
-
+#ifndef HEADLESS
     XDestroyWindow(ECS::sharedWindow.display, ECS::sharedWindow.window);
     XCloseDisplay(ECS::sharedWindow.display);
+#endif
+    ECS::sharedEngine.reset();
     ECS::jobsUtility.reset();
-    ECS::graphics.reset();
+    ECS::TypeManager::Dispose();
     if(allocator_counter){
         printf("Memory leak count %li\n",allocator_counter);
     }
 	return 0;
 }
 
+#ifndef HEADLESS
 
 // Decode a Unicode code point from a UTF-8 stream
 // Based on cutef8 by Jeff Bezanson (Public Domain)
@@ -332,3 +336,4 @@ ImGuiKey ImGui_ImplLinux_VirtualKeyToImGuiKey(KeySym keysym)
 	default: return ImGuiKey_None;
 	}
 }
+#endif

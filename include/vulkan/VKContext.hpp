@@ -19,6 +19,7 @@ namespace ECS
         std::unique_ptr<char[]> message;
     };
     /// @brief A bootstrap class for vulkan.
+    /// @note this class can be initialized without any window
     /// @warning This class must has nothing to do with the rest of the engine, including ECS, resources, systems.
     struct VKContext {
         // a context, so OS can handle many apps
@@ -64,7 +65,7 @@ namespace ECS
         // selects a physical device, create a logical device and command pool of that device
         // requires surface to check compatibility
         void selectDevice();
-        // renderpass, command pool, descriptor pool, semaphores
+        // renderpass, command pool, descriptor pool and the FrameInFlight
         void initRender();
         void resetSwapchain(bool recreateSurface = false);
         int render();

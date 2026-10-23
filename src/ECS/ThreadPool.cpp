@@ -1,6 +1,5 @@
 #include "ECS/ThreadPool.hpp"
 #include "ECS/Engine.hpp"
-#include "GraphicSystem.hpp"
 #include "uv.h"
 
 std::vector<ECS::ISystem*(*)(ECS::DOE&)>& ECS::_get_initialize_list() {
@@ -230,7 +229,17 @@ void ECS::JobsUtility::iterate_systems(ECS::JobsUtility *thiz){
                 thiz->updateDelta      = (float)(realtime - thiz->updateTimeBuffer) / 1.0e9;
                 thiz->updateTimeBuffer = realtime;
             }
-            ECS::graphics->beginFrame();
+            while (begin != end){
+                try {
+                    (*begin)->BeforeUpdate(*ECS::sharedEngine);
+                } catch(const std::exception& e) {
+                    printf("caught std::exception BeforeUpdate: %s\n",e.what());
+                    thiz->bitmask |= Request::Exit;
+                    break;
+                }
+                begin++;
+            }
+            begin = ECS::sharedEngine->sys.data();
             while (begin != end){
                 try {
                     (*begin)->OnUpdate(*ECS::sharedEngine);
@@ -241,7 +250,17 @@ void ECS::JobsUtility::iterate_systems(ECS::JobsUtility *thiz){
                 }
                 begin++;
             }
-            ECS::graphics->endFrame();
+            begin = ECS::sharedEngine->sys.data();
+            while (begin != end){
+                try {
+                    (*begin)->AfterUpdate(*ECS::sharedEngine);
+                } catch(const std::exception& e) {
+                    printf("caught std::exception AfterUpdate: %s\n",e.what());
+                    thiz->bitmask |= Request::Exit;
+                    break;
+                }
+                begin++;
+            }
             thiz->bitmask &= ~Request::Render;
         } else {
             thiz->activeThreads--;

@@ -38,6 +38,11 @@ void TypeManager::Initialize(){
     sharedTypeInfos[1].Category = TypeCategory::Entity;
     sharedTypeInfos[1].Name = "ECS::Entity";
 }
+void TypeManager::Dispose(){
+    TypeManager::initialized = 0;
+    TypeManager::sharedTypeInfos.reset();
+    TypeManager::assetRefOffsetList.reset();
+}
 
 void TypeID::Debug() {
     const TypeManager::TypeInfo& info = TypeManager::GetTypeInfo(*this);

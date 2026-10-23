@@ -31,7 +31,6 @@ typedef struct uv_work_s uv_work_t;
 namespace ECS
 {
     struct DOE;
-    class GraphicSystem;
     struct JobChunkWrapperBase;
     struct ComponentDependencyManager;
 
@@ -41,8 +40,8 @@ namespace ECS
         EntityQueryImpl qb;
         bool parallel;
     };
+    /// @brief This class manages GraphicSystems and DOEs singletons and handles scheduling jobs.
     class JobsUtility final {
-        friend class  GraphicSystem;
         friend struct JobChunkWrapperBase;
         friend struct ComponentDependencyManager;
     protected:
@@ -56,8 +55,6 @@ namespace ECS
         std::atomic<uint32_t>  bitmask = 0;
         uint64_t fixedTimeBuffer = 0;
         uint64_t updateTimeBuffer = 0;
-        float fixedDelta = 0;
-        float updateDelta = 0;
         /// @brief batch begin index to start with
         alignas(Constants::CacheLineSize) align_ptr<JobData[]> jobs = NULL;
         std::atomic<uint32_t>  *beginIndex = NULL;
@@ -72,8 +69,6 @@ namespace ECS
         /// @brief Resolve jobs component dependancies
         ComponentDependencyManager dpm;
 
-        /// @brief signal that new command buffers are availble
-        void signalRender();
         void resizeJobPool(uint32_t);
         void prepareJobs();
         JobHandle schedule(const JobParameter&);
@@ -105,10 +100,15 @@ namespace ECS
         static void after_work_jobs(uv__work *,int);
     public:
         /// @brief initialize threadpool and systems.
-        /// @warning dont call signalRender before this
+        /// @warning requires sharedEngine initialized
         void init();
         /// @brief gracefully stop the thread pool and the systems.
+        /// @warning make sure the object is initialized.
         void signalQuit();
+        /// @brief signal that new command buffers are availble
+        void signalRender();
+        float fixedDelta = 0;
+        float updateDelta = 0;
         void schedule(const Schedule &s){
             scheduleQueue.push_back(s);
         }

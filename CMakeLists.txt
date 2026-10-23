@@ -5,6 +5,7 @@ project(DOE)
 #install build-essential libx11-dev libxi-dev libxcursor-dev libxrandr-dev libxinerama-dev
 
 option(DEBUG "Build with debug features" ON)
+option(HEADLESS "Headless release" OFF)
 if(DEBUG)
     add_compile_definitions(DEBUG)
 else()
@@ -234,12 +235,22 @@ target_compile_features(cutil PRIVATE
 # $(BIN)/test-%: $(OBJ)/$(testDir)/test-%.o $(OBJS) $(OBJ)/$(srcDir)/ECS/TypeID.o
 
 add_executable(engine
-    src/vulkan/wrapper.cpp
-	src/vulkan/VKContext.cpp
     src/system/example.cpp
     src/Window.cpp
-    src/GraphicSystem.cpp
 )
+
+if(HEADLESS)
+    target_compile_definitions(engine PRIVATE HEADLESS)
+else()
+    target_sources(engine PRIVATE
+        src/vulkan/wrapper.cpp
+        src/vulkan/VKContext.cpp
+        src/system/GraphicSystem.cpp
+    )
+    target_link_libraries(engine PRIVATE
+        imgui
+    )
+endif()
 
 if(MSVC)
     target_compile_options(engine PRIVATE
@@ -281,7 +292,6 @@ target_compile_features(engine PRIVATE
 
 target_link_libraries(engine PRIVATE
     ECS
-    imgui
     libuv
     cutil
 )

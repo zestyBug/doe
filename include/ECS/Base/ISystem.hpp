@@ -24,7 +24,9 @@ namespace ECS
     };
     struct ISystem {
         ISystem(DOE&){}
+        virtual void BeforeUpdate(DOE&){};
         virtual void OnUpdate(DOE&){};
+        virtual void AfterUpdate(DOE&){};
         virtual void OnFixedUpdate(DOE&){};
         virtual void OnDestroy(DOE&){};
         virtual ~ISystem(){}

@@ -4,19 +4,20 @@
 #include "imgui_impl_vulkan.h"
 #include "ECS/Engine.hpp"
 #include "ECS/ThreadPool.hpp"
-align_ptr<ECS::GraphicSystem> ECS::graphics;
 
-void ECS::GraphicSystem::gFunc(void *arg)
+static ECS::SystemRegister<GraphicSystem> _{};
+
+void GraphicSystem::gFunc(void *arg)
 {
     GraphicSystem &thiz = *(GraphicSystem*)arg;
-    VKContext     &vk   = thiz.vk;
+    ECS::VKContext &vk   = thiz.vk;
     uint32_t counter = 0;
     uint32_t recreate = 1;
     uint32_t swapchainIndex;
     uint32_t frameInflightIndex = 0;
     VkResult res;
-    VKContext::FrameInFlight FIFB;
-    VKContext::FrameResource FRB;
+    ECS::VKContext::FrameInFlight FIFB;
+    ECS::VKContext::FrameResource FRB;
     const VkCommandBufferBeginInfo begin_info{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
@@ -27,7 +28,7 @@ void ECS::GraphicSystem::gFunc(void *arg)
     };
     vkResetCommandPool(vk.device, vk.cpool, 0);
     FIFB = vk.frameInFlights[frameInflightIndex];
-    jobsUtility->signalRender();
+    ECS::jobsUtility->signalRender();
 
     while(true)
     {
@@ -45,7 +46,7 @@ void ECS::GraphicSystem::gFunc(void *arg)
          * wait fo the queue fence of that image index
          */
         uv_sem_wait(&thiz.glock);
-        if(!sharedWindow.running)
+        if(!thiz.running)
             break;
 
         if(counter>100){
@@ -117,7 +118,7 @@ void ECS::GraphicSystem::gFunc(void *arg)
         vkCmdEndRenderPass(FIFB.commandBuffer);
         vkEndCommandBuffer(FIFB.commandBuffer);
 
-        jobsUtility->signalRender();
+        ECS::jobsUtility->signalRender();
 
         {
             res = vkResetFences(vk.device, 1, &FIFB.queueFence);
@@ -163,7 +164,7 @@ void ECS::GraphicSystem::gFunc(void *arg)
             }
         }
 
-        frameInflightIndex = (frameInflightIndex+1)%Constants::FrameInFlightCount;
+        frameInflightIndex = (frameInflightIndex+1) % ECS::Constants::FrameInFlightCount;
         FIFB = vk.frameInFlights[frameInflightIndex];
         res = vkWaitForFences(vk.device, 1, &FIFB.queueFence, VK_TRUE, UINT64_MAX);
         if (res)
@@ -185,7 +186,7 @@ void ECS::GraphicSystem::gFunc(void *arg)
         FRB = vk.frameResources[swapchainIndex];
     }
 }
-void ECS::GraphicSystem::contextInit() {
+GraphicSystem::GraphicSystem(ECS::DOE &e) : ISystem{e} {
     vk.initialize();
     vk.createSurface();
     vk.selectDevice();
@@ -226,20 +227,21 @@ void ECS::GraphicSystem::contextInit() {
     uv_sem_init(&this->glock,0);
     uv_thread_create(&this->gthread, &gFunc, this);
 }
-void ECS::GraphicSystem::contextDestroy(){
+void GraphicSystem::OnDestroy(ECS::DOE&){
+    this->running = 0;
     uv_sem_post(&this->glock);
     uv_thread_join(&this->gthread);
     uv_sem_destroy(&this->glock);
     ImGui_ImplVulkan_Shutdown();
     ImGui::DestroyContext();
 }
-void ECS::GraphicSystem::beginFrame(){
+void GraphicSystem::BeforeUpdate(ECS::DOE&){
     ImGuiIO& io=ImGui::GetIO();
-    io.DeltaTime = jobsUtility->updateDelta;
+    io.DeltaTime = ECS::jobsUtility->updateDelta;
     io.DisplaySize = ImVec2((float)vk.surfaceExtend.width, (float)vk.surfaceExtend.height);
     ImGui_ImplVulkan_NewFrame();
     ImGui::NewFrame();
 }
-void ECS::GraphicSystem::endFrame(){
+void GraphicSystem::AfterUpdate(ECS::DOE&){
     uv_sem_post(&this->glock);
 }

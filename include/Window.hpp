@@ -7,7 +7,11 @@
 
 namespace ECS
 {
+    /**
+     * @brief This class contains information about the window and platform specific context.
+     */
     struct alignas(Constants::CacheLineSize) Window {
+
     #if defined(VK_USE_PLATFORM_WIN32_KHR)
         HWND hWnd;
         HINSTANCE hInstance;
@@ -17,9 +21,8 @@ namespace ECS
         ::VisualID visualId;
         ::Window window;
     #else
-    #error
+        // might be headless
     #endif
-        std::atomic<uint32_t> running = 1;
         std::atomic<uint32_t> width=0, height=0;
     };
     extern Window sharedWindow;

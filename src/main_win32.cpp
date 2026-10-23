@@ -1,9 +1,10 @@
 #include "ECS/Engine.hpp"
 #include "ECS/ThreadPool.hpp"
 #include "Window.hpp"
-#include "GraphicSystem.hpp"
 #include "uv.h"
+#ifndef HEADLESS
 #include "imgui.h"
+#endif
 #define NOMINMAX 1
 #include <windows.h>
 
@@ -11,6 +12,7 @@ std::unique_ptr<ECS::DOE> ECS::sharedEngine;
 
 LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+#ifndef HEADLESS
 const char* WINDOW_CLASS_NAME = "DOE_Window";
 uint32_t MouseButtonsDown = 0;
 bool MouseTracked = false;
@@ -25,6 +27,7 @@ void messageIdle(uv_idle_t *arg){
         DispatchMessageA(&msg);
     }
 }
+#endif
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, const int iCmdShow)
 {
@@ -53,6 +56,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ShowWindow(console, false);
     }
 
+#ifndef HEADLESS
     /* create main window */
     ECS::sharedWindow.hWnd = CreateWindowExA(
         WS_EX_CLIENTEDGE, WINDOW_CLASS_NAME, "OpenGL Sample",
@@ -72,33 +76,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ECS::sharedWindow.width = rect.right - rect.left;
         ECS::sharedWindow.height = rect.bottom - rect.top;
     }
+#endif
 
 
     uv_setup_args(1,&lpCmdLine);
     loop = uv_default_loop();
+#ifndef HEADLESS
     uv_idle_init(loop, &idle);
     uv_idle_start(&idle, messageIdle);
+#endif
 
     ECS::sharedEngine = std::make_unique<ECS::DOE>();
-    ECS::graphics = make_align<ECS::GraphicSystem>();
     ECS::jobsUtility = make_align<ECS::JobsUtility>();
     ECS::TypeManager::Initialize();
     ECS::jobsUtility->init();
-    ECS::graphics->contextInit();
 
     uv_run(loop, UV_RUN_DEFAULT);
-    ECS::sharedWindow.running.store(0);
 
+#ifndef HEADLESS
     uv_idle_stop(&idle);
-    ECS::sharedEngine.reset();
+#endif
     uv_loop_close(loop);
     uv_library_shutdown();
-
-
-    ECS::graphics->contextDestroy();
+#ifndef HEADLESS
     ::DestroyWindow(ECS::sharedWindow.hWnd);
+#endif
+    ECS::sharedEngine.reset();
     ECS::jobsUtility.reset();
-    ECS::graphics.reset();
+    ECS::TypeManager::Dispose();
     if(allocator_counter){
         printf("Memory leak count %li\n",allocator_counter);
     }
@@ -108,11 +113,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 
 
+#ifndef HEADLESS
 #define IM_VK_KEYPAD_ENTER      (VK_RETURN + 256)
 ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam);
+#endif
 
 LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+#ifndef HEADLESS
     if (ImGui::GetCurrentContext())
     {
         ImGuiIO& io = ImGui::GetIO();
@@ -127,11 +135,11 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 MouseTracked = true;
             }
             io.AddMousePosEvent((float)LOWORD(lParam), (float)HIWORD(lParam));
-            break;
+            return 0;
         case WM_MOUSELEAVE:
             MouseTracked = false;
             io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
-            break;
+            return 0;
         case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
         case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
         case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
@@ -146,7 +154,7 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 ::SetCapture(ECS::sharedWindow.hWnd);
             MouseButtonsDown |= 1 << button;
             io.AddMouseButtonEvent(button, true);
-            break;
+            return 0;
         }
         case WM_LBUTTONUP:
         case WM_RBUTTONUP:
@@ -162,7 +170,7 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (MouseButtonsDown == 0 && ::GetCapture() == ECS::sharedWindow.hWnd)
                 ::ReleaseCapture();
             io.AddMouseButtonEvent(button, false);
-            break;
+            return 0;
         }
         case WM_KEYDOWN:
         case WM_KEYUP:
@@ -189,7 +197,7 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     io.SetKeyEventNativeData(key, wParam, scancode);
                 }
             }
-            break;
+            return 0;
         }
         case WM_CHAR:
             if(unlikely(io.WantTextInput)){
@@ -206,21 +214,23 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     io.AddInputCharacter(wch);
                 }
             }
-            break;
+            return 0;
         case WM_MOUSEWHEEL:
             io.AddMouseWheelEvent(0.0f, (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA);
-            break;
+            return 0;
         case WM_MOUSEHWHEEL:
             io.AddMouseWheelEvent((float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA, 0.0f);
-            break;
+            return 0;
             // return if it was an user input event, countinue to process if is system event.
         case WM_SETFOCUS:
         case WM_KILLFOCUS:
             io.AddFocusEvent(message == WM_SETFOCUS);
-            break;
+            return 0;
         }
     };
+#endif
 
+    if(ECS::sharedWindow.hWnd)
     switch (message)
     {
     case WM_SIZE://WM_SIZING
@@ -229,7 +239,7 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         ::GetClientRect(ECS::sharedWindow.hWnd, &rect);
         ECS::sharedWindow.width = rect.right - rect.left;
         ECS::sharedWindow.height = rect.bottom - rect.top;
-        break;
+        return 0;
     }
     // case WM_CREATE:
     case WM_PAINT:
@@ -237,8 +247,12 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PAINTSTRUCT ps;
         BeginPaint(ECS::sharedWindow.hWnd, &ps);
         EndPaint  (ECS::sharedWindow.hWnd, &ps);
-        break;
+        return 0;
     }
+    };
+
+    switch (message)
+    {
     case WM_QUIT:
     case WM_CLOSE:
         ECS::jobsUtility->signalQuit();
@@ -252,6 +266,7 @@ LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 
+#ifndef HEADLESS
 
 ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam)
 {
@@ -302,3 +317,4 @@ ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam)
     default:                 return ImGuiKey_None;
     }
 }
+#endif

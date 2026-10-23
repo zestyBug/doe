@@ -107,6 +107,7 @@ namespace ECS {
         static std::unique_ptr<uint16_t[]> assetRefOffsetList;
     public:
         static void Initialize();
+        static void Dispose();
         static inline span<const uint16_t> GetAssetRefOffsetsPointer(){
             return {assetRefOffsetList.get(), assetRefOffsetIndex};
         }
