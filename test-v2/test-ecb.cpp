@@ -47,7 +47,7 @@ DEF_TYPE(comp_3)
 
 TEST(Test1) {
     ECS::EntityCommandBuffer ecb;
-    ECS::DOE engine;
+    ECS::Engine engine;
     ECS::EntityQueryBuilder eqb;
     ECS::Entity e = ecb.createEntity();
     ecb.addComponent<comp_1>(e);

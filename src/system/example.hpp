@@ -8,10 +8,10 @@
 struct ExampleSystem : ECS::ISystem{
     int counter = 0;
     ECS::EntityQueryImpl query;
-    ExampleSystem(ECS::DOE&);
-    void OnFixedUpdate(ECS::DOE&);
-    void OnUpdate(ECS::DOE&);
-    void OnDestroy(ECS::DOE&);
+    ExampleSystem(ECS::Engine&);
+    void OnFixedUpdate(ECS::Engine&);
+    void OnUpdate(ECS::Engine&);
+    void OnDestroy(ECS::Engine&);
     ~ExampleSystem();
 };
 

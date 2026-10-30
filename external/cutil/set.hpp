@@ -33,10 +33,10 @@ public:
         if(0 != (count & (count - 1)))
             throw std::invalid_argument("Init(): count must be power of 2");
 
-        const uint32_t size1 = alignPointerSize(sizeof(uint32_t)*count);
-        const uint32_t size2 = sizeof(Type)*count;
+        const uint32_t size1 = alignPointerSize(sizeof(Hash32)*count);
+        const uint32_t size2 =                  sizeof(Type)    *count;
         uint8_t* ptr = std::allocator<uint8_t>().allocate(size1+size2);
-        hashes.reset((uint32_t*)ptr);
+        hashes.reset((Hash32*)ptr);
         values = (Type*)(ptr + size1);
         memset(ptr,0,size1 + size2);
         capacity = count;

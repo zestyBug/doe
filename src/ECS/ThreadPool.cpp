@@ -2,8 +2,8 @@
 #include "ECS/Engine.hpp"
 #include "uv.h"
 
-std::vector<ECS::ISystem*(*)(ECS::DOE&)>& ECS::_get_initialize_list() {
-    static std::vector<ISystem*(*)(DOE&)> tests;
+std::vector<ECS::ISystem*(*)(ECS::Engine&)>& ECS::_get_initialize_list() {
+    static std::vector<ISystem*(*)(Engine&)> tests;
     return tests;
 }
 align_ptr<ECS::JobsUtility> ECS::jobsUtility;
@@ -126,7 +126,7 @@ void ECS::JobsUtility::init()
         this->wakecall->data = this;
     }
     this->scheduleQueue.reserve(Constants::InitialJobPoolCapacity);
-    std::vector<ISystem* (*)(DOE &)> &list = _get_initialize_list();
+    std::vector<ISystem* (*)(Engine &)> &list = _get_initialize_list();
     auto &sysList = sharedEngine->sys;
     sysList.reserve(list.size());
     for(auto func:list){

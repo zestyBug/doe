@@ -8,7 +8,7 @@
 #define NOMINMAX 1
 #include <windows.h>
 
-std::unique_ptr<ECS::DOE> ECS::sharedEngine;
+std::unique_ptr<ECS::Engine> ECS::sharedEngine;
 
 LRESULT CALLBACK WndProc(HWND _hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -86,7 +86,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     uv_idle_start(&idle, messageIdle);
 #endif
 
-    ECS::sharedEngine = std::make_unique<ECS::DOE>();
+    ECS::sharedEngine = std::make_unique<ECS::Engine>();
     ECS::jobsUtility = make_align<ECS::JobsUtility>();
     ECS::TypeManager::Initialize();
     ECS::jobsUtility->init();

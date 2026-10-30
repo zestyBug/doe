@@ -3,53 +3,63 @@
 
 #include "cutil/basics.hpp"
 #include "Base/TypeID.hpp"
+#include "cutil/set.hpp"
 #include <vector>
 
 namespace ECS {
-    using ResourceType = uint32_t;
-    struct Resource final {
-        uint32_t index=0;
-        ResourceType type=0;
-    };
-    typedef void(WaiterSignature)(void*,Resource);
-    struct ResourceTask final {
-        enum class ResourceState : uint32_t {
-            Loaded = 0,
-            Loading = 1,
-            Failed = 2,
-        };
-        struct Waiter {
-            void *ctx;
-            WaiterSignature *cb;
-        };
-        ResourceState state;
-        Resource res;
-        Hash32 hash;
-        std::vector<Waiter> waiters;
-        void *value;
-    };
-    class ResourceManager final {
-        typedef void (LoadSignature)(void*,ResourceTask*);
-        typedef void (FreeSignature)(void*,ResourceTask&);
-    private:
-        struct ResourceStore;
-        uint32_t                       typeCount = 0;
-        ResourceStore *sharedValues[Constants::MaximumResourcesCount]{};
-        // ResourceManager();
+    struct ResourceEntry;
+    class ResourceManager;
+
+    class ResourceManager {
     public:
+        typedef void(WaiterSignature)(void*,Resource);
+    private:
+        struct WaitNode {
+            WaiterSignature *callback;
+            void*        userData;
+            WaitNode*    next;
+        };
+    private:
+        class ResourceStore {
+            struct ResourceChunk;
+            ResourceID type;
+            uint32_t typeSize = 0;
+            uint32_t chunkCapacity = 0;
+            uint32_t numAllocatedChunks = 0;
+            ResourceEntry *freeEntriesTail = nullptr;
+            ResourceEntry *pendingEntriesTail = nullptr;
+            ResourceEntry *allEntriesTail = nullptr;
+            set<ResourceEntry*> hashmap;
+            std::unique_ptr<ResourceChunk> chunks[Constants::MaximumResourceChunkCount];
+            void expand();
+        public:
+            void initialize(ResourceID);
+            inline bool isInitialize() const {
+                return this->typeSize != 0;
+            }
+            ResourceEntry& getOrCreate(Hash32);
+            void free(ResourceEntry*);
+            void garbageCollect();
+        };
+        ResourceStore stores[Constants::MaximumResourceTypeCount];
+        ResourceStore *freeList = nullptr;
+        WaitNode *avaialbleNode;
+        WaitNode arena[Constants::ResourceManagerArenaSize];
+        void destroy(ResourceEntry&);
+    public:
+        void loadResource(ResourceID id, string_view name, void *ctx, WaiterSignature *cb);
+        void resourceReady(Resource r, bool success = true);
+        void retain(Resource r);
+        void release(Resource r);
+        void* getResource(Resource r);
+        ResourceEntry& validate(Resource r);
+        void garbageCollect();
+
         ResourceManager(ResourceManager&&) = delete;
         ResourceManager& operator=(ResourceManager&&) = delete;
-        ResourceManager()=default;
+        ResourceManager();
         ~ResourceManager();
-        void loadResource(ResourceType id, string_view name, void *ctx, WaiterSignature *cb);
-        void refCountIncrease(Resource r);
-        void refCountDecrease(Resource r);
-        void* getResource(Resource r);
-        ResourceType registerResourceType(LoadSignature *load, FreeSignature *free, void* ctx, uint32_t typeSize);
     };
-    template<typename> ResourceType __resourceid__() = delete;
-    template<typename T>
-    inline ResourceType getResourceID() { return __resourceid__<std::remove_const_t<std::remove_reference_t<T>>>(); }
 }
 
 #endif // RESOURCEMANAGER_HPP

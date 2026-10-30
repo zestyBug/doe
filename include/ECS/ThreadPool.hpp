@@ -30,7 +30,6 @@ typedef struct uv_work_s uv_work_t;
 }
 namespace ECS
 {
-    struct DOE;
     struct JobChunkWrapperBase;
     struct ComponentDependencyManager;
 

@@ -86,7 +86,7 @@ Archetype& EntityComponentStore::createArchetype(span<const TypeID> types){
         offsets[2] = offsets[1] + alignPointerSize(sizeof(uint16_t)*types.size());
         offsets[3] = offsets[2] + alignPointerSize(sizeof(uint32_t)*types.size());
         offsets[4] = offsets[3] + alignPointerSize(sizeof(uint16_t)*types.size());
-        offsets[5] = offsets[4] + alignPointerSize(sizeof(TypeManager::DefaultFunction)*types.size());
+        offsets[5] = offsets[4] + alignPointerSize(sizeof(TypeManager::DefaultFunction*)*types.size());
         offsets[6] = offsets[5] + alignPointerSize(sizeof(SharedComponentIndex)*numSharedComponents);
         arch.reset((Archetype*)std::allocator<uint8_t>().allocate(offsets[6]));
         new (&arch->chunks) ArchetypeChunkData(types.size(),numSharedComponents);
@@ -99,7 +99,7 @@ Archetype& EntityComponentStore::createArchetype(span<const TypeID> types){
         arch->_realIndecies = (uint16_t*)((uint8_t*)(arch.get()) + offsets[1]);
         arch->_offsets      = (uint32_t*)((uint8_t*)(arch.get()) + offsets[2]);
         arch->_sizeOfs      = (uint16_t*)((uint8_t*)(arch.get()) + offsets[3]);
-        arch->_dConstructor = (TypeManager::DefaultFunction*)((uint8_t*)(arch.get()) + offsets[4]);
+        arch->_dConstructor = (TypeManager::DefaultFunction**)((uint8_t*)(arch.get()) + offsets[4]);
         arch->_defaultSharedComponents=(SharedComponentIndex*)((uint8_t*)(arch.get()) + offsets[5]);
     }
     arch->typeCount   = types.size();

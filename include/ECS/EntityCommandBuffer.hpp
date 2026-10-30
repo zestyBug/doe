@@ -10,7 +10,6 @@
 namespace ECS
 {
     struct Archetype;
-    struct DOE;
     struct EntityComponentStore;
     class EntityCommandBuffer final {
     protected:

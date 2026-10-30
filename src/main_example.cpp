@@ -5,15 +5,15 @@
 #include "ECS/ThreadPool.hpp"
 #include "uv.h"
 
-std::unique_ptr<ECS::DOE> ECS::sharedEngine;
+std::unique_ptr<ECS::Engine> ECS::sharedEngine;
 
 int main(int argc, char *argv[])
 {
     uv_setup_args(argc,argv);
     uv_loop_t *loop = uv_default_loop();
 
-    ECS::sharedEngine = std::make_unique<ECS::DOE          >();
-    ECS::jobsUtility  =      make_align <ECS::JobsUtility  >();
+    ECS::sharedEngine = std::make_unique<ECS::Engine     >();
+    ECS::jobsUtility  =      make_align <ECS::JobsUtility>();
 
     ECS::jobsUtility->init();
     uv_run(loop, UV_RUN_DEFAULT);

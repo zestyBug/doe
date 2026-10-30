@@ -6,6 +6,7 @@
 #include "cutil/string_view.hpp"
 #include "cutil/basics.hpp"
 #include "ECS/Base/Entity.hpp"
+#include "ECS/Base/Resource.hpp"
 #include "Constants.hpp"
 namespace ECS {
     struct EntityQueryData;
@@ -16,6 +17,25 @@ namespace ECS {
 
     struct ISharedComponentData {};
     struct IComponentData {};
+    struct ResourceID final {
+        ResourceID(const ResourceID&)=default;
+        ResourceID& operator = (const ResourceID&)=default;
+        ResourceID(ResourceID&&)=default;
+        ResourceID& operator = (ResourceID&&)=default;
+        inline uint32_t value() const { return this->_value; }
+        ResourceID()=default;
+    private:
+        friend class TypeManager;
+        inline static ResourceID fromIndex(uint32_t v){
+            ResourceID r;r._value = v;return r;
+        };
+        uint32_t _value=0;
+    };
+    struct ResourceEntry;
+    struct IResource {
+        void load(void *ctx, Resource resource){};
+        void free(void *ctx, Resource resource){};
+    };
     /// @warning TypeIDs are expected to have flags included with them. undefined behaviour otherwise.
     struct TypeID final {
         /// @brief Just in case you know what you are doing
@@ -79,7 +99,16 @@ namespace ECS {
             /// Is an Entity
             Entity,
         };
-        typedef void(*DefaultFunction)(void*);
+        typedef void(DefaultFunction)(void*);
+        typedef void(ResourceCBFunction)(void*,void*,Resource);
+        struct ResourceInfo {
+            void          *ctx = nullptr;
+            ResourceCBFunction *load = nullptr;
+            ResourceCBFunction *free = nullptr;
+            uint32_t       typeSize = 0;
+            const char    *typeName = nullptr;
+            ResourceID type;
+        };
         struct TypeInfo {
             TypeID       TypeIndex;
             /// @brief Blittable size of the component type.
@@ -93,8 +122,8 @@ namespace ECS {
             TypeCategory Category = TypeCategory::IComponentData;
             uint32_t     AssetRefOffsetStartIndex = 0;
             uint32_t     AssetRefOffsetCount = 0;
-            DefaultFunction defaultConstruct = nullptr;
-            DefaultFunction defaultDestruct = nullptr;
+            DefaultFunction *defaultConstruct = nullptr;
+            DefaultFunction *defaultDestruct = nullptr;
             const char  *Name = nullptr;
             /// @brief Returns true if the component does not require space in Chunk memory
             bool         IsZeroSized() {return SizeInChunk==0;}
@@ -102,12 +131,37 @@ namespace ECS {
     private:
         static uint32_t    initialized;
         static uint32_t    typeCount;
+        static uint32_t    resourceTypeCount;
         static uint32_t    assetRefOffsetIndex;
         static std::unique_ptr<TypeInfo[]> sharedTypeInfos;
         static std::unique_ptr<uint16_t[]> assetRefOffsetList;
+        static std::unique_ptr<ResourceInfo[]> sharedResourceInfo;
     public:
         static void Initialize();
         static void Dispose();
+        static const ResourceInfo& GetResourceInfo(ResourceID rType) {
+            if(rType.value() >= resourceTypeCount) throw std::bad_typeid();
+            return sharedResourceInfo[rType.value()];
+        }
+        /// @brief Register informations about a resource globally
+        /// @param ctx A pointer to the context for the manager load and free functions
+        /// @tparam T Base of IResource
+        /// @return A unique id
+        template<typename T>
+        static ResourceID registerResource(void* ctx) {
+            if(unlikely(resourceTypeCount >= Constants::MaximumResourceTypeCount))
+                throw std::runtime_error("registerResourceType(): Constants::MaximumResourceTypeCount");
+            static_assert(!std::is_empty_v<T> && sizeof(T) < 256 && std::is_base_of_v<IResource,T>);
+            const uint32_t index = resourceTypeCount++;
+            ResourceInfo &info = sharedResourceInfo[index];
+            info.load = [](void *thiz,void *ctx,Resource r){static_cast<T*>(thiz)->load(ctx,r);};
+            info.free = [](void *thiz,void *ctx,Resource r){static_cast<T*>(thiz)->free(ctx,r);};
+            info.ctx = ctx;
+            info.typeSize = sizeof(T);
+            info.typeName = TypeManager::GetTypeName<T>();
+            info.type = ResourceID::fromIndex(index);
+            return ResourceID::fromIndex(index);
+        }
         static inline span<const uint16_t> GetAssetRefOffsetsPointer(){
             return {assetRefOffsetList.get(), assetRefOffsetIndex};
         }
@@ -133,15 +187,25 @@ namespace ECS {
             if(index >= typeCount) throw std::bad_typeid();
             return sharedTypeInfos[index].Name;
         }
+        template<class T>
+        static constexpr const char* GetTypeName()
+        {
+        #if defined(__clang__) || defined(__GNUC__)
+            return __PRETTY_FUNCTION__;
+        #elif defined(_MSC_VER)
+            return __FUNCSIG__;
+        #else
+            #error
+        #endif
+        }
         /// @brief Register informations about a component type.
         /// @note A component MUST be publicly default constuctable. And publicly copiable and destrcutable
         /// @warning Call this function only once per type.
         /// @tparam T Component
-        /// @param name A name to be called with.
         /// @param assetRefs list of byte indecies that contain a pointer to a resouce, to handle garbage collection automated.
         /// @return An unique id that the informations are linked with.
         template<typename T>
-        static TypeID registerType(const char* name, span<const uint16_t> assetRefs = {}) {
+        static TypeID registerType(span<const uint16_t> assetRefs = {}) {
             Initialize();
             // MAGIC NUMBER
             static_assert(sizeof(T) <= Constants::MaximumComponentSize && alignof(T) <= Constants::MaximumComponentSize);
@@ -163,23 +227,24 @@ namespace ECS {
                 value |= ZeroSizeInChunkTypeFlag;
             if(!assetRefs.empty())
                 value |= AssetRefFlag;
-            sharedTypeInfos[index].TypeIndex = TypeID::fromIndex(value);
+            TypeInfo &info = sharedTypeInfos[index];
+            info.TypeIndex = TypeID::fromIndex(value);
 
-            sharedTypeInfos[index].TypeSize = sizeof(T);
-            sharedTypeInfos[index].SizeInChunk = std::is_empty_v<T> ? 0 : sizeof(T);
-            sharedTypeInfos[index].AlignmentInBytes = alignof(T);
+            info.TypeSize = sizeof(T);
+            info.SizeInChunk = std::is_empty_v<T> ? 0 : sizeof(T);
+            info.AlignmentInBytes = alignof(T);
 
             if constexpr (std::is_same_v<T,Entity>)
-                sharedTypeInfos[index].Category = TypeCategory::Entity;
+                info.Category = TypeCategory::Entity;
             else if constexpr (std::is_base_of_v<IComponentData,T>)
-                sharedTypeInfos[index].Category = TypeCategory::IComponentData;
+                info.Category = TypeCategory::IComponentData;
             else if constexpr (std::is_base_of_v<ISharedComponentData,T>)
-                sharedTypeInfos[index].Category = TypeCategory::ISharedComponentData;
+                info.Category = TypeCategory::ISharedComponentData;
             else
                 throw std::bad_typeid();
             
-            sharedTypeInfos[index].AssetRefOffsetStartIndex = assetRefOffsetIndex;
-            sharedTypeInfos[index].AssetRefOffsetCount = assetRefs.size();
+            info.AssetRefOffsetStartIndex = assetRefOffsetIndex;
+            info.AssetRefOffsetCount = assetRefs.size();
             if(!assetRefs.empty()){
                 uint16_t *begin_dst = assetRefOffsetList.get() + assetRefOffsetIndex;
                 const uint16_t *begin_src = assetRefs.data();
@@ -196,10 +261,10 @@ namespace ECS {
                 }
             }
 
-            sharedTypeInfos[index].defaultDestruct  = [](void* x){static_cast<T*>(x)->~T();};
-            sharedTypeInfos[index].defaultConstruct = [](void* x){new (static_cast<T*>(x)) T();};
-            sharedTypeInfos[index].Name = name;
-            return sharedTypeInfos[index].TypeIndex;
+            info.defaultDestruct  = [](void* x){static_cast<T*>(x)->~T();};
+            info.defaultConstruct = [](void* x){new (static_cast<T*>(x)) T();};
+            info.Name = GetTypeName<T>();
+            return info.TypeIndex;
         }
     };
 
@@ -209,7 +274,7 @@ namespace ECS {
     template<typename> TypeID __typeid__() = delete;
     template<> TypeID __typeid__<std::nullptr_t>();
     template<> TypeID __typeid__<ECS::Entity>();
-    #define DEF_TYPE(TYPE) template<> ECS::TypeID ECS::__typeid__<TYPE>(){static ECS::TypeID v = ECS::TypeManager::registerType<TYPE>(#TYPE);return v;}
+    #define DEF_TYPE(TYPE) template<> ECS::TypeID ECS::__typeid__<TYPE>(){static ECS::TypeID v = ECS::TypeManager::registerType<TYPE>();return v;}
 
     uint32_t TypeID::value() const {return this->_value;}
     uint32_t TypeID::index() const {return this->_value & TypeManager::ClearFlagsMask;}
@@ -224,6 +289,11 @@ namespace ECS {
     inline TypeID getTypeID() { return __typeid__<std::remove_const_t<std::remove_reference_t<T>>>(); }
     template<typename T>
     constexpr bool isSharedComponent() { return std::is_base_of_v<ISharedComponentData,T> && !std::is_empty_v<T>; }
+
+    template<typename> ResourceID __resource__() = delete;
+    #define DEF_RESOURCE(TYPE,CTX) template<> ECS::ResourceID ECS::__resource__<TYPE>(){static ECS::ResourceID v = ECS::TypeManager::registerResource<TYPE>(CTX);return v;}
+    template<typename T>
+    inline ResourceID getResourceID() { return __typeid__<std::remove_const_t<std::remove_reference_t<T>>>(); }
 
     namespace internal
     {

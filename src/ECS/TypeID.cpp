@@ -10,9 +10,10 @@ namespace ECS {
 uint32_t              TypeManager::initialized = 0;
 uint32_t              TypeManager::assetRefOffsetIndex = 0;
 uint32_t              TypeManager::typeCount = 2;
+uint32_t              TypeManager::resourceTypeCount = 0;
 std::unique_ptr<TypeManager::TypeInfo[]> TypeManager::sharedTypeInfos = nullptr;
 std::unique_ptr<uint16_t[]>              TypeManager::assetRefOffsetList = nullptr;
-
+std::unique_ptr<TypeManager::ResourceInfo[]> TypeManager::sharedResourceInfo = nullptr;
 
 void TypeManager::Initialize(){
     if(likely(initialized))
@@ -20,6 +21,7 @@ void TypeManager::Initialize(){
     TypeManager::initialized = 1;
     TypeManager::sharedTypeInfos    = std::make_unique<TypeManager::TypeInfo[]>(Constants::MaximumTypesCount);
     TypeManager::assetRefOffsetList = std::make_unique<uint16_t[]>(Constants::MaximumRefOffsetCount);
+    TypeManager::sharedResourceInfo = std::make_unique<TypeManager::ResourceInfo[]>(Constants::MaximumResourceTypeCount);
     
     // MAGIC NUMBER
     sharedTypeInfos[0].TypeIndex = TypeID::fromIndex(ZeroSizeInChunkTypeFlag);

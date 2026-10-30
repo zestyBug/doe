@@ -186,7 +186,7 @@ void GraphicSystem::gFunc(void *arg)
         FRB = vk.frameResources[swapchainIndex];
     }
 }
-GraphicSystem::GraphicSystem(ECS::DOE &e) : ISystem{e} {
+GraphicSystem::GraphicSystem(ECS::Engine &e) : ISystem{e} {
     vk.initialize();
     vk.createSurface();
     vk.selectDevice();
@@ -227,7 +227,7 @@ GraphicSystem::GraphicSystem(ECS::DOE &e) : ISystem{e} {
     uv_sem_init(&this->glock,0);
     uv_thread_create(&this->gthread, &gFunc, this);
 }
-void GraphicSystem::OnDestroy(ECS::DOE&){
+void GraphicSystem::OnDestroy(ECS::Engine&){
     this->running = 0;
     uv_sem_post(&this->glock);
     uv_thread_join(&this->gthread);
@@ -235,13 +235,13 @@ void GraphicSystem::OnDestroy(ECS::DOE&){
     ImGui_ImplVulkan_Shutdown();
     ImGui::DestroyContext();
 }
-void GraphicSystem::BeforeUpdate(ECS::DOE&){
+void GraphicSystem::BeforeUpdate(ECS::Engine&){
     ImGuiIO& io=ImGui::GetIO();
     io.DeltaTime = ECS::jobsUtility->updateDelta;
     io.DisplaySize = ImVec2((float)vk.surfaceExtend.width, (float)vk.surfaceExtend.height);
     ImGui_ImplVulkan_NewFrame();
     ImGui::NewFrame();
 }
-void GraphicSystem::AfterUpdate(ECS::DOE&){
+void GraphicSystem::AfterUpdate(ECS::Engine&){
     uv_sem_post(&this->glock);
 }

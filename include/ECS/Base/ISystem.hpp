@@ -6,29 +6,29 @@
 
 namespace ECS
 {
-    struct DOE;
+    struct Engine;
     struct ISystem;
-    std::vector<ISystem*(*)(DOE&)>& _get_initialize_list();
+    std::vector<ISystem*(*)(Engine&)>& _get_initialize_list();
     template<typename S>
     struct SystemRegister {
         SystemRegister() {
-            std::vector<ISystem*(*)(DOE&)> &v = _get_initialize_list();
+            std::vector<ISystem*(*)(Engine&)> &v = _get_initialize_list();
             v.emplace_back(&init);
         }
     private:
-        static ISystem* init(DOE &e){
+        static ISystem* init(Engine &e){
             S *ptr = std::allocator<S>().allocate(1);
             new (ptr) S(e);
             return ptr;
         }
     };
     struct ISystem {
-        ISystem(DOE&){}
-        virtual void BeforeUpdate(DOE&){};
-        virtual void OnUpdate(DOE&){};
-        virtual void AfterUpdate(DOE&){};
-        virtual void OnFixedUpdate(DOE&){};
-        virtual void OnDestroy(DOE&){};
+        ISystem(Engine&){}
+        virtual void BeforeUpdate(Engine&){};
+        virtual void OnUpdate(Engine&){};
+        virtual void AfterUpdate(Engine&){};
+        virtual void OnFixedUpdate(Engine&){};
+        virtual void OnDestroy(Engine&){};
         virtual ~ISystem(){}
     };
 }

@@ -9,7 +9,7 @@
 
 namespace ECS
 {
-    struct DOE;
+    struct Engine;
 }
 
 /**
@@ -27,10 +27,10 @@ private:
     std::atomic<uint32_t> running = 1;
 public:
     /// @warning requires JobsUtility initialized
-    GraphicSystem(ECS::DOE&);
-    void BeforeUpdate(ECS::DOE&);
-    void AfterUpdate(ECS::DOE&);
-    void OnDestroy(ECS::DOE&);
+    GraphicSystem(ECS::Engine&);
+    void BeforeUpdate(ECS::Engine&);
+    void AfterUpdate(ECS::Engine&);
+    void OnDestroy(ECS::Engine&);
 };
 
 

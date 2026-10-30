@@ -15,12 +15,12 @@ struct test_2 : ECS::IComponentData
 };
 DEF_TYPE(test_2)
 
-void ExampleSystem::OnFixedUpdate(ECS::DOE&){
+void ExampleSystem::OnFixedUpdate(ECS::Engine&){
     counter++;
     if(counter == 1000000)
         ECS::jobsUtility->signalQuit();
 }
-void ExampleSystem::OnUpdate(ECS::DOE&){
+void ExampleSystem::OnUpdate(ECS::Engine&){
     ImGuiIO& io=ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(io.DisplaySize);
@@ -44,7 +44,7 @@ void ExampleSystem::OnUpdate(ECS::DOE&){
     }
     ImGui::End();
 }
-ExampleSystem::ExampleSystem(ECS::DOE &e):ISystem{e}{
+ExampleSystem::ExampleSystem(ECS::Engine &e):ISystem{e}{
     {
         ECS::EntityQueryBuilder builder;
         builder.withAllRW(ECS::getTypeID<test_2>());
@@ -55,7 +55,7 @@ ExampleSystem::ExampleSystem(ECS::DOE &e):ISystem{e}{
         //ECS::sharedEngine->ecs.getArchetype
     }
 }
-void ExampleSystem::OnDestroy(ECS::DOE&){
+void ExampleSystem::OnDestroy(ECS::Engine&){
 }
 ExampleSystem::~ExampleSystem(){
 }

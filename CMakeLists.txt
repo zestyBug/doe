@@ -301,4 +301,12 @@ add_executable(test-ecb
     test-v2/test-ecb.cpp
 )
 target_link_libraries(test-ecb PRIVATE ECS libuv cutil)
-# target_link_libraries(test_string PRIVATE core)
+
+
+add_executable(test-resource
+    test-v2/test-resource.cpp
+    src/Window.cpp
+    src/vulkan/wrapper.cpp
+    src/vulkan/VKContext.cpp
+)
+target_link_libraries(test-resource PRIVATE ECS libuv cutil)

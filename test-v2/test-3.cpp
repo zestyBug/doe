@@ -15,7 +15,7 @@ struct test_1 : ECS::ISharedComponentData
     };
 };
 template<> ECS::TypeID ECS::__typeid__<test_1>(){
-    static ECS::TypeID v = ECS::TypeManager::registerType<test_1>("test_1");
+    static ECS::TypeID v = ECS::TypeManager::registerType<test_1>();
     return v;
 }
 struct test_2 : ECS::IComponentData
@@ -30,7 +30,7 @@ struct test_2 : ECS::IComponentData
     }
 };
 template<> ECS::TypeID ECS::__typeid__<test_2>(){
-    static ECS::TypeID v = ECS::TypeManager::registerType<test_2>("test_2");
+    static ECS::TypeID v = ECS::TypeManager::registerType<test_2>();
     return v;
 }
 

@@ -175,7 +175,7 @@ void Archetype::initializeComponents(Chunk* chunk, uint32_t dstIndex, uint32_t c
     uint32_t *offsets = this->_offsets;
     uint16_t *sizeOfs = this->_sizeOfs;
     TypeID *types = this->_types;
-    TypeManager::DefaultFunction *dCons = this->_dConstructor;
+    TypeManager::DefaultFunction **dCons = this->_dConstructor;
     uint8_t  *dstBuffer = (uint8_t*)chunk;
     uint32_t  typesCount = this->numNonZeroSizedTypes();
     for (uint32_t t = 1; t != typesCount; t++)

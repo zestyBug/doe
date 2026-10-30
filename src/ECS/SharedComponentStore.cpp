@@ -101,7 +101,7 @@ SharedComponentStore::~SharedComponentStore() {
         if(ptr)
         {
             const uint32_t typesize = TypeManager::GetTypeInfo(i).TypeSize;
-            TypeManager::DefaultFunction dFunc = TypeManager::GetTypeInfo(i).defaultDestruct;
+            TypeManager::DefaultFunction *dFunc = TypeManager::GetTypeInfo(i).defaultDestruct;
             const SharedComponentInfo* infos = ptr->infos;
             uint8_t *data = ptr->buffer;
             for (uint32_t j = 0;j < ptr->count;j++)
@@ -286,7 +286,7 @@ void SharedComponentStore::removeReference(SharedComponentIndex index, uint32_t 
                     throw std::runtime_error("insert(): something went wrong");
             }
         }
-        TypeManager::DefaultFunction dFunc = TypeManager::GetTypeInfo(typeIndex).defaultDestruct;
+        TypeManager::DefaultFunction *dFunc = TypeManager::GetTypeInfo(typeIndex).defaultDestruct;
         dFunc(ptr->buffer + typeSize * elementIndex);
     }
 }

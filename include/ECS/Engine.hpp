@@ -11,7 +11,7 @@ namespace ECS
 {
     struct JobChunkWrapperBase;
     /// @brief This struct must remain passive, no external calls
-    struct DOE final {
+    struct Engine final {
         EntityComponentStore ecs;
         EntityQueryManager eqm;
         /// @brief List of systems (Intenal)
@@ -19,13 +19,13 @@ namespace ECS
         /// Intenal
         AssetsManager am;
         ResourceManager rm;
-        DOE(){
+        Engine(){
             sys.reserve(Constants::InitialSystemCapacity);
         };
     };
     /// @brief A global singleton for the engine.
     /// @note Must be accessed only by the thread pool and the main function.
-    extern std::unique_ptr<DOE> sharedEngine;
+    extern std::unique_ptr<Engine> sharedEngine;
 } // namespace ECS
 
 

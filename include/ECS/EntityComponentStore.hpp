@@ -45,8 +45,10 @@ namespace ECS
     private:
         static void validateArchetype(span<const TypeID> types);
         static uint32_t getComponentArraySize(uint32_t componentSize, uint32_t entityCount);
+    public:
         static uint32_t calculateSpaceRequirement(span<const uint16_t> componentSizes, uint32_t entityCount);
         static uint32_t calculateChunkCapacity(span<const uint16_t> componentSizes, uint32_t bufferSize);
+    private:
         /// @param types sorted array of types (and must include the type flags)
         Archetype& createArchetype(span<const TypeID> types);
         /// @brief seaarchin for a given type

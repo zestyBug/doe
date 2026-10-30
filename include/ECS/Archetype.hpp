@@ -60,7 +60,7 @@ namespace ECS
         /// @brief  components offsets in the chunks
         uint32_t* _offsets = nullptr;
         uint16_t* _sizeOfs = nullptr;
-        TypeManager::DefaultFunction *_dConstructor = nullptr;
+        TypeManager::DefaultFunction **_dConstructor = nullptr;
         SharedComponentIndex *_defaultSharedComponents;
         uint32_t typeCount;
         // maximum number of entities that can be fit into a single chunk

@@ -34,9 +34,14 @@ namespace ECS {
         static constexpr uint32_t EntityQueryBuilderCapacity = 32;
         static constexpr uint16_t MaximumTypesCount = 1 << 12;
         static constexpr uint16_t MaximumComponentSize = 0x800;
-        static constexpr uint16_t MaximumResourcesCount = 1 << 8;
+        /// @brief Theres a per type allocation for the resource map in ResourceManager::ResourceStore so dont just feed it a big number
+        static constexpr uint16_t MaximumResourceTypeCount = 1 << 6;
         static constexpr uint16_t ResourceBlockCount = 1 << 8;
         static constexpr uint16_t ResourceBlockSize = 1 << 8;
+        /// @brief Maximum resource count per type
+        static constexpr uint16_t MaximumResourceChunkCount = 1 << 8;
+        /// @brief Arena size for waiting messages
+        static constexpr uint16_t ResourceManagerArenaSize = 1 << 12;
         static constexpr uint32_t MaximumChunkCount = 0x10000;
         static constexpr uint32_t MaxJobCount = 0xFFFFF;
         static constexpr uint32_t EntityStoreBlockSize = 8192;

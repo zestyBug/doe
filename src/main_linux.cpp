@@ -29,7 +29,7 @@ static Bool WaitForMapNotify(Display *d, XEvent *e, char *arg)
 
 static void WndProc(uv_poll_t *handle, int status, int events);
 #endif
-std::unique_ptr<ECS::DOE> ECS::sharedEngine;
+std::unique_ptr<ECS::Engine> ECS::sharedEngine;
 
 int main(int argc, char *argv[])
 {
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
     uv_poll_start(&x11_poll, UV_READABLE, &WndProc);
 #endif
 
-    ECS::sharedEngine = std::make_unique<ECS::DOE>();
+    ECS::sharedEngine = std::make_unique<ECS::Engine>();
     ECS::jobsUtility  =      make_align <ECS::JobsUtility>();
     ECS::TypeManager::Initialize();
     ECS::jobsUtility->init();

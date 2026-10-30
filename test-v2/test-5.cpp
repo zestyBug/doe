@@ -8,7 +8,7 @@
 #include "uv.h"
 using namespace ECS;
 
-extern std::unique_ptr<DOE> sharedEngine;
+extern std::unique_ptr<Engine> sharedEngine;
 
 struct Position : IComponentData {
     float x;
@@ -35,7 +35,7 @@ struct SpeedSystem : ISystem {
     JobChunkWrapper<SpeedJob> wrapper;
     EntityQueryImpl qd;
     uint32_t counter=0;
-    SpeedSystem(DOE &e):ISystem{e} {
+    SpeedSystem(Engine &e):ISystem{e} {
         Archetype *arch = e.ecs.getOrCreateArchetype(componentTypes<Entity,Speed,Position>());
         Entity entities[200];
         e.ecs.createEntities(arch,{entities,200});
@@ -44,7 +44,7 @@ struct SpeedSystem : ISystem {
         qb.withAll(getTypeID<Speed>());
         qd = e.eqm.createEntityQuery(qb,e.ecs);
     }
-    void OnFixedUpdate(DOE &e){
+    void OnFixedUpdate(Engine &e){
         counter++;
         if(counter>100){
             JobsUtility::signalQuit();
@@ -69,7 +69,7 @@ CLASS_TEST(Test,Test1){
 int main(int argc, char*argv[]){
     uv_setup_args(argc,argv);
     uv_loop_t *loop = uv_default_loop();
-    ECS::sharedEngine = std::make_unique<DOE>();
+    ECS::sharedEngine = std::make_unique<Engine>();
     mtest::run_all();
     uv_loop_close(loop);
     uv_library_shutdown();
